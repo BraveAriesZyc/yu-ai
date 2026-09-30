@@ -1,0 +1,18 @@
+{
+  "path": "candidate-interview",
+  "hasDatetimeEditor": 1,
+  "panel": {
+    "timeSpinnerVisible": 0,
+    "timeColumnsVisible": 0,
+    "panelVisible": 1,
+    "popperVisible": 1,
+    "panelClass": "el-picker-panel el-date-picker has-time",
+    "popperClass": "el-popper is-pure is-light el-tooltip el-picker__popper",
+    "appeared": true,
+    "hasTimeSide": true
+  },
+  "editorClass": "el-input el-input--prefix el-input--suffix el-date-editor el-date-editor--datetime is-focus !w-full el-tooltip__trigger el-tooltip__trigger",
+  "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/hrm-ele-datetime-check.png",
+  "ok": true,
+  "datetimeEditorConfirmed": true
+}

@@ -1,0 +1,10 @@
+{
+  "afterInternalTabChangeCount": 1,
+  "firstProjectConfigCount": 1,
+  "firstProjectConfigUrl": "http://127.0.0.1:5667/pms/pm/project/config/5?pageKey=PmsProjectConfig",
+  "projectListAfterSceneChangeCount": 1,
+  "projectListInitialCount": 1,
+  "secondProjectConfigCount": 1,
+  "secondProjectConfigUrl": "http://127.0.0.1:5667/pms/pm/project/config/3?pageKey=PmsProjectConfig",
+  "topTabs": ["分析页", "我的项目", "项目设置"]
+}

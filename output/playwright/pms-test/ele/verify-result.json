@@ -1,0 +1,28 @@
+{
+  "tag": "ele",
+  "base": "http://localhost:5777",
+  "pass": 3,
+  "fail": 1,
+  "results": [
+    {
+      "name": "A-分享页未登录不跳登录",
+      "ok": true,
+      "url": "http://localhost:5777/pms/kb/document/share/not-a-real-token"
+    },
+    {
+      "name": "B-项目分组路由可达",
+      "ok": true,
+      "url": "http://localhost:5777/pms/pm/project/list?tabs=participate"
+    },
+    {
+      "name": "C-项目更多下拉弹出",
+      "ok": true,
+      "count": 471
+    },
+    {
+      "name": "D-迭代详情时间线渲染",
+      "ok": false,
+      "count": 0
+    }
+  ]
+}

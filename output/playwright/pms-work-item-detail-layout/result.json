@@ -1,0 +1,10 @@
+{
+  "vben": {
+    "actionAligned": true,
+    "commentButtonBelowTextarea": true,
+    "statusInsideBasicPanel": true
+  },
+  "vue3": {
+    "statusInsideBasicPanel": true
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "vben": {
+    "card": {
+      "bottom": 377,
+      "height": 168,
+      "right": 595,
+      "width": 339,
+      "x": 256,
+      "y": 209
+    },
+    "chartWrapper": {
+      "bottom": 360,
+      "height": 56,
+      "right": 578,
+      "width": 259,
+      "x": 319,
+      "y": 304
+    },
+    "logo": {
+      "bottom": 260,
+      "height": 34,
+      "right": 307,
+      "width": 34,
+      "x": 273,
+      "y": 226
+    },
+    "logoAlignedWithTitle": true,
+    "more": {
+      "bottom": 368,
+      "height": 32,
+      "right": 582,
+      "width": 46,
+      "x": 536,
+      "y": 336
+    },
+    "moreAboveChart": true,
+    "moreZIndex": "10",
+    "star": {
+      "bottom": 246,
+      "height": 24,
+      "right": 582,
+      "width": 16,
+      "x": 566,
+      "y": 222
+    },
+    "starPathFill": "rgb(239, 189, 72)",
+    "starRightOffset": 13,
+    "starTopOffset": 13,
+    "title": {
+      "bottom": 248,
+      "height": 22,
+      "right": 578,
+      "width": 259,
+      "x": 319,
+      "y": 226
+    }
+  },
+  "vue3": {
+    "card": {
+      "bottom": 360,
+      "height": 154,
+      "right": 577,
+      "width": 346,
+      "x": 231,
+      "y": 206
+    },
+    "chartWrapper": null,
+    "logo": {
+      "bottom": 257,
+      "height": 34,
+      "right": 282,
+      "width": 34,
+      "x": 248,
+      "y": 223
+    },
+    "logoAlignedWithTitle": true,
+    "more": {
+      "bottom": 351,
+      "height": 24,
+      "right": 564,
+      "width": 24,
+      "x": 540,
+      "y": 327
+    },
+    "moreAboveChart": true,
+    "moreZIndex": "auto",
+    "star": {
+      "bottom": 245,
+      "height": 26,
+      "right": 564,
+      "width": 26,
+      "x": 538,
+      "y": 219
+    },
+    "starPathFill": "rgb(230, 162, 60)",
+    "starRightOffset": 13,
+    "starTopOffset": 13,
+    "title": {
+      "bottom": 245,
+      "height": 22,
+      "right": 524,
+      "width": 230,
+      "x": 294,
+      "y": 223
+    }
+  }
+}

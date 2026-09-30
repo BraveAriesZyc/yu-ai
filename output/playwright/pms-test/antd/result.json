@@ -1,0 +1,124 @@
+{
+  "tag": "antd",
+  "base": "http://localhost:5666",
+  "pass": 19,
+  "fail": 0,
+  "results": [
+    {
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "name": "01-工作台",
+      "ok": true,
+      "path": "/pms/pm/workbench",
+      "note": ""
+    },
+    {
+      "name": "02-项目列表",
+      "ok": true,
+      "path": "/pms/pm/project/list",
+      "note": ""
+    },
+    {
+      "name": "03-项目详情-打开",
+      "ok": true,
+      "path": "http://localhost:5666/pms/pm/project/detail/3?tabs=planning"
+    },
+    {
+      "name": "04-项目详情-概况",
+      "ok": true
+    },
+    {
+      "name": "05-项目详情-甘特图",
+      "ok": true
+    },
+    {
+      "name": "06-工作项详情抽屉",
+      "ok": true
+    },
+    {
+      "name": "07-项目模板",
+      "ok": true,
+      "path": "/pms/pm/project/template",
+      "note": ""
+    },
+    {
+      "name": "08-项目归档",
+      "ok": true,
+      "path": "/pms/pm/project/archive",
+      "note": ""
+    },
+    {
+      "name": "09-项目回收站",
+      "ok": true,
+      "path": "/pms/pm/project/recycle",
+      "note": ""
+    },
+    {
+      "name": "10-知识库列表",
+      "ok": true,
+      "path": "/pms/kb/library",
+      "note": ""
+    },
+    {
+      "name": "11-知识库文档中心",
+      "ok": true,
+      "path": "http://localhost:5666/pms/kb/library/5"
+    },
+    {
+      "name": "12-知识库模板",
+      "ok": true,
+      "path": "/pms/kb/library-template",
+      "note": ""
+    },
+    {
+      "name": "13-文档标签",
+      "ok": true,
+      "path": "/pms/kb/label",
+      "note": ""
+    },
+    {
+      "name": "14-我的收藏",
+      "ok": true,
+      "path": "/pms/kb/favorite",
+      "note": ""
+    },
+    {
+      "name": "15-最近浏览",
+      "ok": true,
+      "path": "/pms/kb/recent",
+      "note": ""
+    },
+    {
+      "name": "16-文档搜索",
+      "ok": true,
+      "path": "/pms/kb/search",
+      "note": ""
+    },
+    {
+      "name": "17-知识库回收站",
+      "ok": true,
+      "path": "/pms/kb/recycle",
+      "note": ""
+    },
+    {
+      "name": "zz-页面JS错误",
+      "ok": true,
+      "count": 0,
+      "items": []
+    }
+  ],
+  "consoleErrors": [
+    "menu name duplicate: 库存管理, id: 1379 Proxy(Object)",
+    "menu name duplicate: 基础数据, id: 960 Proxy(Object)",
+    "menu name duplicate: 报表管理, id: 1987 Proxy(Object)",
+    "route component is invalid: /oa/schedule/index.vue {component: oa/schedule/index, meta: Object, name: OaSchedule, path: /oa/schedule}",
+    "route component is invalid: /oa/plan/index.vue {component: oa/plan/index, meta: Object, name: OaPlan, path: /oa/plan}",
+    "route component is invalid: /oa/note/index.vue {component: oa/note/index, meta: Object, name: OaNote, path: /oa/note}",
+    "route component is invalid: /oa/contact/index.vue {component: oa/contact/index, meta: Object, name: OaContact, path: /oa/contact}",
+    "route component is invalid: /oa/mail/index.vue {component: oa/mail/index, meta: Object, name: OaMail, path: /oa/mail}",
+    "route component is invalid: /oa/discussion/index.vue {component: oa/discussion/index, meta: Object, name: OaDiscussion, path: /oa/discussion}",
+    "route component is invalid: /cms/stat/workspace/index.vue {component: cms/stat/workspace/index, meta: Object, name: CmsWorkspace, path: /cms/workspace/report}"
+  ]
+}

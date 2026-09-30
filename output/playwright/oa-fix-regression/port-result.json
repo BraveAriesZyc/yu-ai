@@ -1,0 +1,146 @@
+{
+  "generatedAt": "2026-09-18T03:32:56.516Z",
+  "results": [
+    {
+      "tag": "antd",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antd",
+      "name": "01-公文发文并排预览",
+      "ok": false,
+      "screenshot": "antd-port-01-officialdoc-send-form.png",
+      "note": "弹窗宽度比≈0.90、左侧表单右侧预览并排、无「标准预览」按钮、套红模板选择后红头实时联动（红头=芋道科技有限公司文件）、「正式公文」上传项存在且 input accept=\".pdf\"（仅 pdf 满足）；但【标题联动失败】：键盘输入标题并失焦后，右侧预览 h2 仍为空——previewDocument 读取 formApi.form.values 不随表单更新（三端 form.vue 实现相同，三端均复现）。；无 pageerror、无 4xx/5xx"
+    },
+    {
+      "tag": "antd",
+      "name": "04-通讯录头像性别分享人列",
+      "ok": true,
+      "screenshot": "antd-port-04-contact-mine.png, antd-port-04-contact-received.png",
+      "note": "头像=true，性别=true，分享人=true，占位符=请输入姓名、拼音、手机或公司；共享与我列=姓名|头像|性别|分类|手机号码|邮箱|公司名称|创建人|分享人|处理状态|操作|姓名|头像|性别|分类|手机号码|邮箱|公司名称|创建人|分享人|处理状态|操作"
+    },
+    {
+      "tag": "antd",
+      "name": "02-云盘复制",
+      "ok": true,
+      "screenshot": "antd-port-02-file-copy.png",
+      "note": "误报修正：源端 yudao-ui-admin-vue3/src/views/oa/file/OaFileNodeForm.vue:10-13 同样仅在 create/rename 显示「名称」、copy 只显示「目标目录」，后端 copy 接口不收名称；vben 行为与源端一致，无需修改。菜单顺序（收藏|重命名|复制|移动|删除）、弹窗标题=复制、目标目录字段均已验证"
+    },
+    {
+      "tag": "antd",
+      "name": "03-还车表单字段",
+      "ok": true,
+      "screenshot": "antd-port-03-vehicle-return-form.png",
+      "note": "缺失=无，乘车人/随行人=true；字段=|申请单号|*用车申请|*实际出车时间|*实际出车地点|*用车事由|随行人|*实际回车时间|*实际回车地点|还车说明|附件"
+    },
+    {
+      "tag": "antd",
+      "name": "05-日程列表筛选与列",
+      "ok": true,
+      "screenshot": "antd-port-05-schedule-list.png",
+      "note": "优先级=true，开始时间=true，缺列=无；搜索区=日程范围|我的日程||共享给我|标题|日程类型|优先级|开始时间；列=标题|类型|优先级|开始时间|结束时间|参与人|发布人|部门|发布时间|提醒|操作|标题|类型|优先级|开始时间|结束时间|参与人|发布人|部门|发布时间|提醒|操作"
+    },
+    {
+      "tag": "antd",
+      "name": "06-工作汇报统计空态与加载",
+      "ok": true,
+      "screenshot": "antd-port-06-workreport-statistics-empty.png, antd-port-06-workreport-statistics-dept.png",
+      "note": "空态文案=true，选部门后加载=true"
+    },
+    {
+      "tag": "antd",
+      "name": "07-会议室选择弹窗筛选",
+      "ok": true,
+      "screenshot": "antd-port-07-meetingroom-select.png",
+      "note": "可用状态筛选=false，保留项=名称/位置/类型；搜索区=会议室名称|会议室位置|会议室类型"
+    },
+    {
+      "tag": "antd",
+      "name": "08-印章申请搜索区与列",
+      "ok": true,
+      "screenshot": "antd-port-08-seal-apply.png",
+      "note": "印章选择器=true，申请部门=true，创建时间=true，印章编号列=true，紧急列=true；搜索区=单据编号|印章|单据状态|用印类型|用印方式|用印状态|紧急|用印时间|申请部门|创建时间"
+    },
+    {
+      "tag": "antd",
+      "name": "09-邮箱账号编辑禁用字段",
+      "ok": true,
+      "screenshot": "antd-port-09-mail-account-edit.png",
+      "note": "邮箱地址禁用=true，邮箱服务禁用=true，登录名禁用=true"
+    },
+    {
+      "tag": "antd",
+      "name": "10-工作台面板与排行图",
+      "ok": true,
+      "screenshot": "antd-port-10-home.png",
+      "note": "收起/展开按钮=5，关闭按钮=5，任务完成排行=true，canvas=1"
+    },
+    {
+      "tag": "antd",
+      "name": "11-办公用品入库表单",
+      "ok": true,
+      "screenshot": "antd-port-11-supply-instock.png",
+      "note": "入库表单字段=物品名称|当前库存|入库数量，只有数量类字段，无备注（首轮失败为脚本选择器问题：操作列是 vxe 固定右列，按钮在 fixed-right 副本中）。无 pageerror、无 4xx/5xx"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-公文发文并排预览",
+      "ok": false,
+      "screenshot": "antdv-next-port-01-officialdoc-send-form.png",
+      "note": "弹窗宽度比≈0.90、左侧表单右侧预览并排、无「标准预览」按钮、套红模板选择后红头实时联动（红头=芋道科技有限公司文件）、「正式公文」上传项存在且 input accept=\".pdf\"（仅 pdf 满足）；但【标题联动失败】：键盘输入标题并失焦后，右侧预览 h2 仍为空——previewDocument 读取 formApi.form.values 不随表单更新（三端 form.vue 实现相同，三端均复现）。；无 pageerror、无 4xx/5xx"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "04-通讯录头像性别分享人列",
+      "ok": true,
+      "screenshot": "antdv-next-port-04-contact-mine.png, antdv-next-port-04-contact-received.png",
+      "note": "头像=true，性别=true，分享人=true，占位符=请输入姓名、拼音、手机或公司；共享与我列=姓名|头像|性别|分类|手机号码|邮箱|公司名称|创建人|分享人|处理状态|操作|姓名|头像|性别|分类|手机号码|邮箱|公司名称|创建人|分享人|处理状态|操作"
+    },
+    {
+      "tag": "ele",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "ele",
+      "name": "01-公文发文并排预览",
+      "ok": false,
+      "screenshot": "ele-port-01-officialdoc-send-form.png",
+      "note": "弹窗宽度比≈0.90、左侧表单右侧预览并排、无「标准预览」按钮、套红模板选择后红头实时联动（红头=芋道科技有限公司文件）、「正式公文」上传项存在且 input accept=\".pdf\"（仅 pdf 满足）；但【标题联动失败】：键盘输入标题并失焦后，右侧预览 h2 仍为空——previewDocument 读取 formApi.form.values 不随表单更新（三端 form.vue 实现相同，三端均复现）。；无 pageerror、无 4xx/5xx"
+    },
+    {
+      "tag": "ele",
+      "name": "04-通讯录头像性别分享人列",
+      "ok": true,
+      "screenshot": "ele-port-04-contact-mine.png, ele-port-04-contact-received.png",
+      "note": "头像=true，性别=true，分享人=true，占位符=请输入姓名、拼音、手机或公司；共享与我列=姓名|头像|性别|分类|手机号码|邮箱|公司名称|创建人|分享人|处理状态|操作|姓名|头像|性别|分类|手机号码|邮箱|公司名称|创建人|分享人|处理状态|操作"
+    },
+    {
+      "tag": "antd",
+      "name": "12-公文发文标题联动复测",
+      "ok": true,
+      "screenshot": "antd-port-12-officialdoc-preview.png",
+      "note": "输入标题后预览h2=关于开展三季度验收工作的通知，选模板后红头=芋道科技有限公司文件，选模板后标题保持=true；无 pageerror、无 4xx/5xx"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "12-公文发文标题联动复测",
+      "ok": true,
+      "screenshot": "antdv-next-port-12-officialdoc-preview.png",
+      "note": "输入标题后预览h2=关于开展三季度验收工作的通知，选模板后红头=芋道科技有限公司文件，选模板后标题保持=true；无 pageerror、无 4xx/5xx"
+    },
+    {
+      "tag": "ele",
+      "name": "12-公文发文标题联动复测",
+      "ok": true,
+      "screenshot": "ele-port-12-officialdoc-preview.png",
+      "note": "输入标题后预览h2=关于开展三季度验收工作的通知，选模板后红头=芋道科技有限公司文件，选模板后标题保持=true；无 pageerror、无 4xx/5xx"
+    }
+  ]
+}

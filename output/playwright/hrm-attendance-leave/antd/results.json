@@ -1,0 +1,15 @@
+{
+  "app": "antd",
+  "list": {
+    "ok": true,
+    "hasListTitle": true,
+    "hasFilters": true,
+    "pageOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5666/admin-api/hrm/attendance/leave/page?pageNo=1&pageSize=20&startTime=2026-08-01%2000%3A00%3A00&startTime=2026-08-31%2023%3A59%3A59",
+        "status": 200
+      }
+    ]
+  }
+}

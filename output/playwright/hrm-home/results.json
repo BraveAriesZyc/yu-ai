@@ -1,0 +1,168 @@
+[
+  {
+    "route": "/hrm/home",
+    "actualPath": "/hrm/home",
+    "notFound": false,
+    "textHits": {
+      "HR 工作台": true,
+      "人事概况": true,
+      "招聘动态": true,
+      "上月薪资概况": true,
+      "待办提醒": true,
+      "日历": true
+    },
+    "allExpectedFound": true,
+    "matchedApis": [
+      {
+        "apiPath": "/hrm/home/hr-statistics-summary",
+        "hit": true,
+        "status": 200
+      },
+      {
+        "apiPath": "/hrm/home/hr-calendar",
+        "hit": true,
+        "status": 200
+      }
+    ],
+    "allApisOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/hr/index.vue?t=1785755867224",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/api/hrm/home/index.ts",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/employee-survey.vue?t=1785755862914",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/calendar.vue?t=1785755867224",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/recruit-survey.vue?t=1785755863723",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/salary-survey.vue?t=1785755864761",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/todo-survey.vue?t=1785755865927",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/calendar.vue?t=1785755574553&vue&type=style&index=0&scoped=12327215&lang.scss",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/personal-note-form.vue?t=1785747576344",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/chart-options.ts",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/personal-note-form-data.ts",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/admin-api/hrm/home/hr-calendar?endDate=2026-08-31&startDate=2026-08-01",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/admin-api/hrm/home/hr-statistics-summary",
+        "status": 200
+      }
+    ],
+    "calendarInteract": {
+      "tried": false
+    },
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/hrm-home/hr.png",
+    "snippet": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n财务管理\n报表管理\n工作流程\n会员中心\n商城系统\nCMS\nCRM 系统\nERP 系统\nWMS 系统\n公众号管理\nMES 系统\nHRM 人力资源\nHR 工作台\n团队工作台\n组织管理\n招聘管理\n员工管理\n考勤管理\n社保管理\n薪资管理\n绩效管理\nHRM 员工端\nAI 大模型\nIoT 物联网\nIM 即时通讯\nHRM 人力资源\nHR 工作台\n请选择租户\n搜索\n⌘ K\n分析页\nHR 工作台\nHR 工作台\n人事概况（2026.08.01-2026.08.31）\n40\n在职\n0\n入职\n0\n待入职\n0\n离职\n1\n待离职\n0\n转正\n0\n调岗\n招聘动态（2026.02.03-2026.08.03）\n8\n正在招聘职位\n62\n评选中\n10\n待入职\n12\n已入职\n上月薪资概况\n45\n计薪人员\n-15,137.71\n实"
+  },
+  {
+    "route": "/hrm/team-home",
+    "actualPath": "/hrm/team-home",
+    "notFound": false,
+    "textHits": {
+      "团队工作台": true,
+      "我的团队": true,
+      "团队概况": true,
+      "日历": true
+    },
+    "allExpectedFound": true,
+    "matchedApis": [
+      {
+        "apiPath": "/hrm/home/team-statistics-summary",
+        "hit": true,
+        "status": 200
+      },
+      {
+        "apiPath": "/hrm/home/team-calendar",
+        "hit": true,
+        "status": 200
+      }
+    ],
+    "allApisOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/team/index.vue?t=1785755868168",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/api/hrm/home/index.ts",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/team/components/team-survey.vue?t=1785755868168",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/team/components/team-overview.vue?t=1785755867854",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/calendar.vue?t=1785755867224",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/team/components/team-survey-chart.vue",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/personal-note-form.vue?t=1785747576344",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/calendar.vue?t=1785755574553&vue&type=style&index=0&scoped=12327215&lang.scss",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/chart-options.ts",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/home/components/personal-note-form-data.ts",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/admin-api/hrm/home/team-calendar?endDate=2026-08-31&startDate=2026-08-01",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/admin-api/hrm/home/team-statistics-summary",
+        "status": 200
+      }
+    ],
+    "calendarInteract": {
+      "tried": false
+    },
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/hrm-home/team.png",
+    "snippet": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n财务管理\n报表管理\n工作流程\n会员中心\n商城系统\nCMS\nCRM 系统\nERP 系统\nWMS 系统\n公众号管理\nMES 系统\nHRM 人力资源\nHR 工作台\n团队工作台\n组织管理\n招聘管理\n员工管理\n考勤管理\n社保管理\n薪资管理\n绩效管理\nHRM 员工端\nAI 大模型\nIoT 物联网\nIM 即时通讯\nHRM 人力资源\n团队工作台\n请选择租户\n搜索\n⌘ K\n分析页\nHR 工作台\n团队工作台\n团队工作台\n我的团队（2026.08.01-2026.08.31）\n1\n团队人数\n0\n本月入职\n0\n本月离职\n0\n本月转正\n团队概况\n员工状态占比\n男女性别占比\n成员年龄占比\n成员司龄占比\n日历\n2026 年 08 月\n上‌月\n今‌天\n下‌月\n一\t二\t三\t四\t五\t六\t日\n\n27\n十四\n\t\n28\n十五\n\t\n"
+  }
+]

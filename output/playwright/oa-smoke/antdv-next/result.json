@@ -1,0 +1,262 @@
+{
+  "base": "http://127.0.0.1:5999",
+  "results": [
+    {
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "name": "home-工作台",
+      "ok": true,
+      "path": "/oa/home",
+      "note": ""
+    },
+    {
+      "name": "announcement-list-我发布的",
+      "ok": true,
+      "path": "/oa/announcement/list",
+      "note": ""
+    },
+    {
+      "name": "announcement-my-我收到的",
+      "ok": true,
+      "path": "/oa/announcement/my",
+      "note": ""
+    },
+    {
+      "name": "attendance-list-考勤记录",
+      "ok": true,
+      "path": "/oa/attendance/list",
+      "note": ""
+    },
+    {
+      "name": "attendance-my-我的考勤",
+      "ok": true,
+      "path": "/oa/attendance/my",
+      "note": ""
+    },
+    {
+      "name": "attendance-report-考勤报表",
+      "ok": true,
+      "path": "/oa/attendance/report",
+      "note": ""
+    },
+    {
+      "name": "contact-通讯录",
+      "ok": true,
+      "path": "/oa/contact",
+      "note": ""
+    },
+    {
+      "name": "discussion-manage-讨论管理",
+      "ok": true,
+      "path": "/oa/discussion/manage",
+      "note": ""
+    },
+    {
+      "name": "discussion-list-讨论区",
+      "ok": true,
+      "path": "/oa/discussion/list",
+      "note": ""
+    },
+    {
+      "name": "file-企业云盘",
+      "ok": true,
+      "path": "/oa/file",
+      "note": ""
+    },
+    {
+      "name": "mail-inbox-收件箱",
+      "ok": true,
+      "path": "/oa/mail/inbox",
+      "note": ""
+    },
+    {
+      "name": "mail-account-邮箱账号",
+      "ok": true,
+      "path": "/oa/mail/account",
+      "note": ""
+    },
+    {
+      "name": "mail-provider-邮箱服务",
+      "ok": true,
+      "path": "/oa/mail/provider",
+      "note": ""
+    },
+    {
+      "name": "meetingroom-room-会议室",
+      "ok": true,
+      "path": "/oa/meetingroom/room",
+      "note": ""
+    },
+    {
+      "name": "meetingroom-booking-会议室预定",
+      "ok": true,
+      "path": "/oa/meetingroom/booking",
+      "note": ""
+    },
+    {
+      "name": "note-笔记",
+      "ok": true,
+      "path": "/oa/note",
+      "note": ""
+    },
+    {
+      "name": "officialdoc-template-套红模板",
+      "ok": true,
+      "path": "/oa/officialdoc/template",
+      "note": ""
+    },
+    {
+      "name": "officialdoc-send-公文发文",
+      "ok": true,
+      "path": "/oa/officialdoc/send",
+      "note": ""
+    },
+    {
+      "name": "officialdoc-receive-公文收文",
+      "ok": true,
+      "path": "/oa/officialdoc/receive",
+      "note": ""
+    },
+    {
+      "name": "plan-list-计划管理",
+      "ok": true,
+      "path": "/oa/plan/list",
+      "note": ""
+    },
+    {
+      "name": "plan-report-计划报表",
+      "ok": true,
+      "path": "/oa/plan/report",
+      "note": ""
+    },
+    {
+      "name": "process-leave-请假",
+      "ok": true,
+      "path": "/oa/process/leave",
+      "note": ""
+    },
+    {
+      "name": "process-overtime-加班",
+      "ok": true,
+      "path": "/oa/process/overtime",
+      "note": ""
+    },
+    {
+      "name": "process-regular-转正",
+      "ok": true,
+      "path": "/oa/process/regular",
+      "note": ""
+    },
+    {
+      "name": "process-resign-离职",
+      "ok": true,
+      "path": "/oa/process/resign",
+      "note": ""
+    },
+    {
+      "name": "process-reimbursement-报销",
+      "ok": true,
+      "path": "/oa/process/reimbursement",
+      "note": ""
+    },
+    {
+      "name": "schedule-list-日程管理",
+      "ok": true,
+      "path": "/oa/schedule/list",
+      "note": ""
+    },
+    {
+      "name": "schedule-calendar-我的日历",
+      "ok": true,
+      "path": "/oa/schedule/calendar",
+      "note": ""
+    },
+    {
+      "name": "seal-list-印章信息",
+      "ok": true,
+      "path": "/oa/seal/list",
+      "note": ""
+    },
+    {
+      "name": "seal-apply-用印申请",
+      "ok": true,
+      "path": "/oa/seal/apply",
+      "note": ""
+    },
+    {
+      "name": "supply-item-用品管理",
+      "ok": true,
+      "path": "/oa/supply/item",
+      "note": ""
+    },
+    {
+      "name": "supply-apply-领用申请",
+      "ok": true,
+      "path": "/oa/supply/apply",
+      "note": ""
+    },
+    {
+      "name": "supply-issue-发放管理",
+      "ok": true,
+      "path": "/oa/supply/issue",
+      "note": ""
+    },
+    {
+      "name": "task-list-任务管理",
+      "ok": true,
+      "path": "/oa/task/list",
+      "note": ""
+    },
+    {
+      "name": "task-my-我的任务",
+      "ok": true,
+      "path": "/oa/task/my",
+      "note": ""
+    },
+    {
+      "name": "travel-apply-出差申请",
+      "ok": true,
+      "path": "/oa/travel/apply",
+      "note": ""
+    },
+    {
+      "name": "travel-reimbursement-差旅报销",
+      "ok": true,
+      "path": "/oa/travel/reimbursement",
+      "note": ""
+    },
+    {
+      "name": "vehicle-list-车辆信息",
+      "ok": true,
+      "path": "/oa/vehicle/list",
+      "note": ""
+    },
+    {
+      "name": "vehicle-apply-用车申请",
+      "ok": true,
+      "path": "/oa/vehicle/apply",
+      "note": ""
+    },
+    {
+      "name": "vehicle-return-还车申请",
+      "ok": true,
+      "path": "/oa/vehicle/return",
+      "note": ""
+    },
+    {
+      "name": "workreport-my-我的汇报",
+      "ok": true,
+      "path": "/oa/work-report/my",
+      "note": ""
+    },
+    {
+      "name": "workreport-statistics-汇报统计",
+      "ok": true,
+      "path": "/oa/work-report/statistics",
+      "note": ""
+    }
+  ],
+  "pageErrors": []
+}

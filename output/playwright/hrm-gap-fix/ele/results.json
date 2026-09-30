@@ -1,0 +1,26 @@
+{
+  "app": "ele",
+  "checks": {
+    "planList": {
+      "ok": true
+    },
+    "planDetail": {
+      "ok": true,
+      "hasOperateLog": true,
+      "url": "http://127.0.0.1:5777/hrm/performance/plan/detail/36"
+    },
+    "schemeList": {
+      "ok": true,
+      "textHit": true
+    },
+    "schemeCreate": {
+      "ok": true
+    },
+    "groupList": {
+      "ok": true
+    },
+    "groupCreate": {
+      "ok": true
+    }
+  }
+}

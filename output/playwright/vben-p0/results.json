@@ -1,0 +1,670 @@
+[
+  {
+    "app": "antdv-next",
+    "name": "P0-01-pay-cashier",
+    "status": "blocked",
+    "notes": [
+      "未找到预期文本：支付订单",
+      "点击微信扫码后未出现二维码弹窗或明确错误，需人工核查渠道配置"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "Object"
+      }
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/pay/order/submit",
+        "postData": "{\"id\":\"567\",\"channelCode\":\"wx_native\",\"returnUrl\":\"http://127.0.0.1:5999/pay/cashier?id=567\"}"
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-01-pay-cashier.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "P0-02-03-mp-message",
+    "status": "pass",
+    "notes": [],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/mp/message/page?pageNo=1&pageSize=20&accountId=5",
+        "postData": null
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-02-03-mp-message.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "P0-04-erp-stock-move",
+    "status": "fail",
+    "notes": ["产品/仓库 simple-list 请求未完整触发"],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-04-erp-stock-move.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "P0-05-erp-stock-in",
+    "status": "fail",
+    "notes": ["产品/仓库 simple-list 请求未完整触发"],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-05-erp-stock-in.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "P0-06-erp-stock-out",
+    "status": "fail",
+    "notes": ["产品/仓库 simple-list 请求未完整触发"],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-06-erp-stock-out.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "P0-07-erp-stock-check",
+    "status": "fail",
+    "notes": ["产品/仓库 simple-list 请求未完整触发"],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-07-erp-stock-check.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "P0-08-system-menu",
+    "status": "fail",
+    "notes": [
+      "locator.fill: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input').nth(4)\u001b[22m\n\u001b[2m    - locator resolved to <input type=\"radio\" class=\"ant-radio-button-input\"/>\u001b[22m\n\u001b[2m    - fill(\"system/menu\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying fill action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying fill action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    20 × waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying fill action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at Object.testSystemMenu (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:264:15)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:104:9\n    at async runCase (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:101:5)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:350:3"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-08-system-menu.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "P0-09-im-face-pack",
+    "status": "fail",
+    "notes": ["抽屉打开后未触发表情列表请求"],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-09-im-face-pack.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "P0-10-infra-file-config",
+    "status": "blocked",
+    "notes": ["未捕获 update-master 请求，可能 PopConfirm 未确认成功"],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/antdv-next-P0-10-infra-file-config.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-01-pay-cashier",
+    "status": "blocked",
+    "notes": [
+      "未找到预期文本：支付订单",
+      "点击微信扫码后未出现二维码弹窗或明确错误，需人工核查渠道配置"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "Object"
+      }
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/pay/order/submit",
+        "postData": "{\"id\":\"567\",\"channelCode\":\"wx_native\",\"returnUrl\":\"http://127.0.0.1:5777/pay/cashier?id=567\"}"
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-01-pay-cashier.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-02-03-mp-message",
+    "status": "pass",
+    "notes": [],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/mp/message/page?pageNo=1&pageSize=20&accountId=5",
+        "postData": null
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-02-03-mp-message.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-04-erp-stock-move",
+    "status": "fail",
+    "notes": [
+      "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.ant-select-selector, .el-select__wrapper').first()\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"-1\" class=\"el-select__wrapper el-tooltip__trigger el-tooltip__trigger\">…</div>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    19 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at Object.testErpStock (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:221:25)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:104:9\n    at async runCase (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:101:5)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:326:3"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-04-erp-stock-move.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-05-erp-stock-in",
+    "status": "fail",
+    "notes": [
+      "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.ant-select-selector, .el-select__wrapper').first()\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"-1\" class=\"el-select__wrapper el-tooltip__trigger el-tooltip__trigger\">…</div>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <label data-error=\"false\" data-slot=\"form-label\" for=\"reka-v-43-form-item\" class=\"gap-2 text-sm font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 items-center flex leading-6 mb-1 flex-row\">…</label> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  4 × retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <label data-error=\"false\" data-slot=\"form-label\" for=\"reka-v-43-form-item\" class=\"gap-2 text-sm font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 items-center flex leading-6 mb-1 flex-row\">…</label> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <label data-error=\"false\" data-slot=\"form-label\" for=\"reka-v-43-form-item\" class=\"gap-2 text-sm font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 items-center flex leading-6 mb-1 flex-row\">…</label> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\n    at Object.testErpStock (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:221:25)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:104:9\n    at async runCase (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:101:5)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:332:3"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-05-erp-stock-in.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-06-erp-stock-out",
+    "status": "fail",
+    "notes": [
+      "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.ant-select-selector, .el-select__wrapper').first()\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"-1\" class=\"el-select__wrapper el-tooltip__trigger el-tooltip__trigger\">…</div>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    19 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-37\" aria-describedby=\"reka-dialog-description-v-38\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at Object.testErpStock (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:221:25)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:104:9\n    at async runCase (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:101:5)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:338:3"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-06-erp-stock-out.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-07-erp-stock-check",
+    "status": "fail",
+    "notes": [
+      "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.ant-select-selector, .el-select__wrapper').first()\u001b[22m\n\u001b[2m    - locator resolved to <div tabindex=\"-1\" class=\"el-select__wrapper el-tooltip__trigger el-tooltip__trigger\">…</div>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-35\" aria-describedby=\"reka-dialog-description-v-36\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-35\" aria-describedby=\"reka-dialog-description-v-36\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    19 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div data-slot=\"form-item\" class=\"form-is-required flex-col pb-4 relative flex shrink-0\">…</div> from <div id=\"\" tabindex=\"-1\" role=\"dialog\" appendto=\"body\" data-state=\"open\" closeclass=\"top-3\" closedisabled=\"false\" data-dismissable-layer=\"\" data-slot=\"dialog-content\" aria-labelledby=\"reka-dialog-title-v-35\" aria-describedby=\"reka-dialog-description-v-36\" class=\"z-popup bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 shadow-lg outline-hidden sm:rounded-x…>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at Object.testErpStock (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:221:25)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:104:9\n    at async runCase (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:101:5)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:344:3"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-07-erp-stock-check.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-08-system-menu",
+    "status": "fail",
+    "notes": [
+      "locator.fill: Error: Input of type \"radio\" cannot be filled\nCall log:\n\u001b[2m  - waiting for locator('input').nth(4)\u001b[22m\n\u001b[2m    - locator resolved to <input value=\"2\" name=\"type\" type=\"radio\" class=\"el-radio__original\"/>\u001b[22m\n\u001b[2m    - fill(\"system/menu\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\n    at Object.testSystemMenu (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:264:15)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:104:9\n    at async runCase (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:101:5)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:350:3"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-08-system-menu.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-09-im-face-pack",
+    "status": "fail",
+    "notes": ["未找到预期文本：表情包", "未找到管理表情按钮"],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-09-im-face-pack.png"
+  },
+  {
+    "app": "ele",
+    "name": "P0-10-infra-file-config",
+    "status": "fail",
+    "notes": [
+      "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('确定').first()\u001b[22m\n\u001b[2m    - locator resolved to <span class=\"\">确定</span>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    19 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at clickFirstByText (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:153:21)\n    at async Object.testInfraFileConfig (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:308:3)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:104:9\n    at async runCase (/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:101:5)\n    at async file:///Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/run-vben-p0-smoke.mjs:352:3"
+    ],
+    "console": [
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      },
+      {
+        "type": "warning",
+        "text": "[StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry."
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 库存管理, id: 6440 Proxy(Object)"
+      },
+      {
+        "type": "error",
+        "text": "menu name duplicate: 基础数据, id: 5101 Proxy(Object)"
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0/ele-P0-10-infra-file-config.png"
+  }
+]

@@ -1,0 +1,62 @@
+{
+  "generatedAt": "2026-09-17T16:28:33.991Z",
+  "results": [
+    {
+      "tag": "antd",
+      "name": "01-通讯录我共享的列",
+      "ok": true,
+      "screenshot": "antd-recheck-01-contact-shared.png",
+      "note": "列头齐全: 姓名|分类|手机号码|邮箱|公司名称|创建人|接收人|共享时间|处理状态|操作|姓名|分类|手机号码|邮箱|公司名称|创建人|接收人|共享时间|处理状态|操作"
+    },
+    {
+      "tag": "antd",
+      "name": "02-工作汇报页签表头切换",
+      "ok": true,
+      "screenshot": "antd-recheck-02-workreport-daily.png, antd-recheck-02-workreport-weekly.png, antd-recheck-02-workreport-monthly.png",
+      "note": "日报列=单据编号|状态|汇报类型|汇报标题|开始日期|结束日期|申请人|申请部门|创建时间|操作|单据编号|状态|汇报类型|汇报标题|开始日期|结束日期|申请人|申请部门|创建时间|操作 || 周报列=单据编号|状态|汇报类型|汇报周次|汇报标题|开始日期|结束日期|申请人|申请部门|创建时间|操作|单据编号|状态|汇报类型|汇报周次|汇报标题|开始日期|结束日期|申请人|申请部门|创建时间|操作 || 月报列=单据编号|状态|汇报类型|汇报月份|汇报标题|开始日期|结束日期|申请人|申请部门|创建时间|操作|单据编号|状态|汇报类型|汇报月份|汇报标题|开始日期|结束日期|申请人|申请部门|创建时间|操作"
+    },
+    {
+      "tag": "antd",
+      "name": "03-考勤周报日期列跟随切换",
+      "ok": true,
+      "screenshot": "antd-recheck-03-week-report-current.png, antd-recheck-03-week-report-search.png, antd-recheck-03-week-report-prevbtn.png",
+      "note": "初始周=09-14,09-15,09-16,09-17,09-18,09-19,09-20 || 搜索 2026-09-07 周后=09-07,09-08,09-09,09-10,09-11,09-12,09-13（跟随=true）|| 附加：点「上一周」后=09-07,09-08,09-09,09-10,09-11,09-12,09-13（按钮生效=false）"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-通讯录我共享的列",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-01-contact-shared.png",
+      "note": "列头齐全: 姓名|分类|手机号码|邮箱|公司名称|创建人|接收人|共享时间|处理状态|操作|姓名|分类|手机号码|邮箱|公司名称|创建人|接收人|共享时间|处理状态|操作"
+    },
+    {
+      "tag": "ele",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "ele",
+      "name": "01-通讯录我共享的列",
+      "ok": true,
+      "screenshot": "ele-recheck-01-contact-shared.png",
+      "note": "列头齐全: 姓名|分类|手机号码|邮箱|公司名称|创建人|接收人|共享时间|处理状态|操作|姓名|分类|手机号码|邮箱|公司名称|创建人|接收人|共享时间|处理状态|操作"
+    },
+    {
+      "tag": "antd",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antd",
+      "name": "04-周报上一周本周按钮",
+      "ok": true,
+      "screenshot": "antd-recheck-04-week-report-current.png, antd-recheck-04-week-report-prev.png, antd-recheck-04-week-report-today.png",
+      "note": "初始列头首日=周一 09-14 || 上一周后=周一 09-07（预期 周一 09-07，请求=2026-09-07）|| 本周后=周一 09-14（预期 周一 09-14，请求=2026-09-14）"
+    }
+  ]
+}

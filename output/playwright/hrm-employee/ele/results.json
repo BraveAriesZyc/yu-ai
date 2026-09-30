@@ -1,0 +1,53 @@
+{
+  "app": "ele",
+  "list": {
+    "ok": true,
+    "hasTitle": true,
+    "pageOk": true,
+    "countOk": true,
+    "url": "http://127.0.0.1:5777/hrm/employee/list",
+    "firstEmployeeId": 73,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/employee/modules/regular-form.vue?t=1785806470371",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/employee/modules/transfer-form.vue?t=1785806470371",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/api/hrm/employee/config/index.ts?t=1785802809416",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/employee/components/employee-select.vue?t=1785802809500",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/api/hrm/employee/quit-info/index.ts?t=1785802809416",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/employee/components/employee-select-dialog.vue?t=1785802809500",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/employee/status-count?statusCategory=12",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/employee/page?pageNo=1&pageSize=20&statusCategory=12",
+        "status": 200
+      }
+    ]
+  },
+  "createModal": {
+    "ok": true
+  },
+  "detail": {
+    "ok": true,
+    "url": "http://127.0.0.1:5777/hrm/employee/detail/73",
+    "getOk": true
+  }
+}

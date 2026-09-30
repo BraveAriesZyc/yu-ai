@@ -1,0 +1,18 @@
+{
+  "app": "antdv-next",
+  "overview": {
+    "ok": true,
+    "hasOverviewTab": true,
+    "overviewOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5999/admin-api/hrm/attendance/statistics/month-daily-page?pageNo=1&pageSize=10&month=8&year=2026",
+        "status": 200
+      }
+    ]
+  },
+  "record": {
+    "ok": true,
+    "recordPageOk": true
+  }
+}

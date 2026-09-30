@@ -1,0 +1,178 @@
+{
+  "app": "ele",
+  "pages": [
+    {
+      "id": "#20-group",
+      "path": "/hrm/salary/config/group",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": {
+        "ok": true
+      },
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/salary/group/page?pageNo=1&pageSize=20",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#20-tax-rule",
+      "path": "/hrm/salary/config/tax-rule",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": {
+        "ok": true
+      },
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/salary/tax-rule/list",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#21",
+      "path": "/hrm/salary/config/config",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": null,
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/salary/config/get",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#22",
+      "path": "/hrm/salary/config/option",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": null,
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/salary/option/list",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#23",
+      "path": "/hrm/salary/config/change-template",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": {
+        "ok": true
+      },
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/salary/change-template/list",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#24",
+      "path": "/hrm/insurance/config/scheme",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": {
+        "ok": true
+      },
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/insurance/scheme/list",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#25-group",
+      "path": "/hrm/attendance/config/group",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": {
+        "ok": true
+      },
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/attendance/group/page?pageNo=1&pageSize=20",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#25-holiday",
+      "path": "/hrm/attendance/config/holiday",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": {
+        "ok": true
+      },
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/attendance/holiday/page?pageNo=1&pageSize=20",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#26-channel",
+      "path": "/hrm/recruit/settings/channel",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": {
+        "ok": true
+      },
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/recruit/channel/page?pageNo=1&pageSize=20",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#26-eliminate",
+      "path": "/hrm/recruit/settings/eliminate-reason",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": null,
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/recruit/config/eliminate-reason/list",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "id": "#27",
+      "path": "/hrm/employee/config",
+      "ok": true,
+      "hasTitle": true,
+      "pageOk": true,
+      "createModal": null,
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/employee/config/create-field/list?entryStatus=1",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/employee/config/create-field/list?entryStatus=2",
+          "status": 200
+        }
+      ]
+    }
+  ],
+  "error": null
+}

@@ -1,0 +1,25 @@
+{
+  "app": "ele",
+  "employeeInfo": {
+    "hasTitle": true,
+    "apiOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/salary/employee-info/page?pageNo=1&pageSize=20&statusCategory=11",
+        "status": 200
+      }
+    ],
+    "ok": true
+  },
+  "slipSendRecord": {
+    "hasTitle": true,
+    "apiOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/salary/slip-send-record/page?pageNo=1&pageSize=20&year=2026&month=8",
+        "status": 200
+      }
+    ],
+    "ok": true
+  }
+}
