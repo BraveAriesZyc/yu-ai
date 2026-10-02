@@ -1,0 +1,146 @@
+[
+  {
+    "app": "antdv-next",
+    "route": "/im/face/pack",
+    "actualPath": "/im/face/pack",
+    "titleHits": {
+      "facePack": true,
+      "sensitive": true,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n数据统计\n私聊管理\n群聊管理\n通话记录\n敏感词管理\n表情管理\n系统表情\n用户表情\n频道管理\nIM 即时通讯\n表情管理\n系统表情\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n表情包\n状态\n请选择状态\n创建时间\n重 置\n搜 索\n收起\n表情包列表\n新增表情包\n批量删除\n\t\n编号\n\t\n封面\n\t\n名称\n\t\n排序\n\t\n状态\n\t\n创建时间\n\t\n操作\n\t\n1"
+  },
+  {
+    "app": "antdv-next",
+    "route": "/im/manager/face/pack",
+    "actualPath": "/im/manager/face/pack",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": false,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "哎呀！未找到页面\n\n抱歉，我们无法找到您要找的页面。\n\n返回首页"
+  },
+  {
+    "app": "antdv-next",
+    "route": "/im/sensitive-word",
+    "actualPath": "/im/sensitive-word",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": true,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n数据统计\n私聊管理\n群聊管理\n通话记录\n敏感词管理\n表情管理\n频道管理\nIM 即时通讯\n敏感词管理\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n敏感词管理\n敏感词\n状态\n请选择状态\n创建时间\n重 置\n搜 索\n收起\n敏感词列表\n新增敏感词\n批量删除\n\t\n编号\n\t\n敏感词\n\t\n状态\n\t\n创建人\n\t\n创建时间\n\t\n操作\n\t\n30003\n\t\n屏蔽词示"
+  },
+  {
+    "app": "antdv-next",
+    "route": "/infra/file-config",
+    "actualPath": "/infra/file-config",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": false,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "哎呀！未找到页面\n\n抱歉，我们无法找到您要找的页面。\n\n返回首页"
+  },
+  {
+    "app": "antdv-next",
+    "route": "/infra/file/file-config",
+    "actualPath": "/infra/file/file-config",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": true,
+      "fileConfig": true,
+      "notFound": false
+    },
+    "firstText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n代码生成\n代码生成案例\n数据源配置\n表单构建\nAPI 接口\nAPI 日志\nWebSocket\n文件管理\n文件配置\n文件列表\n定时任务\n配置管理\n监控中心\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n基础设施\n文件管理\n文件配置\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n敏感词管理\n文件配置\n配置名\n存储器\n请选择存储器\n创建时间\n重 置\n搜 索\n收起\n文件配置列表\n新增文件配置\n批量"
+  },
+  {
+    "app": "antdv-next",
+    "route": "/infra/fileConfig",
+    "actualPath": "/infra/fileConfig",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": false,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "哎呀！未找到页面\n\n抱歉，我们无法找到您要找的页面。\n\n返回首页"
+  },
+  {
+    "app": "ele",
+    "route": "/im/face/pack",
+    "actualPath": "/im/face/pack",
+    "titleHits": {
+      "facePack": true,
+      "sensitive": true,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n数据统计\n私聊管理\n群聊管理\n通话记录\n敏感词管理\n表情管理\n系统表情\n用户表情\n频道管理\nIM 即时通讯\n表情管理\n系统表情\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n表情包\n状态\n请选择状态\n创建时间\n-\n重置\n搜索\n收起\n表情包列表\n新增表情包\n批量删除\n\t\n编号\n\t\n封面\n\t\n名称\n\t\n排序\n\t\n状态\n\t\n创建时间\n\t\n操作\n\t\n1"
+  },
+  {
+    "app": "ele",
+    "route": "/im/manager/face/pack",
+    "actualPath": "/im/manager/face/pack",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": false,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "哎呀！未找到页面\n\n抱歉，我们无法找到您要找的页面。\n\n返回首页"
+  },
+  {
+    "app": "ele",
+    "route": "/im/sensitive-word",
+    "actualPath": "/im/sensitive-word",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": true,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n数据统计\n私聊管理\n群聊管理\n通话记录\n敏感词管理\n表情管理\n频道管理\nIM 即时通讯\n敏感词管理\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n敏感词管理\n敏感词\n状态\n请选择状态\n创建时间\n-\n重置\n搜索\n收起\n敏感词列表\n新增敏感词\n批量删除\n\t\n编号\n\t\n敏感词\n\t\n状态\n\t\n创建人\n\t\n创建时间\n\t\n操作\n\t\n30003\n\t\n屏蔽词示"
+  },
+  {
+    "app": "ele",
+    "route": "/infra/file-config",
+    "actualPath": "/infra/file-config",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": false,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "哎呀！未找到页面\n\n抱歉，我们无法找到您要找的页面。\n\n返回首页"
+  },
+  {
+    "app": "ele",
+    "route": "/infra/file/file-config",
+    "actualPath": "/infra/file/file-config",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": true,
+      "fileConfig": true,
+      "notFound": false
+    },
+    "firstText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n代码生成\n代码生成案例\n数据源配置\n表单构建\nAPI 接口\nAPI 日志\nWebSocket\n文件管理\n文件配置\n文件列表\n定时任务\n配置管理\n监控中心\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n基础设施\n文件管理\n文件配置\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n敏感词管理\n文件配置\n配置名\n存储器\n请选择存储器\n创建时间\n-\n重置\n搜索\n收起\n文件配置列表\n新增文件配置\n批量"
+  },
+  {
+    "app": "ele",
+    "route": "/infra/fileConfig",
+    "actualPath": "/infra/fileConfig",
+    "titleHits": {
+      "facePack": false,
+      "sensitive": false,
+      "fileConfig": false,
+      "notFound": false
+    },
+    "firstText": "哎呀！未找到页面\n\n抱歉，我们无法找到您要找的页面。\n\n返回首页"
+  }
+]

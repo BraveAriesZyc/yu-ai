@@ -1,0 +1,41 @@
+{
+  "app": "ele",
+  "list": {
+    "ok": true,
+    "hasTitle": true,
+    "pageOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/recruit/channel/index.vue",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/api/hrm/recruit/channel/index.ts?t=1785770659577",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/recruit/channel/data.ts",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/recruit/channel/modules/delete-form.vue",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/recruit/channel/modules/form.vue",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/src/views/hrm/recruit/channel/components/channel-select.vue",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/recruit/channel/page?pageNo=1&pageSize=20",
+        "status": 200
+      }
+    ]
+  },
+  "createModal": {
+    "ok": true
+  }
+}

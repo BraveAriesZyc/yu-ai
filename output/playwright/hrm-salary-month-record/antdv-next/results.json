@@ -1,0 +1,33 @@
+{
+  "app": "antdv-next",
+  "list": {
+    "ok": true,
+    "hasPageTitle": true,
+    "lastOk": true,
+    "emptyState": false,
+    "hasEmployeeApi": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5999/admin-api/hrm/salary/month-record/last",
+        "status": 200,
+        "kind": "last"
+      },
+      {
+        "url": "http://127.0.0.1:5999/admin-api/hrm/salary/month-record/payroll-readiness?monthRecordId=22",
+        "status": 200,
+        "kind": "readiness"
+      },
+      {
+        "url": "http://127.0.0.1:5999/admin-api/hrm/salary/month-employee-record/page?employeeChangeType=0&monthRecordId=22&pageNo=1&pageSize=20",
+        "status": 200,
+        "kind": "employee-page"
+      },
+      {
+        "url": "http://127.0.0.1:5999/admin-api/hrm/salary/month-record/payroll-readiness?monthRecordId=22",
+        "status": 200,
+        "kind": "readiness"
+      }
+    ]
+  },
+  "url": "http://127.0.0.1:5999/hrm/salary/month-record"
+}

@@ -1,0 +1,41 @@
+{
+  "app": "antd",
+  "list": {
+    "ok": true,
+    "hasTitle": true,
+    "pageOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/recruit/channel/index.vue",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/api/hrm/recruit/channel/index.ts?t=1785770659569",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/recruit/channel/data.ts",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/recruit/channel/modules/delete-form.vue?t=1785771200830",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/recruit/channel/modules/form.vue",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/src/views/hrm/recruit/channel/components/channel-select.vue?t=1785771199147",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5666/admin-api/hrm/recruit/channel/page?pageNo=1&pageSize=20",
+        "status": 200
+      }
+    ]
+  },
+  "createModal": {
+    "ok": true
+  }
+}

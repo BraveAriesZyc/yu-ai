@@ -1,0 +1,20 @@
+{
+  "app": "antdv-next",
+  "list": {
+    "ok": true,
+    "hasTitle": true,
+    "listOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5999/admin-api/hrm/recruit/config/eliminate-reason/list",
+        "status": 200
+      }
+    ],
+    "url": "http://127.0.0.1:5999/hrm/recruit/settings/eliminate-reason"
+  },
+  "addRow": {
+    "ok": true,
+    "beforeInputs": 4,
+    "afterInputs": 5
+  }
+}

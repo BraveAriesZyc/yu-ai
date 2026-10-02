@@ -1,0 +1,51 @@
+[
+  {
+    "kind": "btn",
+    "text": "上 月",
+    "letterSpacing": "normal",
+    "fontSize": "14px",
+    "padding": "0px 7px"
+  },
+  {
+    "kind": "btn",
+    "text": "今 天",
+    "letterSpacing": "normal",
+    "fontSize": "14px",
+    "padding": "0px 7px"
+  },
+  {
+    "kind": "btn",
+    "text": "下 月",
+    "letterSpacing": "normal",
+    "fontSize": "14px",
+    "padding": "0px 7px"
+  },
+  {
+    "kind": "btn",
+    "text": "添加备忘录",
+    "letterSpacing": "normal",
+    "fontSize": "14px",
+    "padding": "4px 15px"
+  },
+  {
+    "kind": "empty",
+    "w": 318,
+    "h": 72
+  },
+  {
+    "kind": "cell",
+    "w": 47.703125,
+    "h": 42,
+    "text": "27\n十四"
+  },
+  {
+    "kind": "salaryCard",
+    "h": 405,
+    "w": 784
+  },
+  {
+    "kind": "page",
+    "scrollWidth": 1440,
+    "clientWidth": 1440
+  }
+]

@@ -1,0 +1,309 @@
+[
+  {
+    "app": "antdv-next",
+    "actualPath": "/im/face/pack",
+    "clicked": true,
+    "manageLocators": 4,
+    "beforeHasPackList": true,
+    "afterHasItemList": true,
+    "requests": [
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/im/manager/face-pack/page?pageNo=1&pageSize=20",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 3,
+            "list": [
+              {
+                "id": 1,
+                "name": "微笑表情",
+                "icon": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                "sort": 11,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 2,
+                "name": "日常情绪",
+                "icon": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f914.png",
+                "sort": 20,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 3,
+                "name": "点赞鼓励",
+                "icon": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f44d.png",
+                "sort": 30,
+                "status": 0,
+                "createTime": 1778098469000
+              }
+            ]
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/im/manager/face-pack-item/page?pageNo=1&pageSize=20&packId=1",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 5,
+            "list": [
+              {
+                "id": 1,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                "name": "微笑",
+                "width": 72,
+                "height": 72,
+                "sort": 10,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 2,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f602.png",
+                "name": "大笑",
+                "width": 72,
+                "height": 72,
+                "sort": 20,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 3,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60a.png",
+                "name": "害羞",
+                "width": 72,
+                "height": 72,
+                "sort": 30,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 4,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f923.png",
+                "name": "哈哈",
+                "width": 72,
+                "height": 72,
+                "sort": 40,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 5,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60d.png",
+                "name": "爱你",
+                "width": 72,
+                "height": 72,
+                "sort": 50,
+                "status": 0,
+                "createTime": 1778098469000
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "beforeText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n数据统计\n私聊管理\n群聊管理\n通话记录\n敏感词管理\n表情管理\n系统表情\n用户表情\n频道管理\nIM 即时通讯\n表情管理\n系统表情\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n表情包\n状态\n请选择状态\n创建时间\n重 置\n搜 索\n收起\n表情包列表\n新增表情包\n批量删除\n\t\n编号\n\t\n封面\n\t\n名称\n\t\n排序\n\t\n状态\n\t\n创建时间\n\t\n操作\n\t\n1\n\t\n\t\n微笑表情\n\t\n11\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n\n\n\t\n2\n\t\n\t\n日常情绪\n\t\n20\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n\n\n\t\n3\n\t\n\t\n点赞鼓励\n\t\n30\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n共 3 条记录\n1",
+    "afterText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n数据统计\n私聊管理\n群聊管理\n通话记录\n敏感词管理\n表情管理\n系统表情\n用户表情\n频道管理\nIM 即时通讯\n表情管理\n系统表情\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n表情包\n状态\n请选择状态\n创建时间\n重 置\n搜 索\n收起\n表情包列表\n新增表情包\n批量删除\n\t\n编号\n\t\n封面\n\t\n名称\n\t\n排序\n\t\n状态\n\t\n创建时间\n\t\n操作\n\t\n1\n\t\n\t\n微笑表情\n\t\n11\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n\n\n\t\n2\n\t\n\t\n日常情绪\n\t\n20\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n\n\n\t\n3\n\t\n\t\n点赞鼓励\n\t\n30\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n共 3 条记录\n1\n「微笑表情」表情管理\n表情名\n状态\n请选择状态\n重 置\n搜 索\n收起\n表情列表\n新增表情\n批量删除\n\t\n编号\n\t\n表情图\n\t\n表情名\n\t\n尺寸\n\t\n排序\n\t\n状态\n\t\n操作\n\t\n1\n\t\n\t\n微笑\n\t\n72 × 72\n\t\n10\n\t\n"
+  },
+  {
+    "app": "ele",
+    "actualPath": "/im/face/pack",
+    "clicked": true,
+    "manageLocators": 4,
+    "beforeHasPackList": true,
+    "afterHasItemList": true,
+    "requests": [
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/im/manager/face-pack/page?pageNo=1&pageSize=20",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 3,
+            "list": [
+              {
+                "id": 1,
+                "name": "微笑表情",
+                "icon": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                "sort": 11,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 2,
+                "name": "日常情绪",
+                "icon": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f914.png",
+                "sort": 20,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 3,
+                "name": "点赞鼓励",
+                "icon": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f44d.png",
+                "sort": 30,
+                "status": 0,
+                "createTime": 1778098469000
+              }
+            ]
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/im/manager/face-pack-item/page?pageNo=1&pageSize=20&packId=1",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 5,
+            "list": [
+              {
+                "id": 1,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                "name": "微笑",
+                "width": 72,
+                "height": 72,
+                "sort": 10,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 2,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f602.png",
+                "name": "大笑",
+                "width": 72,
+                "height": 72,
+                "sort": 20,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 3,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60a.png",
+                "name": "害羞",
+                "width": 72,
+                "height": 72,
+                "sort": 30,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 4,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f923.png",
+                "name": "哈哈",
+                "width": 72,
+                "height": 72,
+                "sort": 40,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 5,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60d.png",
+                "name": "爱你",
+                "width": 72,
+                "height": 72,
+                "sort": 50,
+                "status": 0,
+                "createTime": 1778098469000
+              }
+            ]
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/im/manager/face-pack-item/page?pageNo=1&pageSize=20&packId=1",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 5,
+            "list": [
+              {
+                "id": 1,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                "name": "微笑",
+                "width": 72,
+                "height": 72,
+                "sort": 10,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 2,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f602.png",
+                "name": "大笑",
+                "width": 72,
+                "height": 72,
+                "sort": 20,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 3,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60a.png",
+                "name": "害羞",
+                "width": 72,
+                "height": 72,
+                "sort": 30,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 4,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f923.png",
+                "name": "哈哈",
+                "width": 72,
+                "height": 72,
+                "sort": 40,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 5,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60d.png",
+                "name": "爱你",
+                "width": 72,
+                "height": 72,
+                "sort": 50,
+                "status": 0,
+                "createTime": 1778098469000
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "beforeText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n数据统计\n私聊管理\n群聊管理\n通话记录\n敏感词管理\n表情管理\n系统表情\n用户表情\n频道管理\nIM 即时通讯\n表情管理\n系统表情\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n表情包\n状态\n请选择状态\n创建时间\n-\n重置\n搜索\n收起\n表情包列表\n新增表情包\n批量删除\n\t\n编号\n\t\n封面\n\t\n名称\n\t\n排序\n\t\n状态\n\t\n创建时间\n\t\n操作\n\t\n1\n\t\n\t\n微笑表情\n\t\n11\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n\n\n\t\n2\n\t\n\t\n日常情绪\n\t\n20\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n\n\n\t\n3\n\t\n\t\n点赞鼓励\n\t\n30\n\t\n开启\n\t\n2026-05-06 13:14:29\n\t\n管理表情\n修改\n删除\n共 3 条记录\n1",
+    "afterText": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n数据统计\n私聊管理\n群聊管理\n通话记录\n敏感词管理\n表情管理\n系统表情\n用户表情\n频道管理\nIM 即时通讯\n表情管理\n系统表情\n请选择租户\n搜索\n⌘ K\n分析页\n系统表情\n「微笑表情」表情管理\n表情名\n状态\n请选择状态\n重置\n搜索\n收起\n表情列表\n新增表情\n批量删除\n\t\n编号\n\t\n表情图\n\t\n表情名\n\t\n尺寸\n\t\n排序\n\t\n状态\n\t\n\t\n1\n\t\n\t\n微笑\n\t\n72 × 72\n\t\n10\n\t\n开启\n\t\n\n\t\n2\n\t\n\t\n大笑\n\t\n72 × 72\n\t\n20\n\t\n开启\n\t\n\n\t\n3\n\t\n\t\n害羞\n\t\n72 × 72\n\t\n30\n\t\n开启\n\t\n\n\t\n4\n\t\n\t\n哈哈\n\t\n72 × 72\n\t\n40\n\t\n开启\n\t\n\n\t\n5\n\t\n\t\n爱你\n\t\n72 × 72\n\t\n50\n\t\n开启\n\t\n操作\n修改\n删除\n\n\n修改\n删除\n\n\n修改\n删除\n\n\n修改\n删除\n\n\n修改\n删除\n共 5 条记录\n1\n表情包\n状态\n请选择状态\n创建时间\n-\n重置\n搜索\n收起\n表情包列表\n新增表情包\n批量删除\n\t\n编号\n\t\n封面\n\t\n名称\n\t\n排序\n\t\n状态\n\t\n创建时间\n\t\n操作\n\t"
+  }
+]

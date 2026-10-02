@@ -1,0 +1,139 @@
+{
+  "generatedAt": "2026-09-18T12:11:33.904Z",
+  "results": [
+    {
+      "tag": "antd",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antd",
+      "name": "01-用车申请车辆选择弹窗",
+      "ok": true,
+      "screenshot": "antd-01-vehicle-apply-select.png",
+      "note": "只读=true，弹窗标题=选择车辆，缺搜索项=无，缺列=无，确定禁用(未选)=true，行数=12，选中后可用=true，回填=true，清空=true"
+    },
+    {
+      "tag": "antd",
+      "name": "02-请假表单与详情天数",
+      "ok": true,
+      "screenshot": "antd-02-leave-form.png, antd-02-leave-detail.png",
+      "note": "申请原因textarea=maxlength=5000，天数禁用=true，天数后缀=天，详情天数文本=true"
+    },
+    {
+      "tag": "antd",
+      "name": "02-加班表单与详情天数",
+      "ok": true,
+      "screenshot": "antd-02-overtime-form.png, antd-02-overtime-detail.png",
+      "note": "申请原因textarea=maxlength=5000，天数禁用=true，天数后缀=天，详情天数文本=true"
+    },
+    {
+      "tag": "antd",
+      "name": "03-转正申请textarea长度限制",
+      "ok": true,
+      "screenshot": "antd-03-regular-form.png",
+      "note": "textarea数量=6（预期6），maxlength=255,255,255,255,255,255"
+    },
+    {
+      "tag": "antd",
+      "name": "04-发文表单第几号文",
+      "ok": true,
+      "screenshot": "antd-04-officialdoc-sequence.png",
+      "note": "新建时值=空，min=1"
+    },
+    {
+      "tag": "antd",
+      "name": "05-用印申请详情条件显隐",
+      "ok": true,
+      "screenshot": "antd-05-seal-apply-detail.png",
+      "note": "复测通过（recheck-05.mjs，主表格选择器修正后逐行验证6行，覆盖四种组合）：行1: 其他用印/现场用印(无合同字段,无归还字段,一致)；行2: 证明用印/现场用印(一致)；行3: 合同用印/现场用印(有合同字段,无归还字段,一致)；行4: 协议用印/外借(无合同字段,有归还字段,一致)；行5: 合同用印/外借(有合同字段,有归还字段,一致)；行6: 其他用印/外借(一致)；pageerror 无"
+    },
+    {
+      "tag": "antd",
+      "name": "06-工作汇报表单新增按钮",
+      "ok": true,
+      "screenshot": "antd-06-workreport-form.png",
+      "note": "新增工作项=true(禁用=false)，新增计划项=true(禁用=false)，点击加行=true"
+    },
+    {
+      "tag": "antd",
+      "name": "06-工作汇报统计已填明细",
+      "ok": true,
+      "screenshot": "antd-06-workreport-statistics-detail.png",
+      "note": "列表已填计数=0，弹窗tab=已填 0"
+    },
+    {
+      "tag": "antd",
+      "name": "07-我的公告转发",
+      "ok": true,
+      "screenshot": "antd-07-announcement-my.png",
+      "note": "确认文案=true，点击后提示=无（旧后端接口缺失时报错提示属预期）"
+    },
+    {
+      "tag": "antd",
+      "name": "08-云盘权限表单提示",
+      "ok": true,
+      "screenshot": "antd-08-file-permission-form.png",
+      "note": "权限图标=true，继承权限图标=true，悬停tooltip=true（查看权限仅可查看文件信息，预览和下载需选择更高权限；管理权限可改名、编辑和管理共）；labels=||共享类型|共享对象|权限(i)|继承权限(i)|到期时间"
+    },
+    {
+      "tag": "antd",
+      "name": "08-云盘下载blob",
+      "ok": true,
+      "screenshot": "antd-08-file-download.png",
+      "note": "下载事件=true，文件名=项目管理功能总览.png"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-用车申请车辆选择弹窗",
+      "ok": true,
+      "screenshot": "antdv-next-01-vehicle-apply-select.png",
+      "note": "只读=true，弹窗标题=选择车辆，缺搜索项=无，缺列=无，确定禁用(未选)=true，行数=12，选中后可用=true，回填=true，清空=true"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "02-请假表单与详情天数",
+      "ok": false,
+      "screenshot": "antdv-next-02-leave-form.png, antdv-next-02-leave-detail.png",
+      "note": "申请原因textarea=未渲染，天数禁用=true，天数后缀=天，详情天数文本=true"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "02-加班表单与详情天数",
+      "ok": false,
+      "screenshot": "antdv-next-02-overtime-form.png, antdv-next-02-overtime-detail.png",
+      "note": "申请原因textarea=未渲染，天数禁用=true，天数后缀=天，详情天数文本=true"
+    },
+    {
+      "tag": "ele",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "ele",
+      "name": "01-用车申请车辆选择弹窗",
+      "ok": true,
+      "screenshot": "ele-01-vehicle-apply-select.png",
+      "note": "只读=true，弹窗标题=选择车辆，缺搜索项=无，缺列=无，确定禁用(未选)=true，行数=12，选中后可用=true，回填=true，清空=true"
+    },
+    {
+      "tag": "ele",
+      "name": "02-请假表单与详情天数",
+      "ok": true,
+      "screenshot": "ele-02-leave-form.png, ele-02-leave-detail.png",
+      "note": "申请原因textarea=maxlength=5000，天数禁用=true，天数后缀=天，详情天数文本=true"
+    },
+    {
+      "tag": "ele",
+      "name": "02-加班表单与详情天数",
+      "ok": true,
+      "screenshot": "ele-02-overtime-form.png, ele-02-overtime-detail.png",
+      "note": "申请原因textarea=maxlength=5000，天数禁用=true，天数后缀=天，详情天数文本=true"
+    }
+  ]
+}

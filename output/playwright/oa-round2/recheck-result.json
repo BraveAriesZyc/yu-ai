@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-09-18T12:29:37.533Z",
+  "results": [
+    {
+      "tag": "antdv-next",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-请假表单textarea",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-leave-form.png",
+      "note": "请输入申请原因: 渲染=true，maxlength=5000(期望5000)，截断实测=true"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-加班表单textarea",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-overtime-form.png",
+      "note": "请输入申请原因: 渲染=true，maxlength=5000(期望5000)，截断实测=true"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-报销表单textarea",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-reimbursement-form.png",
+      "note": "请输入申请原因: 渲染=true，maxlength=5000(期望5000)，截断实测=true"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-离职表单textarea",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-resign-form.png",
+      "note": "请输入未完成事宜: 渲染=true，maxlength=无(期望无)；请输入申请原因: 渲染=true，maxlength=5000(期望5000)，截断实测=true"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-转正表单六个textarea",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-regular-form.png",
+      "note": "请输入试用期心得: 渲染=true，maxlength=255(期望255)，截断实测=true；请输入岗位职责理解: 渲染=true，maxlength=255(期望255)，截断实测=true；请输入试用期成长: 渲染=true，maxlength=255(期望255)，截断实测=true；请输入目前不足: 渲染=true，maxlength=255(期望255)，截断实测=true；请输入工作改进: 渲染=true，maxlength=255(期望255)，截断实测=true；请输入产品意见建议: 渲染=true，maxlength=255(期望255)，截断实测=true"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "02-发文附注textarea",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-officialdoc-send-form.png",
+      "note": "请输入附注: 渲染=true，maxlength=无(期望无)"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "02-会议室预订textarea",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-meetingroom-booking-form.png",
+      "note": "请输入会议内容: 渲染=true，maxlength=500(期望500)，截断实测=true；请输入备注: 渲染=true，maxlength=500(期望500)，截断实测=true"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "03-infra配置TextArea回归",
+      "ok": true,
+      "screenshot": "antdv-next-recheck-infra-config-form.png",
+      "note": "备注textarea渲染=true，可输入=true"
+    }
+  ]
+}

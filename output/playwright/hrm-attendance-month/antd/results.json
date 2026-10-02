@@ -1,0 +1,21 @@
+{
+  "app": "antd",
+  "list": {
+    "ok": true,
+    "hasListTitle": true,
+    "hasFilters": true,
+    "pageOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5666/admin-api/hrm/attendance/statistics/month-record-page?pageNo=1&pageSize=20&year=2026&month=8",
+        "status": 200
+      }
+    ]
+  },
+  "detail": {
+    "ok": true,
+    "detailOk": true,
+    "hasSummary": true,
+    "hasLeaveSection": true
+  }
+}

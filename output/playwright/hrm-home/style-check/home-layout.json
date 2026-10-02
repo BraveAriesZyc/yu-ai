@@ -1,0 +1,242 @@
+{
+  "cards": [
+    {
+      "tag": "DIV",
+      "text": "人事概况（2026.08.01-2026.08.31） 40 在职 0 入职 0 待入职 0 离职 1 待离职 0 转正 0 调岗",
+      "w": 893,
+      "h": 193,
+      "overflowX": "visible",
+      "className": "ant-card css-dev-only-do-not-override-gw3cp3 ant-card-bordered mb-4"
+    },
+    {
+      "tag": "DIV",
+      "text": "招聘动态（2026.02.03-2026.08.03） 8 正在招聘职位 62 评选中 10 待入职 12 已入职",
+      "w": 893,
+      "h": 193,
+      "overflowX": "visible",
+      "className": "ant-card css-dev-only-do-not-override-gw3cp3 ant-card-bordered mb-4"
+    },
+    {
+      "tag": "DIV",
+      "text": "上月薪资概况 45 计薪人员 -15,137.71 实发工资（元）",
+      "w": 893,
+      "h": 405,
+      "overflowX": "visible",
+      "className": "ant-card css-dev-only-do-not-override-gw3cp3 ant-card-bordered mb-4"
+    },
+    {
+      "tag": "DIV",
+      "text": "待办提醒 0 待核算薪资 条 1 待离职 人 0 合同到期 人 1 待转正 人 0 待入职 人 0 生日 人",
+      "w": 439,
+      "h": 281,
+      "overflowX": "visible",
+      "className": "ant-card css-dev-only-do-not-override-gw3cp3 ant-card-bordered mb-4"
+    },
+    {
+      "tag": "DIV",
+      "text": "日历 2026 年 08 月 上 月 今 天 下 月 一 二 三 四 五 六 日 27 十四 28 十五 29 十六 30 十七 31 十八 ",
+      "w": 439,
+      "h": 689,
+      "overflowX": "visible",
+      "className": "ant-card css-dev-only-do-not-override-gw3cp3 ant-card-bordered calendar-panel mb-4"
+    }
+  ],
+  "strongs": [
+    {
+      "tag": "STRONG",
+      "text": "40",
+      "w": 32,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "0",
+      "w": 16,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "0",
+      "w": 16,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "0",
+      "w": 16,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "1",
+      "w": 12,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "0",
+      "w": 16,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "0",
+      "w": 16,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "8",
+      "w": 16,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "62",
+      "w": 31,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "10",
+      "w": 28,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "12",
+      "w": 26,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    },
+    {
+      "tag": "STRONG",
+      "text": "45",
+      "w": 31,
+      "h": 32,
+      "overflowX": "visible",
+      "className": "text-[24px] leading-8 group-hover:text-primary"
+    }
+  ],
+  "calendarCells": [
+    {
+      "tag": "TD",
+      "text": "27 十四",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell"
+    },
+    {
+      "tag": "TD",
+      "text": "28 十五",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell"
+    },
+    {
+      "tag": "TD",
+      "text": "29 十六",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell"
+    },
+    {
+      "tag": "TD",
+      "text": "30 十七",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell"
+    },
+    {
+      "tag": "TD",
+      "text": "31 十八",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell ant-picker-cell-end"
+    },
+    {
+      "tag": "TD",
+      "text": "01 建军节",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell ant-picker-cell-start ant-picker-cell-in-view"
+    },
+    {
+      "tag": "TD",
+      "text": "02 二十",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell ant-picker-cell-in-view"
+    },
+    {
+      "tag": "TD",
+      "text": "03 廿一",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell ant-picker-cell-in-view ant-picker-cell-today ant-picker-cell-selected"
+    },
+    {
+      "tag": "TD",
+      "text": "04 廿二",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell ant-picker-cell-in-view"
+    },
+    {
+      "tag": "TD",
+      "text": "05 廿三",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell ant-picker-cell-in-view"
+    },
+    {
+      "tag": "TD",
+      "text": "06 廿四",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell ant-picker-cell-in-view"
+    },
+    {
+      "tag": "TD",
+      "text": "07 廿五",
+      "w": 56,
+      "h": 42,
+      "overflowX": "visible",
+      "className": "ant-picker-cell ant-picker-cell-in-view"
+    }
+  ],
+  "bodyScrollWidth": 1440,
+  "bodyClientWidth": 1440
+}

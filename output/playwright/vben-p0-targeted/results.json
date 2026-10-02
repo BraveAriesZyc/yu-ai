@@ -1,0 +1,3128 @@
+[
+  {
+    "app": "antdv-next",
+    "name": "pay-cashier",
+    "status": "blocked",
+    "notes": [
+      "demoOrderId=213, payOrderId=571",
+      "后端支付提交返回错误：发起支付报错，错误码：FAIL，错误提示：签名错误，请检查后再试"
+    ],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "pageerror",
+        "text": "Object"
+      }
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "postData": "{\"id\":\"571\",\"channelCode\":\"wx_native\",\"returnUrl\":\"http://127.0.0.1:5999/pay/cashier?id=571\"}",
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/pay/order/submit",
+        "body": {
+          "code": 1007002004,
+          "msg": "发起支付报错，错误码：FAIL，错误提示：签名错误，请检查后再试",
+          "data": null
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-pay-cashier.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "mp-message",
+    "status": "pass",
+    "notes": ["component markers in DOM: voice=false, video=false"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/mp/message/page?pageNo=1&pageSize=20&accountId=5",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 29,
+            "list": [
+              {
+                "id": 435,
+                "msgId": "25001934346151481",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 65,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "222",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746419040000
+              },
+              {
+                "id": 434,
+                "msgId": "25001933428442548",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 65,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "1111",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746419039000
+              },
+              {
+                "id": 433,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 64,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "subscribe",
+                "eventKey": "qrscene_default",
+                "createTime": 1746419015000
+              },
+              {
+                "id": 432,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 64,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746419011000
+              },
+              {
+                "id": 431,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 62,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418708000
+              },
+              {
+                "id": 430,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 63,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "subscribe",
+                "eventKey": "qrscene_default",
+                "createTime": 1746418708000
+              },
+              {
+                "id": 429,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 61,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418653000
+              },
+              {
+                "id": 428,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 61,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "subscribe",
+                "eventKey": "",
+                "createTime": 1746418653000
+              },
+              {
+                "id": 427,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 60,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "unsubscribe",
+                "eventKey": "",
+                "createTime": 1746418645000
+              },
+              {
+                "id": 426,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 60,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "收到收到",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418561000
+              },
+              {
+                "id": 425,
+                "msgId": "25001928100136894",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 60,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "222",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418561000
+              },
+              {
+                "id": 424,
+                "msgId": "25001932188212942",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 60,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "111",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418546000
+              },
+              {
+                "id": 423,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 57,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "subscribe",
+                "eventKey": "qrscene_default",
+                "createTime": 1746418383000
+              },
+              {
+                "id": 422,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 56,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417637000
+              },
+              {
+                "id": 421,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "收到收到",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417615000
+              },
+              {
+                "id": 420,
+                "msgId": "25001918348270884",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "114",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417615000
+              },
+              {
+                "id": 419,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417608000
+              },
+              {
+                "id": 418,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "unsubscribe",
+                "eventKey": "",
+                "createTime": 1746417598000
+              },
+              {
+                "id": 417,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417565000
+              },
+              {
+                "id": 416,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 47,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "unsubscribe",
+                "eventKey": "",
+                "createTime": 1746417360000
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-mp-message.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "erp-move",
+    "status": "pass",
+    "notes": ["接口数据：product=1, warehouse=2; 下拉占位数=6"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-erp-move.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "erp-in",
+    "status": "pass",
+    "notes": ["接口数据：product=1, warehouse=2; 下拉占位数=4"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-erp-in.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "erp-out",
+    "status": "pass",
+    "notes": ["接口数据：product=1, warehouse=2; 下拉占位数=4"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-erp-out.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "erp-check",
+    "status": "pass",
+    "notes": ["接口数据：product=1, warehouse=2; 下拉占位数=4"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-erp-check.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "system-menu",
+    "status": "pass",
+    "notes": [],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-system-menu.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "im-face-pack",
+    "status": "pass",
+    "notes": [],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/im/manager/face-pack-item/page?pageNo=1&pageSize=20&packId=1",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 5,
+            "list": [
+              {
+                "id": 1,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                "name": "微笑",
+                "width": 72,
+                "height": 72,
+                "sort": 10,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 2,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f602.png",
+                "name": "大笑",
+                "width": 72,
+                "height": 72,
+                "sort": 20,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 3,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60a.png",
+                "name": "害羞",
+                "width": 72,
+                "height": 72,
+                "sort": 30,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 4,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f923.png",
+                "name": "哈哈",
+                "width": 72,
+                "height": 72,
+                "sort": 40,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 5,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60d.png",
+                "name": "爱你",
+                "width": 72,
+                "height": 72,
+                "sort": 50,
+                "status": 0,
+                "createTime": 1778098469000
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-im-face-pack.png"
+  },
+  {
+    "app": "antdv-next",
+    "name": "infra-file-config",
+    "status": "blocked",
+    "notes": [
+      "未捕获 update-master 请求，可能 PopConfirm 未确认或当前行不可设置"
+    ],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/antdv-next-infra-file-config.png"
+  },
+  {
+    "app": "ele",
+    "name": "pay-cashier",
+    "status": "blocked",
+    "notes": [
+      "demoOrderId=214, payOrderId=572",
+      "后端支付提交返回错误：发起支付报错，错误码：FAIL，错误提示：签名错误，请检查后再试"
+    ],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "pageerror",
+        "text": "Object"
+      }
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "postData": "{\"id\":\"572\",\"channelCode\":\"wx_native\",\"returnUrl\":\"http://127.0.0.1:5777/pay/cashier?id=572\"}",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/pay/order/submit",
+        "body": {
+          "code": 1007002004,
+          "msg": "发起支付报错，错误码：FAIL，错误提示：签名错误，请检查后再试",
+          "data": null
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-pay-cashier.png"
+  },
+  {
+    "app": "ele",
+    "name": "mp-message",
+    "status": "pass",
+    "notes": ["component markers in DOM: voice=false, video=false"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/mp/message/page?pageNo=1&pageSize=20&accountId=5",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 29,
+            "list": [
+              {
+                "id": 435,
+                "msgId": "25001934346151481",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 65,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "222",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746419040000
+              },
+              {
+                "id": 434,
+                "msgId": "25001933428442548",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 65,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "1111",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746419039000
+              },
+              {
+                "id": 433,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 64,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "subscribe",
+                "eventKey": "qrscene_default",
+                "createTime": 1746419015000
+              },
+              {
+                "id": 432,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 64,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746419011000
+              },
+              {
+                "id": 431,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 62,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418708000
+              },
+              {
+                "id": 430,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 63,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "subscribe",
+                "eventKey": "qrscene_default",
+                "createTime": 1746418708000
+              },
+              {
+                "id": 429,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 61,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418653000
+              },
+              {
+                "id": 428,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 61,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "subscribe",
+                "eventKey": "",
+                "createTime": 1746418653000
+              },
+              {
+                "id": 427,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 60,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "unsubscribe",
+                "eventKey": "",
+                "createTime": 1746418645000
+              },
+              {
+                "id": 426,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 60,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "收到收到",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418561000
+              },
+              {
+                "id": 425,
+                "msgId": "25001928100136894",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 60,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "222",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418561000
+              },
+              {
+                "id": 424,
+                "msgId": "25001932188212942",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 60,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "111",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746418546000
+              },
+              {
+                "id": 423,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 57,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "subscribe",
+                "eventKey": "qrscene_default",
+                "createTime": 1746418383000
+              },
+              {
+                "id": 422,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 56,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417637000
+              },
+              {
+                "id": 421,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "收到收到",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417615000
+              },
+              {
+                "id": 420,
+                "msgId": "25001918348270884",
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 1,
+                "content": "114",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417615000
+              },
+              {
+                "id": 419,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417608000
+              },
+              {
+                "id": 418,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "unsubscribe",
+                "eventKey": "",
+                "createTime": 1746417598000
+              },
+              {
+                "id": 417,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 55,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "text",
+                "sendFrom": 2,
+                "content": "感谢关注",
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": null,
+                "eventKey": null,
+                "createTime": 1746417565000
+              },
+              {
+                "id": 416,
+                "msgId": null,
+                "accountId": 5,
+                "appId": "wx5b23ba7a5589ecbb",
+                "userId": 47,
+                "openid": "oz-Jdt0kd_jdhUxJHQdBJMlOFN7w",
+                "type": "event",
+                "sendFrom": 1,
+                "content": null,
+                "mediaId": null,
+                "mediaUrl": null,
+                "recognition": null,
+                "format": null,
+                "title": null,
+                "description": null,
+                "thumbMediaId": null,
+                "thumbMediaUrl": null,
+                "url": null,
+                "locationX": null,
+                "locationY": null,
+                "scale": null,
+                "label": null,
+                "articles": null,
+                "musicUrl": null,
+                "hqMusicUrl": null,
+                "event": "unsubscribe",
+                "eventKey": "",
+                "createTime": 1746417360000
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-mp-message.png"
+  },
+  {
+    "app": "ele",
+    "name": "erp-move",
+    "status": "pass",
+    "notes": ["接口数据：product=1, warehouse=2; 下拉占位数=6"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-erp-move.png"
+  },
+  {
+    "app": "ele",
+    "name": "erp-in",
+    "status": "pass",
+    "notes": ["接口数据：product=1, warehouse=2; 下拉占位数=4"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-erp-in.png"
+  },
+  {
+    "app": "ele",
+    "name": "erp-out",
+    "status": "pass",
+    "notes": ["接口数据：product=1, warehouse=2; 下拉占位数=4"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-erp-out.png"
+  },
+  {
+    "app": "ele",
+    "name": "erp-check",
+    "status": "pass",
+    "notes": ["接口数据：product=1, warehouse=2; 下拉占位数=4"],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/product/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 3,
+              "name": "测试产品",
+              "barCode": "A186",
+              "categoryId": 87,
+              "categoryName": "测试分类",
+              "unitId": 3,
+              "unitName": "斤",
+              "status": null,
+              "standard": null,
+              "remark": null,
+              "expiryDay": null,
+              "weight": null,
+              "purchasePrice": 1,
+              "salePrice": 2,
+              "minPrice": null,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/erp/warehouse/simple-list",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": [
+            {
+              "id": 4,
+              "name": "xx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": true,
+              "createTime": null
+            },
+            {
+              "id": 5,
+              "name": "ooxx",
+              "address": null,
+              "sort": null,
+              "remark": null,
+              "principal": null,
+              "warehousePrice": null,
+              "truckagePrice": null,
+              "status": null,
+              "defaultStatus": false,
+              "createTime": null
+            }
+          ]
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-erp-check.png"
+  },
+  {
+    "app": "ele",
+    "name": "system-menu",
+    "status": "pass",
+    "notes": [],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-system-menu.png"
+  },
+  {
+    "app": "ele",
+    "name": "im-face-pack",
+    "status": "pass",
+    "notes": [],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/im/manager/face-pack-item/page?pageNo=1&pageSize=20&packId=1",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 5,
+            "list": [
+              {
+                "id": 1,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                "name": "微笑",
+                "width": 72,
+                "height": 72,
+                "sort": 10,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 2,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f602.png",
+                "name": "大笑",
+                "width": 72,
+                "height": 72,
+                "sort": 20,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 3,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60a.png",
+                "name": "害羞",
+                "width": 72,
+                "height": 72,
+                "sort": 30,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 4,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f923.png",
+                "name": "哈哈",
+                "width": 72,
+                "height": 72,
+                "sort": 40,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 5,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60d.png",
+                "name": "爱你",
+                "width": 72,
+                "height": 72,
+                "sort": 50,
+                "status": 0,
+                "createTime": 1778098469000
+              }
+            ]
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "postData": null,
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/im/manager/face-pack-item/page?pageNo=1&pageSize=20&packId=1",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 5,
+            "list": [
+              {
+                "id": 1,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                "name": "微笑",
+                "width": 72,
+                "height": 72,
+                "sort": 10,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 2,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f602.png",
+                "name": "大笑",
+                "width": 72,
+                "height": 72,
+                "sort": 20,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 3,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60a.png",
+                "name": "害羞",
+                "width": 72,
+                "height": 72,
+                "sort": 30,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 4,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f923.png",
+                "name": "哈哈",
+                "width": 72,
+                "height": 72,
+                "sort": 40,
+                "status": 0,
+                "createTime": 1778098469000
+              },
+              {
+                "id": 5,
+                "packId": 1,
+                "url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f60d.png",
+                "name": "爱你",
+                "width": 72,
+                "height": 72,
+                "sort": 50,
+                "status": 0,
+                "createTime": 1778098469000
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-im-face-pack.png"
+  },
+  {
+    "app": "ele",
+    "name": "infra-file-config",
+    "status": "blocked",
+    "notes": [
+      "未捕获 update-master 请求，可能 PopConfirm 未确认或当前行不可设置"
+    ],
+    "console": [
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connecting..."
+      },
+      {
+        "type": "debug",
+        "text": "[vite] connected."
+      }
+    ],
+    "requests": [],
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/vben-p0-targeted/ele-infra-file-config.png"
+  }
+]

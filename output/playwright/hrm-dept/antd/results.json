@@ -1,0 +1,57 @@
+{
+  "app": "antd",
+  "list": {
+    "path": "/hrm/dept",
+    "actualPath": "/hrm/dept/detail/103",
+    "textHits": {
+      "组织列表": true,
+      "部门名称": true,
+      "在职员工": true,
+      "全职员工": true,
+      "非全职人数": true,
+      "新建部门": true,
+      "人数格式为：直属人数（包含下级部门人数）": true
+    },
+    "allExpectedFound": true,
+    "matchedApis": [
+      {
+        "apiPath": "/system/dept/simple-list",
+        "hit": true,
+        "status": 200
+      },
+      {
+        "apiPath": "/hrm/employee/dept-statistics",
+        "hit": true,
+        "status": 200
+      }
+    ],
+    "allApisOk": true,
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/hrm-dept/antd/list.png"
+  },
+  "detail": {
+    "opened": true,
+    "employeeTabOk": true,
+    "textHasDetails": true,
+    "textHasEmployees": true,
+    "matchedApis": [
+      {
+        "apiPath": "/system/dept/get",
+        "hit": true,
+        "status": 200
+      },
+      {
+        "apiPath": "/system/dept/simple-list",
+        "hit": true,
+        "status": 200
+      },
+      {
+        "apiPath": "/hrm/employee/dept-statistics",
+        "hit": true,
+        "status": 200
+      }
+    ],
+    "allApisOk": true,
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/hrm-dept/antd/detail.png",
+    "actualUrl": "http://127.0.0.1:5666/hrm/dept/detail/103"
+  }
+}
