@@ -18,9 +18,14 @@ internal object UserApi {
 
     private const val PATH_GET = "/love/user/get"
     private const val PATH_UPDATE = "/love/user/update"
+    private const val PATH_STATS = "/love/user/stats"
 
     suspend fun getUser(pager: Pager): ApiResult =
         HttpClient.request(pager, PATH_GET, isPost = false)
+
+    /** 恋爱统计(在一起天数+悄悄话/待办/心情计数,未绑定全 0;解析落 StatsStore 由调用方收口) */
+    suspend fun getStats(pager: Pager): ApiResult =
+        HttpClient.request(pager, PATH_STATS, isPost = false)
 
     /** 改昵称/头像:仅传非空字段(未传字段不进 body,防服务端把未编辑字段误清空) */
     suspend fun updateUser(pager: Pager, nickname: String? = null, avatar: String? = null): ApiResult =

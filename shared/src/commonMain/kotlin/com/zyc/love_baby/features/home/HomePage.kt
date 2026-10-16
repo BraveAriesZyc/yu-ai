@@ -35,6 +35,9 @@ import com.zyc.love_baby.components.AppStatItem
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.state.CoupleBindState
+import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.StatsStore
 import com.zyc.love_baby.state.TodoStore
 
 /**
@@ -135,12 +138,15 @@ private fun HeaderWithStats() {
             // 头像
             AppAvatar("宝", size = 38.dp, bgColor = Color.White.copy(alpha = 0.35f), fontSize = 15.sp)
         }
-        // 悬浮统计卡(实时来自待办)
+        // 悬浮统计卡(实时来自待办 + StatsStore 真数据,「统计真数据化」里程碑)
         AppStatBar(
             items = listOf(
                 AppStatItem("${TodoStore.todos.size}", "今日待办"),
                 AppStatItem("${TodoStore.doneCount}", "已完成"),
-                AppStatItem("520", "在一起(天)"),
+                AppStatItem(
+                    if (CoupleStore.bindState == CoupleBindState.BOUND) "${StatsStore.bindDays}" else "--",
+                    "在一起(天)",
+                ),
             ),
             modifier = Modifier.align(Alignment.BottomCenter)
                 .offset(y = 20.dp)

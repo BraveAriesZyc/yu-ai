@@ -43,6 +43,7 @@ import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
 import com.zyc.love_baby.state.MoodStore
+import com.zyc.love_baby.state.StatsStore
 import com.zyc.love_baby.state.TodoStore
 import com.zyc.love_baby.features.home.HomePage
 import com.zyc.love_baby.features.mine.MinePage
@@ -213,6 +214,8 @@ internal fun MainPageImpl(pager: BasePager) {
             if (result is ApiResult.Ok) {
                 profile = UserProfile.from(result.data)
             }
+            // 恋爱统计(统计真数据化):与 profile 同点首拉,失败静默(只读降级)
+            StatsStore.refresh(pager)
         }
     }
 
@@ -431,6 +434,8 @@ internal fun MainPageImpl(pager: BasePager) {
                 ChatStore.reset()
                 TodoStore.reset()
                 MoodStore.reset()
+                // 统计随关系清场归零(首页「在一起(天)」回 "--",我的页三项回 0)
+                StatsStore.reset()
             }
         }
 
@@ -439,6 +444,8 @@ internal fun MainPageImpl(pager: BasePager) {
         LaunchedEffect(CoupleStore.foregroundTick) {
             if (CoupleStore.foregroundTick > 0 && SessionStore.isLoggedIn) {
                 CoupleStore.refresh(pager)
+                // 统计同步新(发消息/待办/心情后回前台即可见最新计数)
+                StatsStore.refresh(pager)
             }
         }
 
@@ -475,6 +482,8 @@ internal fun MainPageImpl(pager: BasePager) {
                 }
                 3 -> ChatStore.loadIncrement(pager)
             }
+            // 统计顺手刷新(切任意 Tab):发消息/建待办后切页即见最新计数,不等回前台
+            StatsStore.refresh(pager)
         }
 
         // 绑定感知轮询(M2 自适应 + M3 退避恢复,§7.4/F8):A 端等 B 绑定回填伴侣信息、对方解绑后本端

@@ -56,6 +56,7 @@ import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.StatsStore
 import kotlinx.coroutines.launch
 
 /**
@@ -210,12 +211,12 @@ private fun HeaderWithStats(profile: UserProfile?, onEditClick: () -> Unit) {
                 Text("编辑", color = Color.White, fontSize = 12.sp)
             }
         }
-        // 悬浮统计卡
+        // 悬浮统计卡(统计真数据化:三项全真,StatsStore 由 MainPager 拉取,数值变化写穿透后刷新)
         AppStatBar(
             items = listOf(
-                AppStatItem("999+", "收到拥抱"),
-                AppStatItem("36", "心愿完成"),
-                AppStatItem("128", "悄悄话"),
+                AppStatItem("${StatsStore.messageCount}", "悄悄话"),
+                AppStatItem("${StatsStore.todoCount}", "待办"),
+                AppStatItem("${StatsStore.moodCount}", "心情"),
             ),
             valueSize = 18.sp,
             dividerHeight = 26.dp,
