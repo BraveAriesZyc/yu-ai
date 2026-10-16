@@ -36,6 +36,8 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
+import com.tencent.kuikly.core.module.RouterModule
+import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.components.AppCheckbox
 import com.zyc.love_baby.components.AppCheckBadge
@@ -233,7 +235,15 @@ fun MoodPage(
                             AppIcon(AppIconType.Heart, theme.brandStart, Modifier.size(15.dp))
                         },
                         trailing = {
-                            Text("点卡片许愿,送出去", color = AppTheme.TextTertiary, fontSize = 11.sp)
+                            // 「已送的心愿」入口(心愿时间线页):可点文案,clickable 与透明背景
+                            // 同节点(铁律⑤);原「点卡片许愿」说明让位——卡片手势本身已是许愿引导
+                            Box(
+                                modifier = Modifier.background(Color.Transparent, RoundedCornerShape(8.dp))
+                                    .clickable { openWishTimeline(pager) }
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                            ) {
+                                Text("已送的心愿 ›", color = theme.brandStart, fontSize = 11.sp)
+                            }
                         },
                     )
                 }
@@ -302,6 +312,24 @@ fun MoodPage(
                 }
             }
         }
+    }
+}
+
+/** openWishTimeline — 路由打开心愿时间线页(独立二级页压栈,closePage/系统返回即回) */
+private fun openWishTimeline(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("wishTimeline", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/** openMoodTimeline — 路由打开心情时间线页(独立二级页压栈,closePage/系统返回即回) */
+private fun openMoodTimeline(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("moodTimeline", JSONObject())
+    } catch (_: Exception) {
     }
 }
 
@@ -404,7 +432,15 @@ private fun MoodCalendarCard(
             Spacer(modifier = Modifier.width(4.dp))
             Text("TA", color = AppTheme.TextTertiary, fontSize = 10.sp)
             Spacer(modifier = Modifier.weight(1f))
-            Text("圆点颜色 = 当天心情", color = AppTheme.TextTertiary, fontSize = 10.sp)
+            // 「心情时间线」入口(独立二级页):可点文案,clickable 与透明背景同节点(铁律⑤);
+            // 原「圆点颜色 = 当天心情」说明让位(图例本身已表意)
+            Box(
+                modifier = Modifier.background(Color.Transparent, RoundedCornerShape(8.dp))
+                    .clickable { openMoodTimeline(pager) }
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+            ) {
+                Text("心情时间线 ›", color = theme.brandStart, fontSize = 10.sp)
+            }
         }
         Spacer(modifier = Modifier.height(12.dp))
         // 心情选项选择器(M3.5 D-14:couple 私有字典 MoodStore.moodOptions 服务端 sort asc 下发;
