@@ -1,0 +1,58 @@
+package cn.iocoder.yudao.module.love.dal.mysql.message;
+
+import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import cn.iocoder.yudao.module.love.dal.dataobject.message.LoveMessageDO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
+/**
+ * 悄悄话/心愿消息 Mapper
+ *
+ * 功能：消息增量拉取两个入口（INTEGRATION-DESIGN.md §5.2 message 组）——
+ * 有 lastId 走 {@link #selectListIncrement}（idx_couple_time 顺序扫），
+ * 空参 lastId 首屏走 {@link #selectListLatestPage}（id 倒序取最近一页，service 反转正序返回）；
+ * 发送走 BaseMapperX.insert，按 id 写的 admin 删除走 BaseMapperX.deleteById。
+ *
+ * @author 芋道源码
+ */
+@Mapper
+public interface MessageMapper extends BaseMapperX<LoveMessageDO> {
+
+    /**
+     * 增量拉取：id &gt; lastId 的消息，按 id 升序返回 limit 条（§5.2 message/list）
+     *
+     * 走 idx_couple_time(couple_id, id)：couple_id 等值 + id 范围扫，游标只增不减（D-12）；
+     *
+     * @param coupleId 情侣关系编号
+     * @param lastId   上次拉取的最大消息 id（必传，调用方保证非空；空参走 selectListLatestPage）
+     * @param limit    条数上限（service 层钳制：默认 50、上限 200，§5.2；本方法直接拼 SQL，
+     *                 禁止把未钳制的客户端原始值传入）
+     */
+    default List<LoveMessageDO> selectListIncrement(Long coupleId, Long lastId, Integer limit) {
+        return selectList(new LambdaQueryWrapper<LoveMessageDO>()
+                .eq(LoveMessageDO::getCoupleId, coupleId)
+                .gt(LoveMessageDO::getId, lastId)
+                .orderByAsc(LoveMessageDO::getId)
+                // 与仓内 QueryWrapperX.limitN 同款惯例：last("LIMIT n")；limit 由 service 钳制后传入
+                .last("LIMIT " + limit));
+    }
+
+    /**
+     * 首屏最近一页：按 id 倒序取 limit 条（§5.2 message/list 空参 lastId 语义）
+     *
+     * 返回【倒序】结果，service 层负责反转为正序后返回端上；
+     *
+     * @param coupleId 情侣关系编号
+     * @param limit    条数上限（service 层钳制：默认 50、上限 200，§5.2）
+     */
+    default List<LoveMessageDO> selectListLatestPage(Long coupleId, Integer limit) {
+        return selectList(new LambdaQueryWrapper<LoveMessageDO>()
+                .eq(LoveMessageDO::getCoupleId, coupleId)
+                .orderByDesc(LoveMessageDO::getId)
+                // 与仓内 QueryWrapperX.limitN 同款惯例：last("LIMIT n")；limit 由 service 钳制后传入
+                .last("LIMIT " + limit));
+    }
+
+}

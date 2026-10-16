@@ -1,0 +1,63 @@
+package cn.iocoder.yudao.module.love.enums;
+
+import cn.iocoder.yudao.framework.common.exception.ErrorCode;
+
+/**
+ * Love 错误码枚举类
+ *
+ * love 模块独立使用 1-003-000-000 段（infra = 1-001，system = 1-002），子段划分：
+ * 待办 1-003-001-xxx；心情选项 1-003-002-xxx（M3.5 激活，record 覆盖写仍不打错）；
+ * 消息 1-003-003-xxx；情侣 1-003-004-xxx；账号/鉴权 1-003-005-xxx。
+ *
+ * 短信验证码本身的错误（未发送、已过期、不正确等）由 system 的 SmsCodeApi 抛其自有错误码，不在本段定义。
+ */
+public interface ErrorCodeConstants {
+
+    // ========== 待办 模块 1-003-001-000（M3 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义），后续 todo 组端点如需新码从此顺延
+     */
+    ErrorCode TODO_NOT_EXISTS = new ErrorCode(1_003_001_000, "待办不存在");
+    ErrorCode TODO_NO_PERMISSION = new ErrorCode(1_003_001_001, "无权操作该待办");
+
+    // ========== 心情选项 模块 1-003-002-xxx（M3.5 激活，D-14） ==========
+    // record 仍无独立错误码（uk_user_date 冲突走覆盖写不打错，§6.4）；
+    // M3.5 心情选项字典（couple 私有）接入后从预留号段起分配，次序恒定只增不删（§12.5）
+    ErrorCode MOOD_OPTION_NOT_EXISTS = new ErrorCode(1_003_002_000, "心情选项不存在");
+    ErrorCode MOOD_OPTION_NO_PERMISSION = new ErrorCode(1_003_002_001, "无权操作该心情选项");
+    ErrorCode MOOD_OPTION_LIMIT_EXCEEDED = new ErrorCode(1_003_002_002, "心情选项已达上限");
+    ErrorCode MOOD_OPTION_LABEL_DUPLICATED = new ErrorCode(1_003_002_003, "心情名称已存在");
+    /**
+     * admin 通道对默认模板按物理 id 定位（无 app 侧上下文，存在性校验用独立码）；
+     * app 侧不需要此码——app 全部以当前 couple 反查，行不存在统一按 1_003_002_000 处理
+     */
+    ErrorCode MOOD_OPTION_DEFAULT_NOT_EXISTS = new ErrorCode(1_003_002_004, "心情默认选项不存在");
+
+    // ========== 消息 模块 1-003-003-000（M3 追加） ==========
+    /**
+     * 消息组唯一错误码：admin 按物理 id 删除时记录不存在，以及跨 couple 按 id 访问统一按
+     * 「不存在」拒绝（不暴露他 couple 消息的存在性，IDOR 用例见 §11）
+     */
+    ErrorCode MESSAGE_NOT_EXISTS = new ErrorCode(1_003_003_000, "消息不存在");
+
+    // ========== 情侣 模块 1-003-004-000 ==========
+    ErrorCode COUPLE_INVITE_CODE_INVALID = new ErrorCode(1_003_004_000, "邀请码无效");
+    ErrorCode COUPLE_EXISTS = new ErrorCode(1_003_004_001, "你已存在有效的情侣关系");
+    ErrorCode COUPLE_SELF_BIND = new ErrorCode(1_003_004_002, "不能与自己绑定");
+    ErrorCode COUPLE_NOT_EXISTS = new ErrorCode(1_003_004_003, "尚未绑定情侣关系");
+    ErrorCode COUPLE_INVITE_CODE_EXPIRED = new ErrorCode(1_003_004_004, "邀请码已过期");
+
+    // ========== 账号/鉴权 模块 1-003-005-000 ==========
+    ErrorCode AUTH_MOBILE_EXISTS = new ErrorCode(1_003_005_000, "手机号已注册");
+    ErrorCode AUTH_LOGIN_BAD_CREDENTIALS = new ErrorCode(1_003_005_001, "账号或密码错误");
+    ErrorCode AUTH_LOGIN_USER_DISABLED = new ErrorCode(1_003_005_002, "账号已停用");
+    ErrorCode AUTH_MOBILE_NOT_EXISTS = new ErrorCode(1_003_005_003, "手机号不存在");
+
+    // ========== 账号/鉴权 模块 1-003-005-004（M3 admin 追加） ==========
+    /**
+     * admin 更新/删除 C 端用户时校验存在性（§5.3 PUT /love/user/update、DELETE /love/user/delete）；
+     * app 侧不需要此码——app 全部以当前登录人为出发点，行不存在统一按 {@link #AUTH_LOGIN_USER_DISABLED} 处理
+     */
+    ErrorCode AUTH_USER_NOT_EXISTS = new ErrorCode(1_003_005_004, "用户不存在");
+
+}
