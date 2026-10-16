@@ -58,6 +58,7 @@ import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.features.chat.chatDayLabelFriendly
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.state.CoupleBindState
@@ -109,6 +110,8 @@ fun TodoPage(pager: Pager) {
     }
     val todos = TodoStore.todos
     val filtered = visibleTodos()
+    // 日期分组条目(2026-10-17 三域查看):变天插组头,三态过滤视图统一生效
+    val entries = buildTodoEntries(filtered)
 
     // 首组合全量拉取(§7.4):失败静默——只读降级,旧数据可见不崩(§11);
     // 常驻堆叠下本页只组合一次,「再进入」由 MainPager 切 Tab 副作用补拉
@@ -193,22 +196,29 @@ fun TodoPage(pager: Pager) {
                         )
                     }
                 }
-                items(filtered, key = { it.id }, contentType = { "todo" }) { todo ->
-                    TodoRow(
-                        todo = todo,
-                        onToggle = {
-                            scope.launch {
-                                val result = TodoStore.toggle(pager, todo.id)
-                                if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
-                            }
-                        },
-                        onDelete = {
-                            scope.launch {
-                                val result = TodoStore.delete(pager, todo.id)
-                                if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
-                            }
-                        },
-                    )
+                items(
+                    entries,
+                    key = { it.key }, // Header = "h-"+label;RowVal = 服务端 id(均全域唯一)
+                    contentType = { if (it is TodoEntry.Header) "todo-header" else "todo" },
+                ) { entry ->
+                    when (entry) {
+                        is TodoEntry.Header -> TodoDayHeader(entry.label)
+                        is TodoEntry.RowVal -> TodoRow(
+                            todo = entry.todo,
+                            onToggle = {
+                                scope.launch {
+                                    val result = TodoStore.toggle(pager, entry.todo.id)
+                                    if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
+                                }
+                            },
+                            onDelete = {
+                                scope.launch {
+                                    val result = TodoStore.delete(pager, entry.todo.id)
+                                    if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
+                                }
+                            },
+                        )
+                    }
                 }
                 // 尾部 Spacer:给悬浮输入条让位(闭键常数 150 = 输入条上缘 86+44 再 +20
                 // 呼吸,新增滚底后新条目完整露出输入条上方;原 100 恰让位不足,新条目下缘
@@ -288,9 +298,11 @@ fun TodoPage(pager: Pager) {
                                 // 过早 scrollToItem 撞 stale totalItemsCount 越界守卫被静默
                                 // 吞;尾部天然 clamp 贴底,键盘开着时新条目完整露出)
                                 if (TodoStore.filter != 2) {
-                                    val visibleCount = visibleTodos().size
-                                    listState.awaitMeasured(visibleCount + 1)
-                                    listState.scrollToItem(visibleCount)
+                                    // 日期分组后 item 数 = 行数 + 组头数:滚底目标改数 entries
+                                    // (尾 Spacer 下标 = entries.size;只数行会少算新条目触发的组头)
+                                    val itemCount = buildTodoEntries(visibleTodos()).size
+                                    listState.awaitMeasured(itemCount + 1)
+                                    listState.scrollToItem(itemCount)
                                 }
                             } else {
                                 toastCoupleResult(pager, result)
@@ -302,6 +314,52 @@ fun TodoPage(pager: Pager) {
             )
         }
     }
+}
+
+/** 时间线条目:日期分组头 或 待办行(LazyColumn 混排,ChatPage 日期条同思路) */
+private sealed interface TodoEntry {
+    val key: String
+
+    /** 分组头:key = "h-" + label(label 全域唯一:今天/昨天/M月d日/yyyy年M月d日/更早) */
+    data class Header(val label: String) : TodoEntry {
+        override val key: String = "h-$label"
+    }
+
+    /** 待办行:key = 服务端 id(整表覆盖/增量 appendDedupe 均唯一) */
+    data class RowVal(val todo: TodoItem) : TodoEntry {
+        override val key: String = todo.id
+    }
+}
+
+/**
+ * buildTodoEntries — 有序待办 → 分组条目:按 createTime(GMT+8)变天插「今天/昨天/M月d日」头,
+ * createTime<=0(旧包/未回传)归「更早」组兜底;组序 = 传入顺序(TodoStore 与服务端
+ * create_time asc 同序),新组头随新数据自然落尾,与「新增滚底」语义一致
+ */
+private fun buildTodoEntries(todos: List<TodoItem>): List<TodoEntry> {
+    val entries = ArrayList<TodoEntry>(todos.size * 2)
+    var lastLabel: String? = null
+    todos.forEach { todo ->
+        val label = if (todo.createTime > 0L) chatDayLabelFriendly(todo.createTime) else "更早"
+        if (label != lastLabel) {
+            entries.add(TodoEntry.Header(label))
+            lastLabel = label
+        }
+        entries.add(TodoEntry.RowVal(todo))
+    }
+    return entries
+}
+
+/** 日期分组头:左对齐小字(单文本节点,无背景无点击,与 ChatPage 居中胶囊刻意区分层级) */
+@Composable
+private fun TodoDayHeader(label: String) {
+    Text(
+        label,
+        color = AppTheme.TextSecondary,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+    )
 }
 
 /** 空态引导:软色图标圆底 + 一句文案(语气对齐既有页面) */
