@@ -19,6 +19,9 @@ public class AppUserStatsRespVO {
     @Schema(description = "悄悄话消息总数（当前 couple，含文本与心愿）", example = "128")
     private Long messageCount;
 
+    @Schema(description = "心愿消息总数（当前 couple，kind=2；messageCount 仍为全部消息数含文本，两口径并存）", example = "6")
+    private Long wishCount;
+
     @Schema(description = "待办总数（当前 couple）", example = "36")
     private Long todoCount;
 

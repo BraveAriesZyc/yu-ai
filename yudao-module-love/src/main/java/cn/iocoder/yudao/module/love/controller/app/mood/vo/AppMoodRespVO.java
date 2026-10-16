@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * 单日心情 Response VO（GET /love/mood/record/list?month= 数组元素）
@@ -48,5 +49,14 @@ public class AppMoodRespVO {
 
     @Schema(description = "颜色 hex 快照（记录时点，原样透传）", example = "#FFB93C")
     private String color;
+
+    /**
+     * 记录时刻（epoch 毫秒，端上时段徽标用）：LocalDateTime 走仓内 TimestampLocalDateTimeSerializer
+     * （yudao 全局惯例，AppMessageRespVO.createTime 同机制）。语义注意：uk_user_date 重复记录走覆盖写
+     * （UpdateWrapper 只更快照列，不碰 create_time）——本字段 = 当日【首次】记录时刻，非最后修改时刻
+     */
+    @Schema(description = "记录时刻（epoch 毫秒；同日重复记录为覆盖写，本值 = 当日首次记录时刻）",
+            requiredMode = Schema.RequiredMode.REQUIRED, example = "1729045200000")
+    private LocalDateTime createTime;
 
 }

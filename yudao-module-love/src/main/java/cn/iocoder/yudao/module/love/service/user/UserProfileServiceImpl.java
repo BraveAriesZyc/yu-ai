@@ -78,6 +78,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         AppUserStatsRespVO stats = new AppUserStatsRespVO();
         stats.setBindDays(0);
         stats.setMessageCount(0L);
+        stats.setWishCount(0L);
         stats.setTodoCount(0L);
         stats.setMoodCount(0L);
         LoveCoupleDO couple = loveCoupleMapper.selectByUserId(user.getId());
@@ -88,6 +89,8 @@ public class UserProfileServiceImpl implements UserProfileService {
         stats.setBindDays((int) ChronoUnit.DAYS.between(
                 couple.getBindTime().toLocalDate(), LocalDate.now()) + 1);
         stats.setMessageCount(messageMapper.selectCount(LoveMessageDO::getCoupleId, couple.getId()));
+        // 心愿口径 = kind=2 子集（我的页统计卡「心愿」消费；messageCount 仍为全部消息含文本）
+        stats.setWishCount(messageMapper.selectCountWishes(couple.getId()));
         stats.setTodoCount(todoMapper.selectCount(LoveTodoDO::getCoupleId, couple.getId()));
         stats.setMoodCount(moodRecordMapper.selectCount(LoveMoodRecordDO::getCoupleId, couple.getId()));
         return stats;

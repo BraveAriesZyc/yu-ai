@@ -55,4 +55,35 @@ public interface MessageMapper extends BaseMapperX<LoveMessageDO> {
                 .last("LIMIT " + limit));
     }
 
+    /**
+     * 心愿时间线视图：kind=2（心愿消息）按 id 倒序取 limit 条（§5.2 心愿查看，只读视图）
+     *
+     * 返回【倒序】结果（最新在前），service 直接透传不反转——时间线浏览语义与首屏正序流不同；
+     * 走 idx_couple_time(couple_id, id) 前缀扫（kind 无独立索引，couple 内量级毫秒级），
+     * 若未来单 couple 心愿过千再考虑追加 (couple_id, kind) 索引（love.sql 末尾只追加）
+     *
+     * @param coupleId 情侣关系编号
+     * @param limit    条数上限（service 层钳制：默认 50、上限 200，§5.2）
+     */
+    default List<LoveMessageDO> selectListWishes(Long coupleId, Integer limit) {
+        return selectList(new LambdaQueryWrapper<LoveMessageDO>()
+                .eq(LoveMessageDO::getCoupleId, coupleId)
+                .eq(LoveMessageDO::getKind, LoveMessageDO.KIND_WISH)
+                .orderByDesc(LoveMessageDO::getId)
+                // 与仓内 QueryWrapperX.limitN 同款惯例：last("LIMIT n")；limit 由 service 钳制后传入
+                .last("LIMIT " + limit));
+    }
+
+    /**
+     * 心愿计数：kind=2 行数（统计端点 wishCount 用，文本悄悄话不计入——
+     * messageCount 仍数全部消息，两口径并存）
+     *
+     * @param coupleId 情侣关系编号
+     */
+    default Long selectCountWishes(Long coupleId) {
+        return selectCount(new LambdaQueryWrapper<LoveMessageDO>()
+                .eq(LoveMessageDO::getCoupleId, coupleId)
+                .eq(LoveMessageDO::getKind, LoveMessageDO.KIND_WISH));
+    }
+
 }

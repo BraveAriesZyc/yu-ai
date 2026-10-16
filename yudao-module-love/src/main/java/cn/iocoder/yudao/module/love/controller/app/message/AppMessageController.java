@@ -48,6 +48,17 @@ public class AppMessageController {
         return success(messageService.getMessageList(lastId, limit));
     }
 
+    @GetMapping("/wish-list")
+    @Operation(summary = "心愿时间线（kind=2 只读视图，按 id 倒序最新在前）",
+            description = "与聊天流解耦的心愿查看入口：聊天 lastId 游标只进不退 + 首屏截断，历史心愿无法回溯；"
+                    + "本端点单开 kind=2 过滤视图，快照四字段（content/wishKey/color/icon）全量回传；"
+                    + "limit 默认 50、钳制上限 200（§5.2）；无游标，v1 取最近 limit 条，将来补 beforeId 倒序游标平滑升级")
+    public CommonResult<List<AppMessageRespVO>> getWishList(
+            @Parameter(description = "条数上限（默认 50、上限 200）", example = "200")
+            @RequestParam(value = "limit", required = false) Integer limit) {
+        return success(messageService.getWishList(limit));
+    }
+
     @PostMapping("/send")
     @Operation(summary = "发送文本悄悄话（kind=1）",
             description = "trim 后非空、≤500；发送方 = 当前用户、接收方 = couple 对方快照，audit_status 恒写 1（§12.3）；回包 = 落库后的完整消息 VO（含 id，供端上乐观替换与 lastId 推进，§7.4）")

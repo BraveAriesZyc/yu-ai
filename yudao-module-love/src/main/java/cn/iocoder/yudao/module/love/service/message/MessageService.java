@@ -28,6 +28,16 @@ public interface MessageService {
     List<AppMessageRespVO> getMessageList(Long lastId, Integer limit);
 
     /**
+     * 心愿时间线（kind=2 只读视图，按 id 倒序最新在前）：与聊天流解耦的查看入口——
+     * 聊天 lastId 游标只进不退 + 首屏截断，历史心愿无法回溯，故单开全量(限 limit)时间线端点。
+     * 无游标：v1 取最近 limit 条，将来按「只加不改」补 beforeId 倒序游标即可平滑升级
+     *
+     * @param limit 条数上限（默认 50、钳制上限 200，§5.2）
+     * @return 心愿消息列表（倒序，快照四字段全量回传）
+     */
+    List<AppMessageRespVO> getWishList(Integer limit);
+
+    /**
      * 发送文本悄悄话（kind=1）：sender = 当前用户，receiver = couple 对方，audit_status 恒写 1
      *
      * @param reqVO 文本内容（trim 后非空、≤500）

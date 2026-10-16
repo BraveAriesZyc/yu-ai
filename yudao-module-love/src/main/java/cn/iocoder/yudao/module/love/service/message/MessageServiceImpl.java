@@ -91,6 +91,17 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    public List<AppMessageRespVO> getWishList(Integer limit) {
+        Long currentUserId = getCurrentUserId();
+        // §6.5 停用账号收口
+        getValidatedCurrentUser(currentUserId);
+        LoveCoupleDO couple = getValidatedCouple(currentUserId);
+        int size = resolveLimit(limit);
+        // 时间线语义 = 最新在前浏览，mapper 倒序直接透传不反转（与 getMessageList 首屏正序流不同）
+        return BeanUtils.toBean(messageMapper.selectListWishes(couple.getId(), size), AppMessageRespVO.class);
+    }
+
+    @Override
     public AppMessageRespVO sendMessage(AppMessageSendReqVO reqVO) {
         // trim 后非空、≤500：长度由 VO @Length 按原文早拦（列 varchar(500)），空白串在此打回全局参数错误
         String content = reqVO.getContent().trim();
