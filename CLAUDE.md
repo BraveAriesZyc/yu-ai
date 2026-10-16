@@ -1,0 +1,79 @@
+# CLAUDE.md — love_baby(Kuikly 跨端项目)
+
+## 项目概述
+
+腾讯 **Kuikly** 跨端框架项目(KMP + Compose DSL),目标一码多端:Android / iOS / 鸿蒙 / H5 / 小程序。
+
+- 包名:`com.zyc.love_baby`
+- 版本:Kuikly `2.29.0`、Kotlin `2.1.21`(见 `buildSrc/src/main/java/KotlinBuildVar.kt`;升级过 2.7.0→2.29.0,为获得 Native 属性动画/重组分析器)
+- 依赖:`com.tencent.kuikly-open:core` / `core-annotations` / `compose`(shared 模块)
+- **AGP `8.5.2` + Gradle 8.14.5 + JDK 17**(根 `build.gradle.kts`):从 7.4.2 升级——7.4.2 内置 dexer(R8 4.0.52)读 compileSdk 34+ 的 android.jar 直接中止打包,且 compose 1.7.6 AAR 要求 compileSdk ≥ 34,7.4.2 根本打不出 APK(真机定位:手动 `java -cp builder-7.4.2.jar com.android.tools.r8.D8 --lib android-34.jar` 可复现中止)。shared 模块 AGP 8 后移除了 library targetSdk;androidApp 显式开 `buildFeatures.buildConfig = true`(AGP 8 默认关,有代码引用 BuildConfig.DEBUG)
+- maven 走腾讯镜像(根 `settings.gradle.kts`)
+
+## 技术要点(写代码前必读)
+
+1. **双 DSL**:UI 写 Compose DSL(`com.tencent.kuikly.compose.*`,API 与官方 Jetpack Compose 基本一致);页面注册、Module 桥接、Pager 生命周期是 core 包(`com.tencent.kuikly.core.*`)。**不要**用老 DSL 的 attr/event/ViewRef 语法写新 UI。
+2. **页面 = `@Page` 注解的 `Pager` 子类**,内部用 `setContent {}` 挂 Compose 内容(import `com.tencent.kuikly.compose.setContent`,参考 `main/MainPager.kt`)。
+3. **BasicWidget.kt 提供同包简化组件**:`com.zyc.love_baby.TextField`(placeholder 是 **String**、有 `autoFocus` 参数)与 `Button`(`internal`),与 material3 官方签名不同;RouterPage/TodoPage/ChatPage 用的就是它们。
+4. **主题系统**:`components/AppTheme.kt` 的 `ThemeStore` 持有 5 套情侣风主题(蜜桃恋语/落日甜心/薄荷奶绿/海盐气泡/晚风紫),`ThemeStore.current` 全局快照状态,切换即全局重组;通过 SharedPreferencesModule 持久化。**启动恢复走双通道**:Android 宿主把持久化主题 id 经 pageData 参数传入(`KuiklyRenderActivity.createPageData` 读同名 prefs 文件 "KRSharedPreferencesModule")→ MainPager `willInit` 里 `ThemeStore.initFromPageData`(首帧即正确主题,消除启动二次渲染);`didInit` 的 `restore` 仅作无参数端(iOS/鸿蒙/H5)兜底。页面渐变/背景一律用 `ThemeStore.current.brandBrush/.bg`,**不要**用回写死的紫色。`AppTheme` 只放中性色与间距。
+5. **全局状态层**:`state/AppState.kt` 的 `TodoStore/MoodStore/ChatStore` 为 internal 全局单例(快照状态),Tab 切换状态不丢。**MainPager 五 Tab 容器 = HorizontalPager**(2026-10-16 由「常驻堆叠+visibility」改造):`rememberPagerState(pageCount = { 5 })` + `beyondViewportPageCount = 4` 五页全驻留(页面只组合一次),支持左右滑;切 Tab 副作用(静默补拉/轮询门)与底栏**图标高亮**(scale/tint)统一读 `pagerState.targetPage`(将落位页,拖动越过 min(56dp,半页)≈14% 阈值即翻转);**底栏胶囊零动画帧、只瞬移不追帧**:MainPager 以 `pillPosition = remember { { pagerState.targetPage.toFloat() } }` 传入 AppBottomBar,SlidingPill 在 graphicsLayer lambda 内读取——Kuikly 对 layerBlock 做快照观察(NodeCoordinator.updateLayerParameters 的 observeReads),翻转帧仅重算胶囊层参数:零重组/零重测/零重布局;胶囊与图标高亮同读 targetPage,阈值翻转/点切时**同帧瞬移**,拖拽中不逐帧追页面。⚠ **勿改回连续跟随**(`currentPage+currentPageOffsetFraction` 逐帧跟手,2026-10-16 真机实测拖拽掉帧——每帧层参数重算都要过与五页重摆/边界重测共享的 Kotlin 队列,页面位移在原生层不受影响、胶囊帧被推迟即肉眼可见),**也勿改回 animateFloatAsState(tween)**(重新引入插值窗口与切页爆发帧争抢)。底栏/快捷入口/跨页跳转经 `scope.launch { pagerState.scrollToPage(tab) }` **瞬时直达**驱动。**⚠ 铁律:点切勿用 `animateScrollToPage`(2026-10-16 真机「底栏异常卡」根因,工作流源码实锤)**:它把任何 spec——默认 spring 与显式 tween 均然——经 `convertAnimationSpecToSpringAnimation` 转成原生 SpringAnimation + `setContentOffset(animated=true)` 原生插值(PagerState.kt:1502-1532、PagerStateExtensions.kt:250-259;tween 只映射时长,easing 丢弃、damping 硬编码 0.8),动画窗口内每帧原生 tick 回灌完整 compose 布局/放置/绘制管线,跨页边界帧还 forceRemeasure 全量重测五棵驻留页面树,与胶囊/叶子动画抢同一条 Kuikly 线程(正是历史上底栏掉帧的「抢线程」配方);scrollToPage 单帧落位无动画窗口。Pager 底层固有成本:拖拽每帧重放置 5 页根节点 + 过页边界单帧全量重测——**页面树尽量精简**(铁律 10⑥),`beyondViewportPageCount = 4` 勿下调(会破坏五页驻留/状态不丢)。**页回调一律 `remember` 缓存**(goTo/浮层开关等):MainPageImpl 重组(targetPage 翻转等)时新建 lambda 实例会让收回调的页面整树重 diff。**五页同组合的连带约定**:数据页(Todo/Mood/Chat)的首拉 effect 必须 keyed on `CoupleStore.bindState` 且非 BOUND 早退(未登录/未绑定不拉,校准/绑定翻 BOUND 即拉)——原「首次访问才组合才拉」的隐含时序已随 Pager 消失,新增常驻页面照此套路。历史教训仍有效:when 直切每次切页整树销毁+重组,是底栏动画掉帧根源(勿改回 when 直切;**仍勿加 Crossfade**);visibility 常驻堆叠的跨页触摸透传实证(`visibility(false)` 原生映射 View.GONE 理应挡触摸,实测隐藏页仍可能收到跨页点击,隐藏 Box 须追加 `Modifier.offset(x = 10000.dp)` 出屏双保险)在 Pager 下不再适用,但任何「离屏隐藏常驻」新场景仍须遵守。
+6. **图标无 Material Icons 库**:全部用 `components/AppIcons.kt` 的 Path 矢量自绘(`AppIcon(AppIconType.X, tint)`),新图标在 enum + drawAppIcon when 里加分支。
+6a. **通用组件库(components/,新 UI 优先复用)**:五页公共 UI 已抽取——`AppGradientHeader`/`AppHeaderTitle`(渐变头部)、`AppCheckbox`/`AppCheckBadge`(勾选/角标)、`AppTag`(标签胶囊)、`AppAvatar`(文字头像)、`AppMenuGroup`/`AppMenuRow`/`AppMenuDivider`(菜单分组)、`AppStatBar`+`AppStatItem`(统计条)、`AppSectionTitle`(区块标题)、`AppIconTile`(图标底座)、`AppQuickAction`/`AppFeatureCard`/`AppSelectableCard`/`AppIconButton`(卡片与圆钮)。**组件库已把第 7 条的坑封装掉**(画环嵌套、背景常驻切透明、Color/Brush 归一成单个 remember 缓存的 Brush、背景视图吞点击的回调透传等),业务层直接用;新增通用组件必须同步在 demo 画廊 `features/gallery/GalleryPager.kt`(@Page "componentList",入口 = MinePage「组件列表」→ `openPage("componentList")`,返回用 RouterModule.closePage;mock 数据在 `GalleryMock.kt`)补分组展示。
+7. **Path API 差异**:用 `quadraticBezierTo`(无 quadTo);`Stroke` 在 `ui.graphics.drawscope` 包;无 radialGradient/sweepGradient;commonMain 禁用 JVM-only API(如 `Math.PI` → `kotlin.math.PI`)。**⚠️ 描边类渲染异常(2.29 实测)**:`border(w, color, 圆角shape)` 在 Android 渲染层画成**方角**(原生 border 属性不跟随 borderRadius,见 2.29 Border.kt 源码),`Canvas.drawCircle` + Stroke 描边圆同样异常。**⚠️ 同链多个 `background()` 只生效最后一个**(padding 是同节点 LayoutModifier 不产生新视图;BackgroundNode 直接写原生视图背景属性,后者覆盖前者——Jetpack Compose 的 draw 层叠经验在这里不成立)。圆角描边/空心圈一律用**嵌套容器**画环:外层 `background(环色, 外shape)` + 内层 `padding(环宽).background(底色, 内shape)`,环与填充必须分属两个原生视图。**⚠️ 选中态背景禁止用 `.then(if(selected) bg else Modifier)` 条件增删节点**:移除 draw 节点时原生视图残留属性不清(2.29 Background.kt/Border.kt 无 detach 清理,实测留下上一次的方色块);写法是**背景常驻 + 未选中切 `Color.Transparent`**(属性每次重写),或用子级 if/else 换整个容器(子视图销毁,无残留)。**⚠️ 触摸命中(2.29 实测)**:命中测试以**带 background 的原生视图**为准——无背景的 clickable 节点,其点击会被盖在表面的背景子视图整个吞掉(AppCheckbox 事故:22dp 勾选框完全点不动)。规则:clickable 必须与 background **同节点**;可点击区域内叠加的背景子视图(图标底座/图位/角标)必须挂同一回调透传(`AppIconTile`/`AppCheckBadge` 的 `onClick` 参数、AppMenuRow 底座、AppCheckbox 环内孔均已内置);选中态卡片(AppSelectableCard)环宽**常驻占位** `padding(ringWidth)`,选中/未选中外层尺寸一致,否则切换时列表整体抖动。**⚠️ `background()` 的 color 与 brush 两个重载不是渲染等价物(2026-10-16 实锤,反编译 compose+core+render 三层)**:`background(color=)` 写原生 prop `backgroundColor`、`background(brush=)` 写原生 prop `backgroundImage`,映射原生视图 LayerDrawable 的**两个独立图层,且图层顺序首次创建后冻结**(Android M+ addLayer 追加到最顶层,之后只原地更新);同一节点的背景分支若在两重载间切换(Lazy 复用槽位跨状态复用时),先建的实色层会**永久冻结在渐变层上方遮盖后续写入**(聊天 TextBubble 事故:TA 白气泡与我方渐变气泡共用槽位,我方气泡概率渲染成「纯白气泡+白字」)。规则:**同一节点的背景分支必须同参类型(都 brush 或都 color),仅参数值随状态切换;纯色一律 `Brush.linearGradient(listOf(同色, 同色))` 归一**(AppAvatar/ChatPage.taBubbleBrush 先例)。
+8. **Native 桥接**用 `Module` 机制(参考 `base/BridgeModule.kt`,各端原生实现放对应宿主壳);toast 走 `Utils.bridgeModule(pagerId).toast(msg)`。
+9. **⚠️ 模块获取时序(Pager 生命周期)**:`onCreatePager` 内顺序为 `willInit()` → `initModule()`(此时才注册模块)→ `didInit()`。**在 willInit 里 `acquireModule` 必崩**(SharedPreferences 崩溃事故根因),需要模块的逻辑放 `didInit()` 或事件回调。且 `acquireModule` 失败时 `throwRuntimeError` 会同步抛一次(try/catch 可接)并 `setTimeout(1)` 再抛一次(**try/catch 接不住,直接崩 APP**);拿不到就降级的场景一律用可空的 `pager.getModule(name)`。
+10. **动画/列表性能铁律**(详见官方 [Native 属性动画](https://kuikly.tds.qq.com/Compose/native-animation.html)/[列表与滚动](https://kuikly.tds.qq.com/Compose/list-and-scroll.html)):**① ⚠️ `preferNative` 原生插值路径在本项目真机实测有异常(动画丢失/位置错乱/与主题切换冲突),禁用**;统一用 `tween<T>(...)` Compose 插帧(spring 每帧计算且帧数多,位移/缩放一律 tween;`tween<Color>` 需显式泛型;**例外:Pager 联动位移(底栏胶囊)不跑 Compose 动画**,直接读 `targetPage` 瞬移驱动 graphicsLayer(勿逐帧追 `currentPage+fraction` 连续值——帧供给与五页重摆共享 Kotlin 队列,真机实测拖拽掉帧,见铁律 ⑤)——Pager 数据驱动零动画帧,tween 反而制造与切页爆发帧争抢的插值窗口);**② 动画状态只在叶子 Composable 内读**(顶层读 = 整条底栏每帧重组);**③ 位移动画用 graphicsLayer.translationX 纯变换,勿用 offset()**(offset 每帧原生 re-layout);**④ 后组合的节点画在上层**(底栏胶囊必须先组合垫底,放后面会盖住图标文字);**⑤ Brush 一律 lazy/remember 缓存**(每次读取新建实例会击穿 diff);**⑥ Lazy 列表每个 item 是一棵原生视图树,节点数尽量精简**(去纯装饰节点)+ 传 `contentType` 提示复用;**⑦ 同向滚动嵌套(外层竖向滚动套内层竖向 Lazy)禁用**(2026-10-16 心情页实证)——同向手势仲裁风险 + 内层滚动容器必须死高度;「固定头部+底部列表抬满全屏」的诉求用单容器:`LazyVerticalGrid` 的 `item/items` 传 `span = { GridItemSpan(maxLineSpan) }` 把头部作跨列表头,与格子共用一条滚动(GridItemSpan/maxLineSpan 2.29 全实现,LazyGridMeasure 真消费 spanLayoutProvider,非 interactionSource 式死 API);横向 LazyRow 嵌在竖向列表 item 内是跨轴嵌套,可用(MainPager 横滑先例同型);头部区块的横向页边由 grid contentPadding 统一提供,区块内勿再自补(双倍)。重组卡顿排查:`MainPager.PROFILE_RECOMPOSITION` 置 true + `adb logcat -s RCProfiler`。
+11. H5 构建产物为 `nativevue2.js`(js(IR) 目标),由 `static_server/`(Node/Koa)托管。
+12. **沉浸式与安全区**:Android 宿主 `KuiklyRenderActivity.setupImmersiveMode()` 开启全面屏沉浸(状态栏/导航栏透明 + `WindowCompat.setDecorFitsSystemWindows(false)` + API29+ 关 contrast 蒙层),页面背景色(fillMaxSize 的根容器)自然穿透到屏幕底,**不要**给根容器加 bottom padding。底部安全距离用 `components/AppTheme.kt` 的 `navBarSafePaddingDp()`(来源 `pageData.safeAreaInsets.bottom`,取自 rootWindowInsets stable insets,已换算 dp;⚠️ Android 渲染层不填 `navigationBarHeight` 字段,勿用),顶部用 `statusBarPaddingDp()`。底部避让 = 悬浮底栏/输入条/列表尾 Spacer 的常量一律 `+ navBarSafePaddingDp()`。
+13. **键盘/焦点与程序化滚动(2026-10-16 聊天页 P1/P2/P3 体验修复实证,反编译 2.29 源码核实)**:**① 软键盘生命周期完全绑 TextField 的 Compose 焦点**(获焦 startInput→原生输入视图 focus 弹键盘;失焦 stopInput→blur 收键盘)——切 Tab 收键盘在 MainPager 用 `LocalFocusManager.current` + `LaunchedEffect(selectedTab){ clearFocus() }` 一处覆盖五 Tab(单 FocusOwner 焦点树一收全收;副作用必须放 LaunchedEffect,勿写重组体);**输入框一律显式 `autoFocus = false`**(BasicWidget.TextField 默认 true!五页常驻下漏传 = App 启动时页外 requestFocus 自动弹键盘);`FocusRequester` 无 blur API;`LocalSoftwareKeyboardController.hide()` 不清 Compose 焦点(焦点/键盘失同步,再点输入框可能不弹)只能与 clearFocus 同用作兜底;`BridgeModule.closeKeyboard` Android 宿主 KRBridgeModule 未实现该分支(调了返回「方法不存在」)勿调。**② 程序化滚动 Lazy 列表有两个静默吞点,滚底必须「先等 measure 落地再 snap 版 scrollToItem」**:(a) `layoutInfo` 只反映上一次 measure——追加数据后立刻 `scrollToItem(新目标)` 会被 stale totalItemsCount 越界守卫静默吞掉(`snapToItemIndexInternal` 首行 `index >= totalItemsCount` 直接 return,forceRemeasure 只按上次约束重测不刷新数据),用 `snapshotFlow { layoutInfo.totalItemsCount }.first { it >= 目标总数 }` + `withTimeoutOrNull(500)` 等落地;(b) `animateScrollToItem` 首帧 scrollBy 撞上陈旧 `canScrollForward=false` 的 onScroll 闸门返回 0 消耗 → 按「Hit the end」静默取消动画——**滚底一律用 snap 版 `scrollToItem`(suspend,内部 forceRemeasure),勿用 animateScrollToItem**。**③ 键盘顶起列表的跟随**:`keyboardHeightChange` 回调是重组/测量前唯一可靠读点(LaunchedEffect 里读 layoutInfo 已是收缩后状态,贴底判定与收缩前视口高双双失真),须在回调内捕获收缩前贴底态/视口高,再由 effect 等 `layoutInfo.viewportSize.height` < 捕获值(收缩 measure 落地)后钉底;窗口不 resize(setDecorFitsSystemWindows(false) + manifest 无 windowSoftInputMode),顶起全靠手动 padding,而 LazyList 滚动锚「by key, not index」不随视口收缩重锚——**视口收缩(键盘弹起)后必须主动回底,否则最新消息被裁出视口下方**;Kuikly 2.29 无 `WindowInsets.ime` 等价物(compose_src grep 无 imePadding/windowInsetsPadding 实现)。顶起有**两种形态**(2026-10-16 待办页实证):流内顶起(聊天页:输入行在 Column 流内,bottom padding 长高→weight(1f) 列表视口收缩)与**悬浮浮岛顶起**(待办页:输入条 align(BottomCenter) 悬浮,列表视口不收缩)——浮岛形态 = 输入条 bottom 切 `max(浮岛常数, 键盘高+navBar+12)` + **列表尾 Spacer 同步长高 `max(让位常数, 键盘高+navBar+行高+呼吸)`** 代偿避让几何,两种形态等观感;⚠ 尾 Spacer 让位常数必须 ≥ 输入条上缘+呼吸(浮岛 86+44 输入条带,原 100 恰不足,滚底内容被输入条遮一截,已改 150)。**追加列表尾的写操作成功后滚到尾 Spacer 下标**(awaitMeasured 先行,见②),否则长列表下「加了没反应」(待办页 add 与聊天页 send 同源 P3a);「已完成」类过滤不含新条目的视图跳过滚动。**④ 「用户手势 vs 程序化滚动」的判别铁律(2026-10-16 聊天页拖拽收键盘实锤)**:`LazyListState.interactionSource` 是**死 API**(其唯一发射接线 scrollingContainer 在 Kuikly 被整段注释,列表拖动永不发 DragInteraction);`isScrollInProgress` 对拖拽/fling/程序化一律置位不可分辨;`KuiklyScrollInfo.isDragging` 经 internal 不可达。唯一干净通道=**容器挂被动 pointerInput 观察器**:`.pointerInput(focusManager){ awaitEachGesture{ awaitFirstDown(requireUnconsumed=false, pass=PointerEventPass.Initial); 循环 awaitPointerEvent(Initial) 累计 positionChangeIgnoreConsumed 位移,越 touchSlop 即触发 } }`——三个不可妥协点:①**全程不调 change.consume()**(Compose 侧消费移动才 preventTouch 阻断原生触摸);②**位移必须读 `positionChangeIgnoreConsumed()`**(原生层接管滚动后事件带预消费标记,普通 positionChange() 返回 Zero 检测失灵);③**key 用稳定实例**(逐帧变化值做 key 会重启手势协程)。程序化 scrollToItem 只写原生偏移**不产生任何指针事件**,天然不误伤——「拖动才触发」由事件通道结构性保证,无需抑制标志。另:`awaitEachGesture`/`awaitFirstDown`/`PointerEventPass` 全套存在(BasicWidget touchListener 同管线先例);手势 handler 内 `withTimeoutOrNull` 是 2.29 no-op 存根勿依赖。
+
+## 常用操作
+
+- **Android 运行**:Android Studio 直接跑 `androidApp`
+- **Android 打包**:debug 包 `./gradlew :androidApp:assembleDebug` → `androidApp/build/outputs/apk/debug/`;正式包 `./gradlew :androidApp:assembleRelease` → `outputs/apk/release/`(已配 `signingConfigs`)。**签名**:keystore 为 `androidApp/love_baby-release.jks`(alias `love_baby`,密码在 `androidApp/keystore.properties`,两者已 gitignore;⚠️ jks 丢失则无法以同一签名更新应用,务必备份)。lintVital 因 targetSdk 30(Play 上架规范)拦截 release 已用 `lint.checkReleaseBuilds=false` 跳过。国产 ROM adb 安装需在手机上手动确认弹窗(或开"USB 安装")
+- **鸿蒙**:用 DevEco Studio,构建脚本为根目录 `build.ohos.gradle.kts / settings.ohos.gradle.kts`(运行配置 `.run/ohosApp.run.xml`)
+- **iOS**:`iosApp/`(CocoaPods,`shared` 产出静态 framework)
+- **H5 本地服务**:`npm run serve`(即 `node static_server/serve/index.js`)
+- 版本号统一改 `buildSrc` 的 `KotlinBuildVar.kt`
+
+## 目录结构与后续规划
+
+```text
+love_baby/
+├── androidApp/          # Android 宿主壳(原生扩展注册端;默认启动页 "main")
+├── iosApp/              # iOS 宿主壳(CocoaPods)
+├── ohosApp/             # 鸿蒙宿主壳
+├── shared/              # ★ 核心跨端业务模块(KMP),业务代码都在这
+│   └── src/commonMain/kotlin/com/zyc/love_baby/
+│       ├── base/            # BasePager、BridgeModule、Utils(基建)
+│       ├── main/MainPager.kt      # @Page("main") 主容器:底栏五 Tab,HorizontalPager 左右滑切换(五页全驻留)
+│       ├── components/      # AppTheme(含 ThemeStore 主题切换)/AppIcons(矢量图标)/AppBottomBar(浮岛底栏)+ 通用组件库(AppGradientHeader/AppCheckbox/AppTag/AppAvatar/AppMenu/AppStats/AppSection/AppCards)
+│       ├── state/AppState.kt      # 全局状态:TodoStore/MoodStore/ChatStore
+│       ├── features/
+│       │   ├── home/ HomePage.kt    # 首页(渐变头部+统计+快捷入口)
+│       │   ├── todo/ TodoPage.kt    # 待办清单
+│       │   ├── mood/ MoodPage.kt    # 心情(按情绪挑心愿,送出到聊天)
+│       │   ├── chat/ ChatPage.kt    # 悄悄话(气泡+心愿卡+自动回复)
+│       │   ├── mine/ MinePage.kt    # 我的(含主题切换卡;「组件列表」入口路由到画廊)
+│       │   └── gallery/ GalleryPager.kt # 组件列表(@Page("componentList"):通用组件 demo 画廊+GalleryMock 数据)
+│       ├── RouterPage.kt    # 模板自带:页面路由调试页(@Page("router"))
+│       ├── BasicWidget.kt   # 模板自带:同包 TextField/Button 简化封装
+│       ├── data/            # [规划] 数据模型(kotlinx.serialization)+ Repository
+│       ├── network/       # [规划] 网络封装(DevGuide network 或 Ktor)
+│       └── utils/           # [规划] 通用工具
+├── static_server/       # Node/Koa 静态服务器(H5 与动态产物托管)
+├── buildSrc/            # 构建配置与版本号
+├── docs/
+│   └── kuikly-docs.md   # ★ Kuikly 文档导航手册(按场景速查)
+└── CLAUDE.md            # 本文件
+```
+
+新增页面约定:页面放 `features/<业务域>/`,入口 `@Page` 类 + Compose UI 同目录;跨页面共享的状态放 `state/` 的 Store;可复用 UI 抽到 `components/`;各端原生扩展的注册代码放对应宿主壳,跨端接口放 `base/`。
+
+## 文档导航
+
+**遇到不会写的,先查 [docs/kuikly-docs.md](docs/kuikly-docs.md)** —— 按"场景 → 链接"整理了全部官方文档入口。常用直达:
+
+- [Compose 快速开始](https://kuikly.tds.qq.com/Compose/getting-started.html) · [核心组件](https://kuikly.tds.qq.com/Compose/core-components.html) · [布局](https://kuikly.tds.qq.com/Compose/layout.html) · [状态管理](https://kuikly.tds.qq.com/Compose/status-management.html)
+- [Module 调 Native](https://kuikly.tds.qq.com/DevGuide/module.html) · [打开/关闭页面](https://kuikly.tds.qq.com/DevGuide/open-and-close-page.html) · [网络请求](https://kuikly.tds.qq.com/DevGuide/network.html)
+- [架构介绍](https://kuikly.tds.qq.com/Introduction/arch.html) · [FAQ](https://kuikly.tds.qq.com/Compose/faq.html)

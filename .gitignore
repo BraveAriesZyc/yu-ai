@@ -1,0 +1,48 @@
+*.iml
+.gradle
+/local.properties
+.idea
+.DS_Store
+/build
+*/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.so
+*.js
+node_modules
+Pods
+Pods/*
+Pods-iosApp/*
+Kotlin-js-store
+
+## Various settings
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+**/xcuserdata/**
+**/*.xcuserdatad/**
+**/xcshareddata/
+**/IDEWorkspaceChecks.plist
+
+## Other
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+*.xcbkptlist
+*.pyc
+# 正式签名密钥(丢失无法更新应用,勿删本地文件)
+keystore.properties
+*.jks
+
+# static_server Node 源码例外(模板 *.js 全局忽略会吞源码;static/ 下 H5 编译产物保持忽略)
+!static_server/**/*.js
+# KMP / ohos 产物
+.kotlin
+oh_modules

@@ -1,0 +1,9 @@
+<resources>
+	<style name="AppTheme" parent="android:Theme.Material.NoActionBar"/>
+
+	<!-- 头像选图透明桥 Activity 主题:全透明窗口,主页面在选图系统 UI 下仍可见,无黑底闪帧 -->
+	<style name="Theme.KRPickImage" parent="Theme.AppCompat.NoActionBar">
+		<item name="android:windowIsTranslucent">true</item>
+		<item name="android:windowBackground">@android:color/transparent</item>
+	</style>
+</resources>

@@ -1,0 +1,421 @@
+package com.zyc.love_baby.features.todo
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import com.tencent.kuikly.compose.animation.animateColorAsState
+import com.tencent.kuikly.compose.animation.core.FastOutSlowInEasing
+import com.tencent.kuikly.compose.animation.core.tween
+import com.tencent.kuikly.compose.foundation.background
+import com.tencent.kuikly.compose.foundation.clickable
+import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
+import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
+import com.tencent.kuikly.compose.foundation.layout.Arrangement
+import com.tencent.kuikly.compose.foundation.layout.Box
+import com.tencent.kuikly.compose.foundation.layout.Column
+import com.tencent.kuikly.compose.foundation.layout.Row
+import com.tencent.kuikly.compose.foundation.layout.Spacer
+import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
+import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
+import com.tencent.kuikly.compose.foundation.layout.height
+import com.tencent.kuikly.compose.foundation.layout.padding
+import com.tencent.kuikly.compose.foundation.layout.size
+import com.tencent.kuikly.compose.foundation.layout.width
+import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
+import com.tencent.kuikly.compose.foundation.lazy.LazyListState
+import com.tencent.kuikly.compose.foundation.lazy.items
+import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
+import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
+import com.tencent.kuikly.compose.foundation.text.maxLength
+import com.tencent.kuikly.compose.material3.Text
+import com.tencent.kuikly.compose.ui.Alignment
+import com.tencent.kuikly.compose.ui.Modifier
+import com.tencent.kuikly.compose.ui.graphics.Color
+import com.tencent.kuikly.compose.ui.input.pointer.PointerEventPass
+import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
+import com.tencent.kuikly.compose.ui.input.pointer.positionChangeIgnoreConsumed
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
+import com.tencent.kuikly.compose.ui.text.TextStyle
+import com.tencent.kuikly.compose.ui.text.font.FontWeight
+import com.tencent.kuikly.compose.ui.unit.dp
+import com.tencent.kuikly.compose.ui.unit.max
+import com.tencent.kuikly.compose.ui.unit.sp
+import com.tencent.kuikly.core.pager.Pager
+import com.tencent.kuikly.core.views.KeyboardParams
+import com.zyc.love_baby.TextField
+import com.zyc.love_baby.components.AppCheckbox
+import com.zyc.love_baby.components.AppGradientHeader
+import com.zyc.love_baby.components.AppHeaderTitle
+import com.zyc.love_baby.components.AppIcon
+import com.zyc.love_baby.components.AppIconButton
+import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppTag
+import com.zyc.love_baby.components.AppTheme
+import com.zyc.love_baby.components.ThemeStore
+import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.features.couple.toastCoupleResult
+import com.zyc.love_baby.network.ApiResult
+import com.zyc.love_baby.state.CoupleBindState
+import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.TodoItem
+import com.zyc.love_baby.state.TodoStore
+import kotlin.math.abs
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+
+/** 文本长度上限(与服务端 AppTodoCreateReqVO @Length(max=64) 对齐;maxLength 原生层拒绝 + take 兜底) */
+private const val TODO_INPUT_MAX_LENGTH = 64
+
+/**
+ * TodoPage — 待办页:主题渐变头部 + 分段过滤 + 清单卡片 + 底部添加输入条(M3 服务端同步版)
+ * 用法:TodoPage(pager),数据与过滤状态在 TodoStore(全局,切 Tab 不丢);写操作经 pager 走 app-api
+ * 依赖:TodoStore/ThemeStore/AppIcons/BasicWidget.TextField(String placeholder, keyboardHeightChange)
+ * 事件:勾选完成/删除/添加 → TodoStore 写穿透(乐观更新失败回滚,失败 toastCoupleResult);
+ *      进入首组合 loadAll 全量拉取,再进本页由 MainPager 切 Tab 触发补拉(§7.4 拉取触发点);
+ *      添加成功 → 滚到列表尾新条目(TodoStore.add 恒追加,长列表不滚 = 「加了没反应」)
+ * 功能:全部/进行中/已完成 三态过滤;空列表引导文案;键盘三件套(2026-10-16 对齐聊天页):
+ *  - 软键盘避让(聊天页 F2/F7 同款):keyboardHeightChange 顶起悬浮输入条 + 列表尾 Spacer
+ *    同步长高,键盘开着新增也能完整看到新条目落在顶起的输入条上方(几何见各 inline 注释)
+ *  - 拖列表收键盘(聊天页 Q3 同款):键盘开着竖向拖列表越 touchSlop 即 clearFocus,
+ *    列表容器被动观察器不消费事件,不扰原生滚动/行点击勾选/切过滤(铁律13④)
+ *  - 键盘跨页残留由 MainPager 切 Tab clearFocus 全局兜底(上轮已做,本页零改动)
+ *  - 输入框高度(2026-10-16 F15 对齐聊天页):单行≈44dp 与添加钮等高(22dp 胶囊圆角=高之半),
+ *    maxLines=3 长文本封顶自然长高,64 字上限与服务端 @Length(max=64) 对齐
+ */
+@Composable
+fun TodoPage(pager: Pager) {
+    val theme = ThemeStore.current
+    var inputText by remember { mutableStateOf("") }
+    var adding by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    // 软键盘高度(dp,KeyboardParams.height),0 = 收起;驱动输入条 bottom 与列表尾 Spacer 顶起
+    var keyboardHeight by remember { mutableStateOf(0f) }
+    // Q3 拖拽收键盘(2026-10-16,同聊天页):键盘开着时手指拖列表 → clearFocus 收键盘
+    // (微信语义)。观察器挂列表容器(见 LazyColumn modifier),被动不消费事件;程序化滚动
+    // (新增滚底 scrollToItem 只写原生偏移)零指针事件,天然不误伤(铁律13)
+    val focusManager = LocalFocusManager.current
+    // 键盘高度回调(BasicWidget 内部 rememberUpdatedState 透传;remember 化满足铁律⑩)。
+    // 不需要聊天页的 kbFollow 贴底快照链:本页输入条是悬浮浮岛,列表视口不随键盘收缩,
+    // 键盘弹起期间列表不重锚;「新增后滚到新条目」已覆盖键盘开着看新待办的诉求
+    val onKeyboardHeightChange: (KeyboardParams) -> Unit = remember {
+        { params: KeyboardParams -> keyboardHeight = params.height }
+    }
+    val todos = TodoStore.todos
+    val filtered = visibleTodos()
+
+    // 首组合全量拉取(§7.4):失败静默——只读降级,旧数据可见不崩(§11);
+    // 常驻堆叠下本页只组合一次,「再进入」由 MainPager 切 Tab 副作用补拉
+    // 首拉绑定态驱动(Pager 化改造):HorizontalPager 五页冷启动即全组合,原「首次访问才组合
+    // 才拉」的隐含时序已不存在——未登录/未绑定(UNKNOWN/UNBOUND)时静默跳过,校准/绑定翻
+    // BOUND 时重拉(解绑清场后重绑同键重拉,与 D-11 清场闭环;冷启动已绑定 = UNKNOWN→BOUND 拉一次)
+    LaunchedEffect(CoupleStore.bindState) {
+        if (CoupleStore.bindState != CoupleBindState.BOUND) return@LaunchedEffect
+        TodoStore.loadAll(pager)
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // 渐变头部
+            AppGradientHeader {
+                AppHeaderTitle("待办清单")
+                AppTag(
+                    "${TodoStore.doneCount}/${todos.size} 已完成",
+                    bgColor = Color.White.copy(alpha = 0.25f),
+                    textColor = Color.White,
+                    fontSize = 11.sp,
+                    corner = 12.dp,
+                    hPadding = 10.dp,
+                    vPadding = 4.dp,
+                )
+            }
+
+            // 分段过滤器
+            FilterBar(
+                filter = TodoStore.filter,
+                onFilter = { TodoStore.filter = it },
+                modifier = Modifier.padding(horizontal = AppTheme.PageHPadding, vertical = 14.dp),
+            )
+
+            // 清单
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth()
+                    // Q3 拖拽收键盘:被动手势观察器(同聊天页,三个不可妥协点见铁律13④):
+                    // ①全程不调 change.consume()——Compose 侧消费移动才会 preventTouch
+                    // 阻断原生触摸,不消费 = 原生滚动/惯性/行点击勾选/切过滤全部无感;
+                    // ②pass 一律 Initial + requireUnconsumed=false,位移读
+                    // positionChangeIgnoreConsumed()——原生层接管滚动后事件带预消费标记,
+                    // 普通 positionChange() 对已消费事件返回 Zero 会检测失灵;③竖向
+                    // 位移越 touchSlop 且竖向占优(dy>dx)才收——横滑翻页由 MainPager 切
+                    // Tab 的 clearFocus 承接,轻点行勾选/切过滤不越 slop 不收。
+                    // key=focusManager(页内稳定实例;勿用逐帧变化值做 key,重组会重启
+                    // 手势协程)。手势 handler 内勿用 withTimeoutOrNull(2.29 no-op 存根)
+                    .pointerInput(focusManager) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(
+                                requireUnconsumed = false,
+                                pass = PointerEventPass.Initial,
+                            )
+                            var dx = 0f
+                            var dy = 0f
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                val delta = change.positionChangeIgnoreConsumed()
+                                dx += abs(delta.x)
+                                dy += abs(delta.y)
+                                if (dy > viewConfiguration.touchSlop && dy > dx) {
+                                    focusManager.clearFocus()
+                                    break
+                                }
+                            }
+                        }
+                    },
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (filtered.isEmpty()) {
+                    item {
+                        TodoEmptyHint(
+                            text = when {
+                                todos.isEmpty() -> "还没有待办,添加一条吧"
+                                TodoStore.filter == 1 -> "都做完啦,好好休息一下吧"
+                                else -> "还没有完成的待办"
+                            },
+                            modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                        )
+                    }
+                }
+                items(filtered, key = { it.id }, contentType = { "todo" }) { todo ->
+                    TodoRow(
+                        todo = todo,
+                        onToggle = {
+                            scope.launch {
+                                val result = TodoStore.toggle(pager, todo.id)
+                                if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
+                            }
+                        },
+                        onDelete = {
+                            scope.launch {
+                                val result = TodoStore.delete(pager, todo.id)
+                                if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
+                            }
+                        },
+                    )
+                }
+                // 尾部 Spacer:给悬浮输入条让位(闭键常数 150 = 输入条上缘 86+44 再 +20
+                // 呼吸,新增滚底后新条目完整露出输入条上方;原 100 恰让位不足,新条目下缘
+                // 落输入条带内被遮一截)。键盘弹起同步长高(键盘高+navBar+70 = 顶起输入条
+                // 上缘 56 + 14 呼吸),滚底的新条目完整落在键盘/输入条上方(2026-10-16
+                // 对齐聊天页避让几何;收起归零自动回落,lazy 滚动 clamp 自动保持贴底)
+                item {
+                    Spacer(
+                        modifier = Modifier.height(
+                            max(
+                                150.dp + navBarSafePaddingDp(),
+                                keyboardHeight.dp + navBarSafePaddingDp() + 70.dp,
+                            ),
+                        ),
+                    )
+                }
+            }
+        }
+
+        // 底部添加条(悬浮在底栏上方;软键盘避让 2026-10-16 对齐聊天页 F2/F7)。⚠ 原生
+        // Android11PlusKeyboardWatcher 的 height = imeInsets.bottom - navigationBars.bottom
+        // (聊天页反编译核实同款)——不含导航栏区域,键盘实际顶边比它高出一条 navBar,
+        // 须再叠加 navBarSafePaddingDp() 补齐,否则输入框下缘被导航栏区域上方的键盘盖住
+        // 一条;弹起时 bottom 切到「键盘高 + navBar + 12dp」顶到键盘上方,收起回调归零
+        // 恢复浮岛常数(悬浮浮岛与聊天页流内顶起等观感)
+        Row(
+            modifier = Modifier.align(Alignment.BottomCenter)
+                .padding(horizontal = AppTheme.PageHPadding)
+                .padding(
+                    bottom = max(
+                        86.dp + navBarSafePaddingDp(),
+                        keyboardHeight.dp + navBarSafePaddingDp() + 12.dp,
+                    ),
+                )
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.weight(1f)
+                    .background(AppTheme.CardBg, RoundedCornerShape(22.dp)),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                TextField(
+                    value = inputText,
+                    onValueChange = { inputText = it.take(TODO_INPUT_MAX_LENGTH) },
+                    placeholder = "想做点什么?",
+                    autoFocus = false,
+                    placeholderColor = AppTheme.TextTertiary,
+                    textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 13.sp),
+                    maxLines = 3, // 长文本限 3 行竖向生长,不在 22dp 胶囊里无限撑高(2026-10-16 F15 对齐聊天页)
+                    keyboardHeightChange = onKeyboardHeightChange, // 写键盘高度:输入条顶起 + 尾 Spacer 长高
+                    modifier = Modifier.fillMaxWidth()
+                        // 单行≈44dp 与添加钮等高(22dp 胶囊圆角恰为高之半,原 6dp 压成 ~30dp
+                        // 矮墩圆角被钳制)+ 触达舒适;3 行时自然长高,底部锚定向上生长
+                        .padding(horizontal = 14.dp, vertical = 13.dp)
+                        .maxLength(TODO_INPUT_MAX_LENGTH), // 原生层拒绝超限输入,与 take 兜底双保险
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            // 添加按钮(POST 成功才清输入:失败保留文案可重试,无脏数据 §7.4)
+            AppIconButton(
+                AppIconType.Plus,
+                onClick = {
+                    val text = inputText.trim()
+                    if (text.isNotEmpty() && !adding) {
+                        adding = true
+                        scope.launch {
+                            val result = TodoStore.add(pager, text)
+                            adding = false
+                            if (result is ApiResult.Ok) {
+                                inputText = ""
+                                // 新待办滚到可见(2026-10-16,对齐聊天页 P3a 同源):
+                                // TodoStore.add 恒追加列表尾(服务端 create_time asc 同序),
+                                // 长列表下不滚 = 「加了没反应」。「已完成」过滤不含新
+                                // (未完成)条目,滚了也看不到,跳过。先 awaitMeasured 等
+                                // 含新条目的 measure 落地再 snap 滚到尾 Spacer 下标(铁律13:
+                                // 过早 scrollToItem 撞 stale totalItemsCount 越界守卫被静默
+                                // 吞;尾部天然 clamp 贴底,键盘开着时新条目完整露出)
+                                if (TodoStore.filter != 2) {
+                                    val visibleCount = visibleTodos().size
+                                    listState.awaitMeasured(visibleCount + 1)
+                                    listState.scrollToItem(visibleCount)
+                                }
+                            } else {
+                                toastCoupleResult(pager, result)
+                            }
+                        }
+                    }
+                },
+                iconSize = 22.dp,
+            )
+        }
+    }
+}
+
+/** 空态引导:软色图标圆底 + 一句文案(语气对齐既有页面) */
+@Composable
+private fun TodoEmptyHint(text: String, modifier: Modifier = Modifier) {
+    val theme = ThemeStore.current
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier.size(56.dp)
+                .background(theme.brandStart.copy(alpha = 0.1f), RoundedCornerShape(28.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            AppIcon(AppIconType.Todo, theme.brandStart, Modifier.size(24.dp))
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text, color = AppTheme.TextTertiary, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun FilterBar(filter: Int, onFilter: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val theme = ThemeStore.current
+    val tabs = listOf("全部", "进行中", "已完成")
+    Row(
+        modifier = modifier.fillMaxWidth()
+            .background(AppTheme.CardBg, RoundedCornerShape(14.dp))
+            .padding(4.dp),
+    ) {
+        tabs.forEachIndexed { index, label ->
+            val selected = index == filter
+            // 短 tween 压帧数;preferNative 原生路径接管背景色后与主题切换冲突,实测异常,暂不启用
+            val bg by animateColorAsState(
+                targetValue = if (selected) theme.bg else AppTheme.CardBg,
+                animationSpec = tween<Color>(durationMillis = 150, easing = FastOutSlowInEasing),
+                label = "filterBg",
+            )
+            Box(
+                modifier = Modifier.weight(1f)
+                    .background(bg, RoundedCornerShape(11.dp))
+                    .clickable { onFilter(index) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    label,
+                    color = if (selected) AppTheme.TextPrimary else AppTheme.TextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodoRow(todo: TodoItem, onToggle: () -> Unit, onDelete: () -> Unit) {
+    Row(
+        modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)
+            .fillMaxWidth()
+            .background(AppTheme.CardBg, RoundedCornerShape(16.dp))
+            .clickable { onToggle() }
+            .padding(horizontal = 14.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // 圆形勾选框(通用组件)
+        AppCheckbox(
+            checked = todo.done,
+            onCheckedChange = { onToggle() },
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                todo.title,
+                color = if (todo.done) AppTheme.TextTertiary else AppTheme.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = if (todo.done) FontWeight.Normal else FontWeight.Medium,
+            )
+            Spacer(modifier = Modifier.height(5.dp))
+            AppTag(
+                todo.tag,
+                bgColor = todo.tagColor.copy(alpha = 0.12f),
+                textColor = todo.tagColor,
+            )
+        }
+        // 删除(clickable 与透明 background 同节点,铁律⑤:命中测试以带 background 的原生视图为准,
+        // 无背景 clickable 的点击会被行级背景子视图整个吞掉)
+        Box(
+            modifier = Modifier.size(28.dp)
+                .background(Color.Transparent, RoundedCornerShape(14.dp))
+                .clickable { onDelete() },
+            contentAlignment = Alignment.Center,
+        ) {
+            AppIcon(AppIconType.Close, Color(0xFFC8CCD8), Modifier.size(16.dp))
+        }
+    }
+}
+
+/** 当前过滤视图的可见待办(页首 filtered 与新增滚底协程共用;协程内新鲜读 Store,防捕获重组期旧列表) */
+private fun visibleTodos(): List<TodoItem> = when (TodoStore.filter) {
+    1 -> TodoStore.todos.filter { !it.done }
+    2 -> TodoStore.todos.filter { it.done }
+    else -> TodoStore.todos
+}
+
+/**
+ * 等列表对「包含目标条数」的那次 measure 真正落地再放行(同 ChatPage.awaitMeasured,
+ * 铁律13):Kuikly 的 layoutInfo 只反映上一次 measure,新增待办后立刻 scrollToItem 会
+ * 撞陈旧 totalItemsCount 越界守卫被静默吞(snapToItemIndexInternal 首行 index 越界直接
+ * return);snapshotFlow 对 neverEqualPolicy 的 layoutInfoState 每次 measure 必发新值,
+ * 以「totalItemsCount ≥ itemTotal」为落地信号。500ms 兜底超时(丢弃本次滚动优于错误滚动;
+ * 与 ChatPage 同款实现,各自随页面演进,勿强行合并去重)
+ */
+private suspend fun LazyListState.awaitMeasured(itemTotal: Int) {
+    withTimeoutOrNull(500) {
+        snapshotFlow { layoutInfo.totalItemsCount }.first { it >= itemTotal }
+    }
+}
