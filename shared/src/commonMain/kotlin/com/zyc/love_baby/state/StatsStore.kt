@@ -26,8 +26,12 @@ internal object StatsStore {
     var bindDays by mutableIntStateOf(0)
         private set
 
-    /** 悄悄话消息总数(含文本与心愿) */
+    /** 悄悄话消息总数(含文本与心愿;接口保留口径,端上统计卡已改用心愿) */
     var messageCount by mutableIntStateOf(0)
+        private set
+
+    /** 心愿消息总数(kind=2 子集;我的页统计卡「心愿」消费,点击进心愿时间线页) */
+    var wishCount by mutableIntStateOf(0)
         private set
 
     /** 待办总数 */
@@ -47,15 +51,17 @@ internal object StatsStore {
             val data = result.data
             bindDays = data.optInt("bindDays", 0)
             messageCount = data.optInt("messageCount", 0)
+            wishCount = data.optInt("wishCount", 0)
             todoCount = data.optInt("todoCount", 0)
             moodCount = data.optInt("moodCount", 0)
         }
     }
 
-    /** 登出/解绑清场:四项归零(与 ChatStore/TodoStore.reset 同范式,重复清幂等) */
+    /** 登出/解绑清场:五项归零(与 ChatStore/TodoStore.reset 同范式,重复清幂等) */
     fun reset() {
         bindDays = 0
         messageCount = 0
+        wishCount = 0
         todoCount = 0
         moodCount = 0
     }

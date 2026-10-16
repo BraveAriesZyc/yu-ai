@@ -91,6 +91,7 @@ internal fun MinePage(
         LazyColumn(modifier = Modifier.fillMaxSize(), userScrollEnabled = listScrollEnabled) {
             item {
                 HeaderWithStats(
+                    pager = pager,
                     profile = profile,
                     onEditClick = onEditProfile,
                 )
@@ -173,9 +174,22 @@ private fun openComponentGallery(pager: Pager) {
     }
 }
 
-/** 头部:资料区(§7.7)读 profile 参数回填昵称与首字头像;「编辑」回调 onEditClick */
+/**
+ * openWishTimeline — 路由打开心愿时间线页(新 Activity 压栈,closePage/系统返回即回)
+ * 事件回调里模块已就绪(didInit 之后),acquireModule 安全(openComponentGallery 同款)
+ */
+private fun openWishTimeline(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("wishTimeline", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/** 头部:资料区(§7.7)读 profile 参数回填昵称与首字头像;「编辑」回调 onEditClick;
+ *  统计卡「心愿」列可点进心愿时间线页(需 pager 路由,未绑定时点击不响应) */
 @Composable
-private fun HeaderWithStats(profile: UserProfile?, onEditClick: () -> Unit) {
+private fun HeaderWithStats(pager: Pager, profile: UserProfile?, onEditClick: () -> Unit) {
     val nickname = profile?.nickname?.trim().orEmpty()
     Box(modifier = Modifier.fillMaxWidth()) {
         // 渐变头部
@@ -211,10 +225,18 @@ private fun HeaderWithStats(profile: UserProfile?, onEditClick: () -> Unit) {
                 Text("编辑", color = Color.White, fontSize = 12.sp)
             }
         }
-        // 悬浮统计卡(统计真数据化:三项全真,StatsStore 由 MainPager 拉取,数值变化写穿透后刷新)
+        // 悬浮统计卡(统计真数据化:三项全真,StatsStore 由 MainPager 拉取,数值变化写穿透后刷新)。
+        // 「心愿」列可点进时间线页(messageCount 口径保留在接口,端上第一卡按产品口径改心愿);
+        // 未绑定不响应(wish-list 需 couple 上下文,点了也只是失败态)
         AppStatBar(
             items = listOf(
-                AppStatItem("${StatsStore.messageCount}", "悄悄话"),
+                AppStatItem(
+                    "${StatsStore.wishCount}",
+                    "心愿",
+                    onClick = {
+                        if (CoupleStore.bindState == CoupleBindState.BOUND) openWishTimeline(pager)
+                    },
+                ),
                 AppStatItem("${StatsStore.todoCount}", "待办"),
                 AppStatItem("${StatsStore.moodCount}", "心情"),
             ),

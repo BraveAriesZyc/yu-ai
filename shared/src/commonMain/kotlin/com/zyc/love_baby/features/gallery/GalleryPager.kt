@@ -52,6 +52,7 @@ import com.zyc.love_baby.components.AppQuickAction
 import com.zyc.love_baby.components.AppSectionTitle
 import com.zyc.love_baby.components.AppSelectableCard
 import com.zyc.love_baby.components.AppStatBar
+import com.zyc.love_baby.components.AppStatItem
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.AppAvatar
@@ -110,7 +111,7 @@ internal fun GalleryPage(pager: Pager) {
         item { IconSection() }
         item { CheckSection() }
         item { TagAvatarSection() }
-        item { StatSection() }
+        item { StatSection(pager) }
         item { MenuSection(pager) }
         item { CardSection() }
         item { ButtonSection(pager) }
@@ -236,11 +237,28 @@ private fun TagAvatarSection() {
 }
 
 @Composable
-private fun StatSection() {
-    GallerySection(title = "AppStatBar", note = "两种规格") {
+private fun StatSection(pager: Pager) {
+    GallerySection(title = "AppStatBar", note = "两种规格 + 可点统计项") {
         AppStatBar(GalleryMock.stats)
         Spacer(modifier = Modifier.height(10.dp))
         AppStatBar(GalleryMock.stats, valueSize = 18.sp, dividerHeight = 26.dp)
+        Spacer(modifier = Modifier.height(10.dp))
+        // onClick 形态(2026-10-17 三域查看):可点列整列热区(我的页统计卡「心愿」进时间线同款)
+        AppStatBar(
+            listOf(
+                AppStatItem(
+                    "12",
+                    "可点项",
+                    onClick = { Utils.bridgeModule(pager.pagerId).toast("点了可点项 1") },
+                ),
+                AppStatItem("34", "不可点"),
+                AppStatItem(
+                    "56",
+                    "可点项",
+                    onClick = { Utils.bridgeModule(pager.pagerId).toast("点了可点项 2") },
+                ),
+            ),
+        )
     }
 }
 

@@ -35,3 +35,39 @@ internal fun chatDayLabel(epochMs: Long): String {
     val today = civilFromDays((nowEpochMs() + 8 * MS_HOUR) / MS_DAY)
     return if (y == today.first) "${m}月${d}日" else "${y}年${m}月${d}日"
 }
+
+/** 友好日期条文案:今天 / 昨天 / 其余 chatDayLabel(同年 M月d日/跨年 yyyy年M月d日);epochMs<=0 返回空串。
+ *  只服务新页(心愿时间线/待办分组),聊天页保持 chatDayLabel 原样(不动已验收面) */
+internal fun chatDayLabelFriendly(epochMs: Long): String {
+    if (epochMs <= 0) return ""
+    val todayIndex = (nowEpochMs() + 8 * MS_HOUR) / MS_DAY
+    return when (chatDayIndex(epochMs)) {
+        todayIndex -> "今天"
+        todayIndex - 1 -> "昨天"
+        else -> chatDayLabel(epochMs)
+    }
+}
+
+/** 任意天序号 → "yyyy-MM-dd" 日期键(GMT+8):moodDate 字符串分组比对用(mood record 无时刻只有日期) */
+internal fun civilDateKeyGmt8(dayIndex: Long): String {
+    val (y, m, d) = civilFromDays(dayIndex)
+    return "$y-${pad2(m)}-${pad2(d)}"
+}
+
+/** 今晨 GMT+8 天序号(配合 civilDateKeyGmt8 取今天/昨天日期键) */
+internal fun todayDayIndexGmt8(): Long = (nowEpochMs() + 8 * MS_HOUR) / MS_DAY
+
+/** 时段徽标文案(GMT+8):清晨5-7/上午8-10/中午11-12/下午13-17/傍晚18/晚上19-22/深夜23-4;
+ *  epochMs<=0 返回空串(调用侧整层隐藏,不造假数据) */
+internal fun daypartLabel(epochMs: Long): String {
+    if (epochMs <= 0) return ""
+    return when (((epochMs + 8 * MS_HOUR) / MS_HOUR) % 24) {
+        in 5..7 -> "清晨"
+        in 8..10 -> "上午"
+        in 11..12 -> "中午"
+        in 13..17 -> "下午"
+        18L -> "傍晚"
+        in 19..22 -> "晚上"
+        else -> "深夜" // 23-4
+    }
+}

@@ -2,6 +2,7 @@ package com.zyc.love_baby.components
 
 import androidx.compose.runtime.Composable
 import com.tencent.kuikly.compose.foundation.background
+import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Row
@@ -23,10 +24,12 @@ import com.tencent.kuikly.compose.ui.unit.sp
 
 /**
  * AppStatItem — 统计项(数值 + 标签)
+ * onClick 非空 = 整列可点(跳详情页用);默认 null 不可点,零调用点破坏
  */
 data class AppStatItem(
     val value: String,
     val label: String,
+    val onClick: (() -> Unit)? = null,
 )
 
 /**
@@ -34,7 +37,7 @@ data class AppStatItem(
  * 用法:AppStatBar(listOf(AppStatItem("36", "心愿完成"), ...))
  *       头部悬浮统计用法:外层 Box align(BottomCenter).offset(y = 22.dp) + modifier 传水平边距
  * 依赖:AppTheme
- * 事件:无
+ * 事件:AppStatItem.onClick(item 级可点,热区=整列;默认 null 不可点)
  * 功能:valueSize/dividerHeight 可调(首页 20sp/28dp,我的页 18sp/26dp)
  */
 @Composable
@@ -57,7 +60,10 @@ fun AppStatBar(
                 AppStatDivider(dividerHeight)
             }
             Column(
-                modifier = Modifier.weight(1f),
+                // clickable 与 background 同节点(铁律⑤):透明 background 常驻不分支,可点性由 enabled 表达
+                modifier = Modifier.weight(1f)
+                    .background(Color.Transparent, RoundedCornerShape(8.dp))
+                    .clickable(enabled = item.onClick != null) { item.onClick?.invoke() },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(item.value, color = AppTheme.TextPrimary, fontSize = valueSize, fontWeight = FontWeight.Bold)

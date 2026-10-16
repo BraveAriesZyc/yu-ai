@@ -52,7 +52,9 @@ internal data class MoodOptionDeleteReq(val id: String) {
 /**
  * 单日心情(mood/record/list 数组元素;§5.2 组 RespVO 契约 + M3.5 快照列只加字段)。
  * moodDate 为服务端原样字符串(预期 yyyy-MM-dd);moodDate 无记录的日期回包无条目,端上按空缺渲染;
- * 快照三列(moodLabel/emoji/color)记录时点定格——选项可能已被删除,渲染勿依赖字典回查
+ * 快照三列(moodLabel/emoji/color)记录时点定格——选项可能已被删除,渲染勿依赖字典回查。
+ * createTime 为记录时刻 epoch 毫秒(服务端 uk_user_date 覆盖写不更新 = 当日首次记录时刻),
+ * 0 = 服务端未回传/旧包,时段徽标整层隐藏(不造假数据)
  */
 internal data class MoodRecordInfo(
     val id: String,
@@ -63,6 +65,7 @@ internal data class MoodRecordInfo(
     val moodLabel: String,
     val emoji: String,
     val color: String,
+    val createTime: Long,
 ) {
     companion object {
 
@@ -80,6 +83,7 @@ internal data class MoodRecordInfo(
                 moodLabel = data.optString("moodLabel"),
                 emoji = data.optString("emoji"),
                 color = data.optString("color"),
+                createTime = data.optLong("createTime"),
             )
         }
 

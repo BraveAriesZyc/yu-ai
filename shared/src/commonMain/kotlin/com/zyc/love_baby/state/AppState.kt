@@ -217,6 +217,7 @@ internal data class TodoItem(
     val tag: String,
     val tagColor: Color, // 端上 UI 色;上送前经 colorToHex 转 hex(§7.6 铁律⑥)
     val done: Boolean = false,
+    val createTime: Long = 0L, // 创建时刻 epoch 毫秒(服务端 create_time asc 排序语义源);0=未回传,日期分组归「更早」
 )
 
 internal object TodoStore {
@@ -241,6 +242,7 @@ internal object TodoStore {
                     tag = info.tag.ifEmpty { TODO_DEFAULT_TAG },
                     tagColor = colorFromHex(info.color.ifEmpty { TODO_DEFAULT_COLOR_HEX }),
                     done = info.done,
+                    createTime = info.createTime,
                 )
             }
         }
@@ -289,6 +291,7 @@ internal object TodoStore {
                     tag = info.tag.ifEmpty { TODO_DEFAULT_TAG },
                     tagColor = colorFromHex(info.color.ifEmpty { TODO_DEFAULT_COLOR_HEX }),
                     done = info.done,
+                    createTime = info.createTime,
                 )
             }
         }
@@ -500,7 +503,7 @@ internal object MoodStore {
         val sameMonth = displayMonth.isEmpty() || today.take(7) == displayMonth
         if (option != null && today.isNotEmpty() && sameMonth) {
             moodRecords = moodRecords.filterNot { it.userId == SessionStore.userId && it.moodDate == today } +
-                MoodRecordInfo("", SessionStore.userId, today, 0, option.id, option.label, option.emoji, option.colorHex)
+                MoodRecordInfo("", SessionStore.userId, today, 0, option.id, option.label, option.emoji, option.colorHex, nowEpochMs())
         }
         val result = MoodApi.record(pager, optionId)
         if (result !is ApiResult.Ok) {

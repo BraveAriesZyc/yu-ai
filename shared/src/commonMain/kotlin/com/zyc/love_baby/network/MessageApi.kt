@@ -26,7 +26,11 @@ internal object MessageApi {
     /** 增量拉取每页条数(§5.2:limit 默认 50、上限 200,端上固定取默认) */
     const val LIST_LIMIT = 50
 
+    /** 心愿时间线单次取数上限(服务端钳制同 200;无游标,取最近 200 条,v1 足够) */
+    const val WISH_LIST_LIMIT = 200
+
     private const val PATH_LIST = "/love/message/list"
+    private const val PATH_WISH_LIST = "/love/message/wish-list"
     private const val PATH_SEND = "/love/message/send"
     private const val PATH_SEND_WISHES = "/love/message/send-wishes"
 
@@ -37,6 +41,14 @@ internal object MessageApi {
      */
     suspend fun list(pager: Pager, lastId: String = "", limit: Int = LIST_LIMIT): ApiResult =
         HttpClient.request(pager, "$PATH_LIST?lastId=$lastId&limit=$limit", isPost = false)
+
+    /**
+     * 心愿时间线:kind=2 只读视图,服务端按 id 倒序(最新在前)返回,快照四字段(content/wishKey/color/icon)
+     * 全量,MessageInfo.listFrom 直接解析(与聊天流解耦,不碰 ChatStore/lastId 游标)。
+     * data 为数组走 ApiResult.Ok.dataArray;无游标,取最近 limit 条(升级路径=服务端补 beforeId 倒序游标)
+     */
+    suspend fun wishList(pager: Pager, limit: Int = WISH_LIST_LIMIT): ApiResult =
+        HttpClient.request(pager, "$PATH_WISH_LIST?limit=$limit", isPost = false)
 
     /** 发文本悄悄话:回包为落库后的单个消息 VO(供乐观替换与 lastId 推进) */
     suspend fun send(pager: Pager, content: String): ApiResult =
