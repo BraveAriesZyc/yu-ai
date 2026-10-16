@@ -55,6 +55,7 @@ import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppGradientHeader
+import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
@@ -272,46 +273,40 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 渐变头部(§1 居中情侣构图):双头像对居中(我方半透白底配角 + TA 白底主色字视觉焦点,
-            // 中缝白圆心形徽章点题),标题/副标题居中排其下;副标题携带伴侣昵称
+            // 渐变头部(2026-10-17 重构:居中舞台构图 → 左对齐紧凑行,与四个兄弟 Tab 头部
+            // 语言统一;原双头像簇+压缝心形徽章母题保留,整簇缩进行内,头部省 ~40dp 给消息列表)
             AppGradientHeader {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    // 双人头像对(94x44 舞台):左我右 TA 各 44dp 间 6dp,18dp 心形徽章居中压缝(后组合压上层)
-                    Box(modifier = Modifier.width(94.dp).height(44.dp)) {
-                        AppAvatar(
-                            myInitial,
-                            size = 44.dp,
-                            bgColor = Color.White.copy(alpha = 0.30f),
-                            fontSize = 16.sp,
-                            avatarUrl = myAvatar,
-                            modifier = Modifier.align(Alignment.CenterStart),
-                        )
-                        AppAvatar(
-                            partnerInitial,
-                            size = 44.dp,
-                            bgColor = Color.White,
-                            textColor = theme.brandStart,
-                            fontSize = 16.sp,
-                            avatarUrl = partnerAvatar,
-                            modifier = Modifier.align(Alignment.CenterEnd),
-                        )
-                        Box(
-                            modifier = Modifier.align(Alignment.Center)
-                                .size(18.dp)
-                                .background(Color.White, RoundedCornerShape(9.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            AppIcon(AppIconType.Heart, theme.brandStart, Modifier.size(9.dp))
-                        }
+                // 双头像簇(86x40 舞台):左我(白 30% 磨砂配角)右 TA(白底主色字视觉焦点),
+                // 中缝 18dp 白圆心形徽章点题
+                Box(modifier = Modifier.width(86.dp).height(40.dp)) {
+                    AppAvatar(
+                        myInitial,
+                        size = 40.dp,
+                        bgColor = Color.White.copy(alpha = 0.30f),
+                        fontSize = 15.sp,
+                        avatarUrl = myAvatar,
+                        modifier = Modifier.align(Alignment.CenterStart),
+                    )
+                    AppAvatar(
+                        partnerInitial,
+                        size = 40.dp,
+                        bgColor = Color.White,
+                        textColor = theme.brandStart,
+                        fontSize = 15.sp,
+                        avatarUrl = partnerAvatar,
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                    )
+                    Box(
+                        modifier = Modifier.align(Alignment.Center)
+                            .size(18.dp)
+                            .background(Color.White, RoundedCornerShape(9.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AppIcon(AppIconType.Heart, theme.brandStart, Modifier.size(9.dp))
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text("悄悄话", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text("和${partnerName}的悄悄话", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                 }
+                Spacer(modifier = Modifier.width(12.dp))
+                AppHeaderTitle("悄悄话", "和${partnerName}的悄悄话")
             }
 
             // 消息列表(§2)
