@@ -5,10 +5,22 @@ import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.love.controller.app.user.vo.AppUserProfileRespVO;
 import cn.iocoder.yudao.module.love.controller.app.user.vo.AppUserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.love.controller.app.user.vo.AppUserStatsRespVO;
+import cn.iocoder.yudao.module.love.dal.dataobject.couple.LoveCoupleDO;
+import cn.iocoder.yudao.module.love.dal.dataobject.message.LoveMessageDO;
+import cn.iocoder.yudao.module.love.dal.dataobject.mood.LoveMoodRecordDO;
+import cn.iocoder.yudao.module.love.dal.dataobject.todo.LoveTodoDO;
 import cn.iocoder.yudao.module.love.dal.dataobject.user.LoveUserDO;
+import cn.iocoder.yudao.module.love.dal.mysql.couple.LoveCoupleMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.message.MessageMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.mood.MoodRecordMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.todo.TodoMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.user.LoveUserMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.UNAUTHORIZED;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -26,6 +38,18 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     @Resource
     private LoveUserMapper loveUserMapper;
+
+    @Resource
+    private LoveCoupleMapper loveCoupleMapper;
+
+    @Resource
+    private MessageMapper messageMapper;
+
+    @Resource
+    private TodoMapper todoMapper;
+
+    @Resource
+    private MoodRecordMapper moodRecordMapper;
 
     @Override
     public AppUserProfileRespVO getUser() {
@@ -45,6 +69,28 @@ public class UserProfileServiceImpl implements UserProfileService {
         loveUserMapper.updateById(new LoveUserDO().setId(user.getId())
                 .setNickname(reqVO.getNickname())
                 .setAvatar(reqVO.getAvatar()));
+    }
+
+    @Override
+    public AppUserStatsRespVO getStats() {
+        // §6.5 停用账号收口（统计非敏感，但沿用统一入口防停用号继续消费）
+        LoveUserDO user = getValidatedCurrentUser();
+        AppUserStatsRespVO stats = new AppUserStatsRespVO();
+        stats.setBindDays(0);
+        stats.setMessageCount(0L);
+        stats.setTodoCount(0L);
+        stats.setMoodCount(0L);
+        LoveCoupleDO couple = loveCoupleMapper.selectByUserId(user.getId());
+        if (couple == null) {
+            return stats;
+        }
+        // 在一起天数：bind_time 当天记第 1 天（between=0 → 1），与纪念日惯例一致（第 520 天时 between=519）
+        stats.setBindDays((int) ChronoUnit.DAYS.between(
+                couple.getBindTime().toLocalDate(), LocalDate.now()) + 1);
+        stats.setMessageCount(messageMapper.selectCount(LoveMessageDO::getCoupleId, couple.getId()));
+        stats.setTodoCount(todoMapper.selectCount(LoveTodoDO::getCoupleId, couple.getId()));
+        stats.setMoodCount(moodRecordMapper.selectCount(LoveMoodRecordDO::getCoupleId, couple.getId()));
+        return stats;
     }
 
     /**

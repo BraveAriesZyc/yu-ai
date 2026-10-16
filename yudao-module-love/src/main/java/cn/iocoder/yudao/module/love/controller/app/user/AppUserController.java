@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.love.controller.app.user;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.love.controller.app.user.vo.AppUserProfileRespVO;
 import cn.iocoder.yudao.module.love.controller.app.user.vo.AppUserProfileUpdateReqVO;
+import cn.iocoder.yudao.module.love.controller.app.user.vo.AppUserStatsRespVO;
 import cn.iocoder.yudao.module.love.service.user.UserProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +36,13 @@ public class AppUserController {
             description = "昵称/头像一律由此接口回查 love_user（MEMBER 上下文 buildUserInfo 返回空 Map，见 INTEGRATION-DESIGN.md M-6）")
     public CommonResult<AppUserProfileRespVO> getUser() {
         return success(userProfileService.getUser());
+    }
+
+    @GetMapping("/stats")
+    @Operation(summary = "获得当前登录用户的恋爱统计",
+            description = "在一起天数（couple.bind_time 自然日含当天）+ 当前 couple 的悄悄话/待办/心情计数；未绑定全 0")
+    public CommonResult<AppUserStatsRespVO> getStats() {
+        return success(userProfileService.getStats());
     }
 
     @PostMapping("/update")
