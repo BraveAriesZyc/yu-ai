@@ -6,9 +6,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
+import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Row
@@ -18,13 +20,16 @@ import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
+import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
+import com.tencent.kuikly.compose.ui.graphics.Brush
 import com.tencent.kuikly.compose.ui.graphics.Color
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -48,7 +53,12 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.UserProfile
 import com.zyc.love_baby.data.model.WishInfo
+import com.zyc.love_baby.data.model.zodiacSignOf
+import com.zyc.love_baby.features.couple.BindInputField
+import com.zyc.love_baby.features.couple.BindPrimaryButton
 import com.zyc.love_baby.features.couple.formatBindTime
+import com.zyc.love_baby.features.couple.toastCouple
+import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.network.WishApi
@@ -57,6 +67,7 @@ import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleStore
 import com.zyc.love_baby.state.SessionStore
 import com.zyc.love_baby.state.StatsStore
+import kotlinx.coroutines.launch
 
 /** profilePage 路由名与 who 参数取值(openProfilePage 与四处入口共用,勿散落字面量) */
 internal const val PROFILE_PAGE_NAME = "profilePage"
@@ -76,18 +87,22 @@ internal fun openProfilePage(pager: Pager, who: String) {
 }
 
 /**
- * ProfilePage — 用户资料详情页(@Page "profilePage"):我/TA 一页两用,纯展示(2026-10-18)
+ * ProfilePage — 用户资料详情页(@Page "profilePage"):我/TA 一页两用(2026-10-18,M16 起带编辑)
  * 用法:openProfilePage(pager, who) 四入口(聊天页双头像/我的页资料区/情侣空间卡/首页头像);
  *      返回钮 closePage。独立二级页骨架照 WishListPage.kt:122-139(WishListPager 同款壳)
  * 依赖:StatsStore/CoupleStore/AnniversaryStore/CheckinStore(全局 Store 只读);
  *      UserApi.getUser(mine 自拉权威真值)/WishApi.list(贡献数端上聚合,页内自持不进 AppState
- *      D-19g 同款,页销毁即弃);features.couple.formatBindTime(宿主 dateFormatter);
+ *      D-19g 同款,页销毁即弃);features.couple.BindInputField/BindPrimaryButton(编辑浮层表单件)
+ *      features.couple.formatBindTime/toastCouple/toastCoupleResult;
  *      components(AppGradientHeader/AppAvatar/AppStatBar/AppMenuGroup/AppMenuRow/AppSectionTitle)
  * 入参:pageData.params.who = "mine"|"partner"(非法/缺失兜底 mine,willInit 读入 Pager 字段)
- * 事件:仅返回钮 closePage(纯展示页,无行点击无编辑入口——编辑留在我的页原链路)
+ * 事件:返回钮 closePage;mine 页头部「编辑」胶囊开 ProfileEditOverlay(页内自持浮层)
  * 功能:
  *  - 渐变头:返回行 + 96dp 双层渐变环大头像(照 BindingPanel 46dp 环放大)+ 昵称 + 副标题
- *    (mine=「在一起的第 N 天」/partner=「绑定于 X」,bindTime≤0 显「时间未知」)
+ *    (mine=「在一起的第 N 天」/partner=「绑定于 X」,bindTime≤0 显「时间未知」);mine 右端
+ *    「编辑」胶囊(54x38 白25% 圆角19,partner 页不组合)
+ *  - 资料卡(M16):性别/生日(星座)/个性签名 三行 AppMenuRow,仅展示;
+ *    mine 页行点击开编辑浮层(partner 页只读),未设置占位 TextTertiary
  *  - 共享统计 5 列:在一起/心愿/心情/待办/纪念日(couple 共享账本,StatsStore+AnniversaryStore)
  *  - 打卡条 3 列:共同连续 + 我/TA 累计(summary null 显 "--",CheckinStore 注释自带口径)
  *  - 个人贡献「足迹」三行:许下的心愿/点亮的心愿/创建的纪念日——端上聚合零服务端改动
@@ -154,6 +169,14 @@ internal fun ProfilePage(pager: Pager, isPartner: Boolean) {
     val wishLit = wishes.count { it.doneBy == subjectId }
     val annivCreated = AnniversaryStore.anniversaries.count { it.ownerId == subjectId }
 
+    // 资料三字段(M16):mine=自拉 profile,partner=couple/get 回包 partner 三字段
+    val profileSex = if (isPartner) couple?.partnerSex else profile?.sex
+    val profileBirthday = if (isPartner) couple?.partnerBirthday.orEmpty() else profile?.birthday.orEmpty()
+    val profileSignature = if (isPartner) couple?.partnerSignature.orEmpty() else profile?.signature.orEmpty()
+
+    // 编辑浮层(仅 mine 页可开,partner 页纯展示)
+    var showEditOverlay by remember { mutableStateOf(false) }
+
     // 头像/昵称/副标题(按 who 切数据源;空值兜底全走既有先例口径)
     val avatarUrl = if (isPartner) couple?.partnerAvatar.orEmpty() else profile?.avatar.orEmpty()
     val nickname = if (isPartner) {
@@ -170,7 +193,18 @@ internal fun ProfilePage(pager: Pager, isPartner: Boolean) {
 
     LazyColumn(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         item {
-            ProfileHeader(pager, isPartner, avatarUrl, nickname, bindTimeText)
+            ProfileHeader(
+                pager,
+                isPartner,
+                avatarUrl,
+                nickname,
+                bindTimeText,
+                if (!isPartner) {
+                    { showEditOverlay = true }
+                } else {
+                    null
+                },
+            )
         }
         item {
             // 共享统计 5 列(couple 共享账本:统计端点按 couple 归属计数,双方同值)
@@ -215,6 +249,50 @@ internal fun ProfilePage(pager: Pager, isPartner: Boolean) {
             }
         }
         item {
+            // 资料卡(M16):性别/生日/签名三行,trailing 覆写为值替代默认箭头 → 纯展示行不暗示可跳;
+            // 图标凑现有库(Mine 人头/Star/Info),真机反馈不佳再扩 AppIconType;空值显「未设置」
+            Column(modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)) {
+                Spacer(modifier = Modifier.height(20.dp))
+                AppSectionTitle(if (isPartner) "TA 的资料" else "我的资料")
+                Spacer(modifier = Modifier.height(10.dp))
+                AppMenuGroup {
+                    AppMenuRow(AppIconType.Mine, Color(0xFF6C7BFF), Color(0xFFEDEFFF), "性别") {
+                        Text(
+                            when (profileSex) {
+                                0 -> "女"
+                                1 -> "男"
+                                else -> "未设置"
+                            },
+                            color = if (profileSex == null) AppTheme.TextTertiary else AppTheme.TextSecondary,
+                            fontSize = 13.sp,
+                        )
+                    }
+                    AppMenuDivider()
+                    AppMenuRow(AppIconType.Star, Color(0xFFFF9A56), Color(0xFFFFF1E8), "生日") {
+                        val zodiac = zodiacSignOf(profileBirthday)
+                        Text(
+                            when {
+                                profileBirthday.isEmpty() -> "未设置"
+                                zodiac.isNotEmpty() -> "$profileBirthday（$zodiac）"
+                                else -> profileBirthday
+                            },
+                            color = if (profileBirthday.isEmpty()) AppTheme.TextTertiary else AppTheme.TextSecondary,
+                            fontSize = 13.sp,
+                        )
+                    }
+                    AppMenuDivider()
+                    AppMenuRow(AppIconType.Info, Color(0xFF34C77B), Color(0xFFE8F9F0), "个性签名") {
+                        Text(
+                            profileSignature.ifEmpty { "未设置" },
+                            color = if (profileSignature.isEmpty()) AppTheme.TextTertiary else AppTheme.TextSecondary,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
+        item {
             // 个人贡献区:图标配色与首页快捷入口四件套同源(HomePage AppQuickAction);
             // trailing 覆写为计数替代默认箭头 → 展示行不暗示可跳(onClick 空)
             Column(modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)) {
@@ -240,12 +318,29 @@ internal fun ProfilePage(pager: Pager, isPartner: Boolean) {
             Spacer(modifier = Modifier.height(24.dp + navBarSafePaddingDp()))
         }
     }
+
+    // 编辑浮层页内自持挂载(独立 @Page 无浮岛底栏,不存在 M12「页内浮层盖不住底栏」问题)
+    if (showEditOverlay) {
+        ProfileEditOverlay(
+            pager = pager,
+            currentSex = profile?.sex,
+            currentBirthday = profile?.birthday.orEmpty(),
+            currentSignature = profile?.signature.orEmpty(),
+            onDismiss = { showEditOverlay = false },
+            onSaved = { newSex, newBirthday, newSignature ->
+                profile = profile?.copy(sex = newSex, birthday = newBirthday, signature = newSignature)
+                showEditOverlay = false
+            },
+        )
+    }
 }
 
 /**
  * 渐变头:返回钮行 + 居中舞台(96dp 双层渐变环大头像 + 昵称 + 副标题)。
  * 返回钮 WishListPage.kt:364-373 逐字同款;渐变环照 BindingPanel 46dp 环放大;
- * 舞台层 Column fillMaxWidth 让头像/昵称相对整行居中(返回钮独占一行,无横向重叠)
+ * 舞台层 Column fillMaxWidth 让头像/昵称相对整行居中(返回钮独占一行,无横向重叠)。
+ * onEditClick 仅 mine 页传(M16 编辑资料浮层入口):头部行右端「编辑」胶囊,与返回钮对称;
+ * 编辑胶囊三层写法(铁律 14/15:外 Box 容器+内 background+Text 子节点),partner 页 null 不组合
  */
 @Composable
 private fun ProfileHeader(
@@ -254,6 +349,7 @@ private fun ProfileHeader(
     avatarUrl: String,
     nickname: String,
     subtitle: String,
+    onEditClick: (() -> Unit)? = null,
 ) {
     val theme = ThemeStore.current
     AppGradientHeader(bottomSpacing = 20.dp) {
@@ -261,7 +357,10 @@ private fun ProfileHeader(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Box(
                     modifier = Modifier.size(38.dp)
                         .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
@@ -275,6 +374,16 @@ private fun ProfileHeader(
                         Color.White,
                         Modifier.size(20.dp),
                     )
+                }
+                if (onEditClick != null) {
+                    Box(
+                        modifier = Modifier.size(width = 54.dp, height = 38.dp)
+                            .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
+                            .clickable { onEditClick() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("编辑", color = Color.White, fontSize = 13.sp)
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -303,4 +412,130 @@ private fun ProfileHeader(
             )
         }
     }
+}
+
+/**
+ * ProfileEditOverlay — 编辑资料浮层(M16,页内自持):性别双胶囊 + 生日/签名输入 + 保存。
+ * 骨架 NicknameEditOverlay(MinePage.kt:259-380)逐字同构:灰幕 0.45 可点关(保存中拦)+居中白卡
+ * 20dp+空 clickable 吞透传;键盘避让走收口 clearFocus(居中浮层零 imePadding)。
+ * 提交语义(与 UserUpdateReq 守卫对齐):性别选中≠现值才传(选中后不可取消,防 null 语义歧义);
+ * 生日 trim 非空且≠现值才传(不支持清空);签名 trim 后≠现值才传——**含空串=清空**。
+ * 三值全等直接 dismiss 不打请求(昵称浮层先例);失败 toastCoupleResult 保留原值无乐观更新
+ */
+@Composable
+private fun ProfileEditOverlay(
+    pager: Pager,
+    currentSex: Int?,
+    currentBirthday: String,
+    currentSignature: String,
+    onDismiss: () -> Unit,
+    onSaved: (Int?, String, String) -> Unit,
+) {
+    val theme = ThemeStore.current
+    var draftSex by remember { mutableStateOf(currentSex) }
+    var draftBirthday by remember { mutableStateOf(currentBirthday) }
+    var draftSignature by remember { mutableStateOf(currentSignature) }
+    var saving by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+
+    fun dismissWith() {
+        focusManager.clearFocus()
+        onDismiss()
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable { if (!saving) dismissWith() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 32.dp)
+                .fillMaxWidth()
+                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
+                .clickable { } // 空 clickable 吞点击防透传
+                .padding(horizontal = 20.dp, vertical = 22.dp),
+        ) {
+            Text("编辑资料", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("性别", color = AppTheme.TextSecondary, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row {
+                SexChip("女", draftSex == 0) { draftSex = 0 }
+                Spacer(modifier = Modifier.width(10.dp))
+                SexChip("男", draftSex == 1) { draftSex = 1 }
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            BindInputField(draftBirthday, { draftBirthday = it.take(10) }, "生日 yyyy-MM-dd")
+            Spacer(modifier = Modifier.height(10.dp))
+            BindInputField(draftSignature, { draftSignature = it.take(100) }, "一句话介绍自己")
+            Spacer(modifier = Modifier.height(18.dp))
+            BindPrimaryButton("保存", submitting = saving) {
+                val trimmedBirthday = draftBirthday.trim()
+                if (trimmedBirthday.isNotEmpty() && !isValidBirthday(trimmedBirthday)) {
+                    toastCouple(pager, "生日格式应为 yyyy-MM-dd")
+                    return@BindPrimaryButton
+                }
+                val trimmedSignature = draftSignature.trim()
+                val sexChanged = draftSex != currentSex
+                val birthdayChanged = trimmedBirthday.isNotEmpty() && trimmedBirthday != currentBirthday
+                val signatureChanged = trimmedSignature != currentSignature
+                // 三值全等不打请求(昵称浮层先例);全不等但均未变即全等,自然落 dismiss
+                if (!sexChanged && !birthdayChanged && !signatureChanged) {
+                    dismissWith()
+                    return@BindPrimaryButton
+                }
+                saving = true
+                focusManager.clearFocus()
+                scope.launch {
+                    val result = UserApi.updateUser(
+                        pager,
+                        sex = if (sexChanged) draftSex else null,
+                        birthday = if (birthdayChanged) trimmedBirthday else null,
+                        signature = if (signatureChanged) trimmedSignature else null,
+                    )
+                    if (result is ApiResult.Ok) {
+                        toastCouple(pager, "已保存")
+                        onSaved(
+                            if (sexChanged) draftSex else currentSex,
+                            if (birthdayChanged) trimmedBirthday else currentBirthday,
+                            if (signatureChanged) trimmedSignature else currentSignature,
+                        )
+                    } else {
+                        toastCoupleResult(pager, result)
+                    }
+                    saving = false
+                }
+            }
+        }
+    }
+}
+
+/** 性别选择胶囊:选中 brandBrush 渐变白字(白字主操作铁律:禁 brandEnd 浅端单色),未选灰底深字 */
+@Composable
+private fun SexChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val selectedBrush = ThemeStore.current.brandBrush
+    // color/brush 重载禁混用(铁律):三元两分支必须同型——未选纯色转同色 linearGradient 走 brush 重载
+    val unselectedBrush = Brush.linearGradient(listOf(Color(0xFFF3F4F8), Color(0xFFF3F4F8)))
+    Box(
+        modifier = Modifier
+            .background(if (selected) selectedBrush else unselectedBrush, RoundedCornerShape(24.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 22.dp, vertical = 8.dp),
+    ) {
+        Text(
+            label,
+            color = if (selected) Color.White else AppTheme.TextPrimary,
+            fontSize = 13.sp,
+        )
+    }
+}
+
+/** 生日粗校验:yyyy-MM-dd 格式 + 月 1-12 日 1-31(日历级合法性由服务端 LocalDate.parse 收口) */
+private fun isValidBirthday(value: String): Boolean {
+    if (!Regex("^\\d{4}-\\d{2}-\\d{2}$").matches(value)) return false
+    val month = value.substring(5, 7).toIntOrNull() ?: return false
+    val day = value.substring(8, 10).toIntOrNull() ?: return false
+    return month in 1..12 && day in 1..31
 }

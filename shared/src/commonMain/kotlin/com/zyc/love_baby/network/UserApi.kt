@@ -27,7 +27,22 @@ internal object UserApi {
     suspend fun getStats(pager: Pager): ApiResult =
         HttpClient.request(pager, PATH_STATS, isPost = false)
 
-    /** 改昵称/头像:仅传非空字段(未传字段不进 body,防服务端把未编辑字段误清空) */
-    suspend fun updateUser(pager: Pager, nickname: String? = null, avatar: String? = null): ApiResult =
-        HttpClient.request(pager, PATH_UPDATE, isPost = true, body = UserUpdateReq(nickname, avatar).toJson())
+    /**
+     * 改个人资料:仅传非空字段(未传字段不进 body,防服务端把未编辑字段误清空;
+     * 例外见 UserUpdateReq——sex 非 null 即传、signature 非 null 即传含空串=清空)。
+     * 三老调用方(昵称浮层/头像上传)走默认参零改动
+     */
+    suspend fun updateUser(
+        pager: Pager,
+        nickname: String? = null,
+        avatar: String? = null,
+        sex: Int? = null,
+        birthday: String? = null,
+        signature: String? = null,
+    ): ApiResult = HttpClient.request(
+        pager,
+        PATH_UPDATE,
+        isPost = true,
+        body = UserUpdateReq(nickname, avatar, sex, birthday, signature).toJson(),
+    )
 }

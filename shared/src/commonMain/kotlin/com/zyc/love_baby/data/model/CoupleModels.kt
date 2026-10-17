@@ -19,8 +19,11 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
  *  - ⚠ 与服务端 VO 的字段名契约(服务端 M2 并行开发,App 侧做平铺/嵌套双形态解析兜底,联调后收敛单一形态):
  *      create-invite data = {inviteCode, inviteExpireTime}(兼容别名 expireTime)
  *      couple get/bind data = {id, partnerId, partnerNickname, partnerAvatar, bindTime}
- *                            或嵌套 {id, partner:{userId, nickname, avatar}, bindTime}
- *      user get data = {id, mobile, nickname, avatar};user update 请求体 = {nickname?, avatar?}
+ *                            或嵌套 {id, partner:{userId, nickname, avatar, sex, birthday, signature}, bindTime}
+ *      user get data = {id, mobile, nickname, avatar, sex, birthday, signature}
+ *      user update 请求体 = {nickname?, avatar?, sex?, birthday?, signature?}
+ *      (M16 资料三字段:sex 0=女 1=男 缺失/null=未设置;birthday "yyyy-MM-dd" 空串=未设置;
+ *       signature 空串=无签名——update 语义 sex/birthday null=不改、signature 非null即写含空串=清空)
  *    时间字段(epoch 毫秒)缺失时按 0 解析,UI 降级为占位文案
  */
 
@@ -38,13 +41,23 @@ internal data class CoupleBindReq(val inviteCode: String) {
 }
 
 /**
- * 改昵称/头像(user/update,M2 定案用 POST 非 PUT:core 2.29 NetworkModule 仅支持 GET/POST)。
- * 仅非空字段进 body:未传字段不上送,防服务端把未编辑字段误清空
+ * 改个人资料(user/update,M2 定案用 POST 非 PUT:core 2.29 NetworkModule 仅支持 GET/POST)。
+ * 守卫语义(M16):nickname/avatar/birthday 仅非空进 body(未传不上送,防误清空);
+ * sex 非 null 即进;signature 非 null 即进——**含空串**,空串=端上显式清空(服务端落 '' 等同无签名)
  */
-internal data class UserUpdateReq(val nickname: String?, val avatar: String?) {
+internal data class UserUpdateReq(
+    val nickname: String? = null,
+    val avatar: String? = null,
+    val sex: Int? = null,
+    val birthday: String? = null,
+    val signature: String? = null,
+) {
     fun toJson(): JSONObject = JSONObject().also { json ->
         if (!nickname.isNullOrEmpty()) json.put("nickname", nickname)
         if (!avatar.isNullOrEmpty()) json.put("avatar", avatar)
+        if (sex != null) json.put("sex", sex)
+        if (!birthday.isNullOrEmpty()) json.put("birthday", birthday)
+        if (signature != null) json.put("signature", signature)
     }
 }
 
@@ -84,6 +97,9 @@ internal data class CoupleInfo(
     val partnerNickname: String,
     val partnerAvatar: String,
     val bindTime: Long,
+    val partnerSex: Int? = null,
+    val partnerBirthday: String = "",
+    val partnerSignature: String = "",
 ) {
     companion object {
         /**
@@ -106,6 +122,19 @@ internal data class CoupleInfo(
                 partner?.optString("avatar").orEmpty(),
                 data.optString("partnerAvatar"),
             )
+            // M16 资料三字段:缺键自然缺省,不参与 hasInfo 判定(旧回包兼容,防误翻 UNBOUND)
+            val partnerSex = firstNonEmpty(
+                partner?.optString("sex").orEmpty(),
+                data.optString("partnerSex"),
+            ).toIntOrNull()
+            val partnerBirthday = firstNonEmpty(
+                partner?.optString("birthday").orEmpty(),
+                data.optString("partnerBirthday"),
+            )
+            val partnerSignature = firstNonEmpty(
+                partner?.optString("signature").orEmpty(),
+                data.optString("partnerSignature"),
+            )
             val bindTime = data.optLong("bindTime")
             val hasInfo = data.optString("id").isNotEmpty() || partnerId.isNotEmpty() ||
                 partnerNickname.isNotEmpty() || bindTime > 0
@@ -116,6 +145,9 @@ internal data class CoupleInfo(
                 partnerNickname = partnerNickname,
                 partnerAvatar = partnerAvatar,
                 bindTime = bindTime,
+                partnerSex = partnerSex,
+                partnerBirthday = partnerBirthday,
+                partnerSignature = partnerSignature,
             )
         }
     }
@@ -147,6 +179,9 @@ internal data class UserProfile(
     val mobile: String,
     val nickname: String,
     val avatar: String,
+    val sex: Int? = null,
+    val birthday: String = "",
+    val signature: String = "",
 ) {
     companion object {
         /** id/nickname 全空判无效回包返回 null(调用方保留占位展示) */
@@ -160,6 +195,10 @@ internal data class UserProfile(
                 mobile = data.optString("mobile"),
                 nickname = nickname,
                 avatar = data.optString("avatar"),
+                // M16 资料三字段:缺键缺省,不参与 id/nickname 判空口径
+                sex = data.optString("sex").toIntOrNull(),
+                birthday = data.optString("birthday"),
+                signature = data.optString("signature"),
             )
         }
     }
@@ -168,3 +207,28 @@ internal data class UserProfile(
 /** 取第一个非空字符串(全空返回 "") */
 private fun firstNonEmpty(vararg values: String): String =
     values.firstOrNull { it.isNotEmpty() }.orEmpty()
+
+/**
+ * 星座名(M16 资料卡):birthday "yyyy-MM-dd" → 十二星座(摩羯跨年 12/22-1/19)。
+ * 非法/空/越界回 ""(调用方降级不显星座);纯字符串切片+区间表,commonMain 零依赖
+ */
+internal fun zodiacSignOf(birthday: String): String {
+    if (birthday.length < 10) return ""
+    val month = birthday.substring(5, 7).toIntOrNull() ?: return ""
+    val day = birthday.substring(8, 10).toIntOrNull() ?: return ""
+    if (month !in 1..12 || day !in 1..31) return ""
+    return when (month) {
+        1 -> if (day < 20) "摩羯座" else "水瓶座"
+        2 -> if (day < 19) "水瓶座" else "双鱼座"
+        3 -> if (day < 21) "双鱼座" else "白羊座"
+        4 -> if (day < 20) "白羊座" else "金牛座"
+        5 -> if (day < 21) "金牛座" else "双子座"
+        6 -> if (day < 22) "双子座" else "巨蟹座"
+        7 -> if (day < 23) "巨蟹座" else "狮子座"
+        8 -> if (day < 23) "狮子座" else "处女座"
+        9 -> if (day < 23) "处女座" else "天秤座"
+        10 -> if (day < 24) "天秤座" else "天蝎座"
+        11 -> if (day < 23) "天蝎座" else "射手座"
+        else -> if (day < 22) "射手座" else "摩羯座"
+    }
+}
