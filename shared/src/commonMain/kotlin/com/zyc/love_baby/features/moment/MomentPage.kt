@@ -24,7 +24,11 @@ import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
+import com.tencent.kuikly.compose.foundation.lazy.LazyRow
+import com.tencent.kuikly.compose.foundation.lazy.itemsIndexed
 import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
+import com.tencent.kuikly.compose.foundation.pager.HorizontalPager
+import com.tencent.kuikly.compose.foundation.pager.rememberPagerState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.material3.pullToRefreshItem
@@ -42,6 +46,7 @@ import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
+import com.tencent.kuikly.core.nvi.serialization.json.JSONArray
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
@@ -68,6 +73,7 @@ import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.SessionStore
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -82,13 +88,19 @@ import kotlinx.coroutines.launch
  * 功能:
  *  - 双列瞬间墙:LazyColumn + chunked(2) Row 自排(CheckinPage 日历同款自排,非 LazyVerticalGrid
  *    ——2.29 官方 pullToRefreshItem 只挂 LazyListScope(反编译 javap 锤实,scrollState 参数即
- *    LazyListState),计划里「网格+官方下拉刷新」二者取官方下拉刷新;图片定高故行高恒对齐)
- *  - 卡片:图定高 140dp Crop 圆角(浅灰底常驻充当加载占位)+ 配文(空串不显)+ 我/TA 与时间;
+ *    LazyListState),计划里「网格+官方下拉刷新」二者取官方下拉刷新;M15 多图后行高随图数变高,
+ *    生产等价先例同行有/无配文,Row 缺省 Top 对齐)
+ *  - 卡片:图块三态(M15:单图 140dp 全宽 Crop / 多图三列迷你九宫格 56dp cell,浅灰底常驻充当
+ *    加载占位)+ 配文(空串不显,maxLines=2 变高行收敛)+ 我/TA 与时间 + 纯展示红心;
  *    点击进大图预览
- *  - 发布浮层:选图即上传(pickAndUpload maxEdge=1080,suspendCoroutine 包装,MainPager
- *    submitAvatarUpload 同款)+ 配文输入(定高行居中)+ 发布(POST create,回包头插落态不重拉)
- *  - 大图预览:黑底 0.9 全屏 Fit 展示 + 底部信息卡(配文/发布者/时间/删除钮仅上传者本人
- *    ——服务端 1_003_008_001 兜底,端上只显不拦校验);点击黑底关闭,信息卡 clickable 吞透传
+ *  - 可见期 5s 静默轮询对账(M15,D-20c:点赞/对方增删不发 WS 靠轮询感知,M14 心愿清单同款;
+ *    恒拉首页合并删账/增改账,data class 相等跳过,失败静默自愈)
+ *  - 发布浮层:多图选图即上传(pickAndUpload maxEdge=1080 maxCount=余量,suspendCoroutine 包装,
+ *    MainPager submitAvatarUpload 同款;回包双形态解析 D-20f)+ LazyRow 缩略条(右上 X 删除/
+ *    条尾 Plus 追加)+ 配文输入(定高行居中)+ 发布(POST create,回包头插落态不重拉)
+ *  - 大图预览:黑底 0.9 全屏 HorizontalPager 逐页 Fit + 多图页码胶囊 + 底部信息卡(配文/
+ *    发布者/时间/点赞钮双方均可 D-20e 回包真值原位替换/删除钮仅上传者本人——服务端
+ *    1_003_008_001 兜底,端上只显不拦校验);点击黑底关闭,信息卡 clickable 吞透传
  *  - F6 铁律:任一浮层开着 LazyColumn userScrollEnabled=false(遮罩只吃 tap 不吃拖拽)
  */
 @Page("momentPage", supportInLocal = true)
@@ -127,6 +139,8 @@ internal fun MomentPage(pager: Pager) {
     // 大图预览目标(null = 关闭);非空时 LazyColumn 关滚动(F6)
     var preview by remember { mutableStateOf<MomentInfo?>(null) }
     var previewDeleting by remember { mutableStateOf(false) }
+    // 点赞单飞锁(M15):在飞期间轮询跳过、预览点赞钮拦截
+    var likeToggling by remember { mutableStateOf(false) }
     // 页内自持(M7 时间线页先例):id 倒序新→旧,服务端序原样保留不重排
     val moments = remember { mutableStateListOf<MomentInfo>() }
     // 官方下拉刷新与列表手势共享同一 state 实例(2.29 pullToRefreshItem 的 scrollState 参数
@@ -188,8 +202,78 @@ internal fun MomentPage(pager: Pager) {
         }
     }
 
+    // 点赞/取消(M15,单飞):回包操作后服务端真值 {likeCount,liked} 按 id 原位替换(D-20e,
+    // 禁端上乐观推导);preview 是独立状态副本,替换时同步落态
+    fun toggleLike(info: MomentInfo) {
+        if (likeToggling) return
+        likeToggling = true
+        scope.launch {
+            val result = MomentApi.like(pager, info.id, !info.liked)
+            likeToggling = false
+            if (result is ApiResult.Ok) {
+                val data = result.data
+                val updated = info.copy(
+                    liked = data.optBoolean("liked", !info.liked),
+                    likeCount = data.optInt("likeCount", info.likeCount),
+                )
+                val index = moments.indexOfFirst { it.id == info.id }
+                if (index >= 0) moments[index] = updated
+                if (preview?.id == info.id) preview = updated
+            } else {
+                toastCoupleResult(pager, result)
+            }
+        }
+    }
+
+    // 5s 静默轮询对账(M14 心愿清单同款解法,D-20c:点赞/对方增删不发 WS 不发消息,靠轮询感知):
+    // 恒拉首页 beforeId=0 limit=PAGE_SIZE,失败静默自愈;四类在飞动作期间跳过(动作回包自带真值,
+    // 轮询抢跑会覆盖新鲜态);浮层开着不拦——preview 是独立副本,合并时同步真值
+    suspend fun fetchSilentMerge() {
+        val result = MomentApi.list(pager, "0", PAGE_SIZE)
+        if (result !is ApiResult.Ok) return
+        val fresh = MomentInfo.listFrom(result.dataArray)
+        // ①删账:id 倒序,首页窗口 = id ≥ fresh 最小 id;窗口内消失的条目移除,窗口外更老条目
+        //   删除不可见 = 接受(R2),下拉刷新全量纠偏
+        val freshIds = fresh.map { it.id }.toSet()
+        val windowMinId = fresh.lastOrNull()?.id?.toLongOrNull()
+        if (windowMinId != null) {
+            moments.removeAll {
+                val mid = it.id.toLongOrNull()
+                mid != null && mid > windowMinId && it.id !in freshIds
+            }
+        }
+        // ②增/改账:按服务端序(新→旧)遍历——已存在则 data class 相等跳过/原位替换(likeCount/
+        //   liked/多图字段变化即触发),新条目插 anchor 后(保持服务端相对序);替换同步 preview
+        var anchor = 0
+        for (item in fresh) {
+            val index = moments.indexOfFirst { it.id == item.id }
+            if (index >= 0) {
+                if (moments[index] != item) {
+                    moments[index] = item
+                    if (preview?.id == item.id) preview = item
+                }
+                anchor = index + 1
+            } else {
+                moments.add(minOf(anchor, moments.size), item)
+                anchor++
+            }
+        }
+        // ③hasMore 纠偏:对方删光/缩容时首窗口不满页即无更多(发新只会变多,无碍)
+        hasMore = fresh.size >= PAGE_SIZE
+    }
+
     // 独立页每次打开都是新 Pager 组合,LaunchedEffect(Unit) 即每次进入都重拉
     LaunchedEffect(Unit) { load() }
+
+    // 可见期 5s 轮询(WishListPage fetchSilent 同款:独立 @Page 组合在即活动在,无需 pageVisible)
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000)
+            if (!loading && !refreshing && !loadingMore && !previewDeleting && !likeToggling) {
+                fetchSilentMerge()
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -322,7 +406,9 @@ internal fun MomentPage(pager: Pager) {
         preview?.let { info ->
             MomentPreviewOverlay(
                 info = info,
+                likeSubmitting = likeToggling,
                 deleting = previewDeleting,
+                onToggleLike = { toggleLike(it) },
                 onDelete = { removeMoment(info) },
                 onDismiss = { preview = null },
             )
@@ -353,9 +439,11 @@ private fun MomentEmptyHint() {
 }
 
 /**
- * 单卡:定高图(Crop 圆角,浅灰底常驻充当加载占位)+ 配文(空串不显)+ 我/TA 与时间。
+ * 单卡:图块(M15 三态:单图 140dp 全宽 Crop 现状字节不变 / 多图三列迷你九宫格,浅灰底常驻充当
+ * 加载占位)+ 配文(空串不显)+ 我/TA 与时间 + 纯展示红心(不可点,点赞入口在预览浮层)。
  * 「我」= 主题色,「TA」= 暖橙(CheckinPage PartnerRingDot 同款语义色);
- * background+clickable 同节点(铁律⑤)
+ * background+clickable 同节点(铁律⑤)。多图行高随图数变化 = 双列变高行,已有生产等价先例
+ * (同行一卡有配文一卡无,Row 缺省 Top 对齐)
  */
 @Composable
 private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick: () -> Unit) {
@@ -367,21 +455,46 @@ private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick:
             .clickable(onClick = onClick)
             .padding(8.dp),
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
-                .height(140.dp)
-                .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp)),
-        ) {
-            Image(
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
-                painter = rememberAsyncImagePainter(info.imageUrl),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-            )
+        if (info.imageUrls.size <= 1) {
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .height(140.dp)
+                    .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp)),
+            ) {
+                Image(
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                    painter = rememberAsyncImagePainter(info.imageUrl),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                )
+            }
+        } else {
+            // 多图:三列迷你九宫格(chunked(3),4dp gap,末行 repeat 补位对齐)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                info.imageUrls.chunked(3).forEach { rowUrls ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        rowUrls.forEach { url ->
+                            Box(
+                                modifier = Modifier.weight(1f)
+                                    .height(56.dp)
+                                    .background(Color(0xFFF5F6FA), RoundedCornerShape(6.dp)),
+                            ) {
+                                Image(
+                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+                                    painter = rememberAsyncImagePainter(url),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                )
+                            }
+                        }
+                        repeat(3 - rowUrls.size) { Spacer(modifier = Modifier.weight(1f)) }
+                    }
+                }
+            }
         }
         if (info.text.isNotEmpty()) {
             Spacer(modifier = Modifier.height(7.dp))
-            Text(info.text, color = AppTheme.TextPrimary, fontSize = 13.sp)
+            Text(info.text, color = AppTheme.TextPrimary, fontSize = 13.sp, maxLines = 2)
         }
         Spacer(modifier = Modifier.height(7.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -395,17 +508,34 @@ private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick:
             if (timeLabel.isNotEmpty()) {
                 Text(timeLabel, color = AppTheme.TextTertiary, fontSize = 10.sp)
             }
+            if (info.likeCount > 0) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    "${info.likeCount}",
+                    color = if (info.liked) AppTheme.Danger else AppTheme.TextTertiary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                AppIcon(
+                    AppIconType.Heart,
+                    if (info.liked) AppTheme.Danger else AppTheme.TextTertiary,
+                    Modifier.size(13.dp),
+                    filled = info.liked,
+                )
+            }
         }
     }
 }
 
 /**
- * MomentAddOverlay — 发布瞬间浮层(独立页内根级挂载,一次性表单:成功即收,AnniversaryAddOverlay
- * 同款浮岛式键盘避让)。选图区点击 → FileModule.pickAndUpload(maxEdge=1080)选图即上传
- * (suspendCoroutine 包装,MainPager.submitAvatarUpload 先例:先 getUser 热身保 token 新鲜
- * ——原生直传不经 HttpClient 无 401 单飞;getModule=null 渐进降级 toast),上传中蒙层拦点击;
- * 成功显缩略图,可再点重选(覆盖 uploadedUrl)。发布校验:未选图 toast 拦;POST create 成功
- * 回包 MomentInfo 头插上报后关浮层,失败 toast 不关
+ * MomentAddOverlay — 发布瞬间浮层(M15 多图:最多 9 张;独立页内根级挂载,一次性表单:成功即收,
+ * AnniversaryAddOverlay 同款浮岛式键盘避让)。选图流程:FileModule.pickAndUpload(maxEdge=1080,
+ * maxCount=当前余量)选图即上传(suspendCoroutine 包装,MainPager.submitAvatarUpload 先例:先
+ * getUser 热身保 token 新鲜——原生直传不经 HttpClient 无 401 单飞;getModule=null 渐进降级
+ * toast),上传中蒙层拦点击;回包双形态解析(D-20f:数组字符串逐项 / 单 URL 兜底),成功 append
+ * 缩略条(LazyRow,右上 X 删除 / 条尾 Plus 追加)。发布校验:未选图 toast 拦;POST create
+ * 成功回包 MomentInfo 头插上报后关浮层,失败 toast 不关
  */
 @Composable
 private fun MomentAddOverlay(
@@ -416,7 +546,7 @@ private fun MomentAddOverlay(
     val theme = ThemeStore.current
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    var uploadedUrl by remember { mutableStateOf("") }
+    val uploadedUrls = remember { mutableStateListOf<String>() }
     var uploading by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }
@@ -425,30 +555,50 @@ private fun MomentAddOverlay(
         { params: KeyboardParams -> keyboardHeight = params.height }
     }
 
-    // 选图+压缩+直传一条龙(maxEdge=1080 供大图预览清晰);链路与 MainPager.submitAvatarUpload
-    // 同构:热身 → getModule 判空降级 → suspendCoroutine 一次性回调收口
+    // 选图+压缩+直传一条龙(按余量多选,maxCount=9-已选;maxCount=1 回单 URL 字符串老契约):
+    // 链路与 MainPager.submitAvatarUpload 同构:热身 → getModule 判空降级 → suspendCoroutine
+    // 一次性回调收口;回包双形态解析(data 以 [ 开头 = JSON 数组字符串逐项,否则单 URL)
     fun pickImage() {
         if (uploading) return
+        val remain = MOMENT_IMAGE_MAX - uploadedUrls.size
+        if (remain <= 0) {
+            toastCouple(pager, "最多 ${MOMENT_IMAGE_MAX} 张照片")
+            return
+        }
         uploading = true
         scope.launch {
             UserApi.getUser(pager) // 热身:原生直传不经 HttpClient(无 401 单飞刷新),先焐热 token
             var failMsg = "上传失败,请重试"
-            val fileUrl = try {
+            val urls = try {
                 val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
                 if (module == null) {
                     failMsg = "当前端暂不支持选择照片"
                     null
                 } else {
-                    suspendCoroutine<String?> { cont ->
+                    suspendCoroutine<List<String>?> { cont ->
                         module.pickAndUpload(
                             ApiConfig.url(pager, "/infra/file/upload"),
                             SessionStore.accessToken,
                             MOMENT_MAX_EDGE,
+                            remain,
                         ) { result ->
                             val code = result?.optInt("code", -1) ?: -1
                             val data = result?.optString("data").orEmpty()
                             if (code == 0 && data.isNotEmpty()) {
-                                cont.resume(data)
+                                if (data.startsWith("[")) {
+                                    try {
+                                        val arr = JSONArray(data)
+                                        val list = ArrayList<String>(arr.length())
+                                        for (i in 0 until arr.length()) {
+                                            arr.optString(i).takeIf { !it.isNullOrEmpty() }?.let { list.add(it) }
+                                        }
+                                        cont.resume(list)
+                                    } catch (_: Exception) {
+                                        cont.resume(null)
+                                    }
+                                } else {
+                                    cont.resume(listOf(data))
+                                }
                             } else {
                                 result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
                                 cont.resume(null)
@@ -460,23 +610,23 @@ private fun MomentAddOverlay(
                 null
             }
             uploading = false
-            if (fileUrl.isNullOrEmpty()) {
+            if (urls.isNullOrEmpty()) {
                 toastCouple(pager, failMsg)
             } else {
-                uploadedUrl = fileUrl // 选图即上传:成功直接落缩略图;重选覆盖
+                uploadedUrls.addAll(urls.take(remain)) // 防御:超余量截断
             }
         }
     }
 
     fun submit() {
         if (publishing) return
-        if (uploadedUrl.isEmpty()) {
+        if (uploadedUrls.isEmpty()) {
             toastCouple(pager, "先选一张照片吧")
             return
         }
         publishing = true
         scope.launch {
-            val result = MomentApi.create(pager, uploadedUrl, draft.trim())
+            val result = MomentApi.create(pager, uploadedUrls.toList(), draft.trim())
             publishing = false
             if (result is ApiResult.Ok) {
                 val info = MomentInfo.from(result.data)
@@ -527,15 +677,16 @@ private fun MomentAddOverlay(
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.height(14.dp))
-                // 选图区:未选 = 虚位引导(Plus + 文案);已选 = 缩略图 + 右上「重选」角标;
-                // 上传中蒙层拦点击(background 常驻不分支,铁律③)
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .height(150.dp)
-                        .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
-                        .clickable { if (!uploading) pickImage() },
-                ) {
-                    if (uploadedUrl.isEmpty()) {
+                // 选图区(M15 多图):未选 = 虚位引导(Plus + 文案);已选 = LazyRow 缩略条
+                // (72dp 方图 + 右上 X 删除 + 条尾余量内 Plus 追加;LazyRow 横向嵌在竖向 Column
+                // = 跨轴嵌套合法铁律);上传中蒙层拦点击(background 常驻不分支,铁律③)
+                if (uploadedUrls.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                            .height(150.dp)
+                            .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
+                            .clickable { if (!uploading) pickImage() },
+                    ) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -545,32 +696,59 @@ private fun MomentAddOverlay(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("点击选择照片", color = AppTheme.TextSecondary, fontSize = 13.sp)
                             Spacer(modifier = Modifier.height(3.dp))
-                            Text("从手机相册选一张,发布后 TA 也能看到", color = AppTheme.TextTertiary, fontSize = 10.sp)
-                        }
-                    } else {
-                        Image(
-                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
-                            painter = rememberAsyncImagePainter(uploadedUrl),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                        )
-                        Box(
-                            modifier = Modifier.align(Alignment.TopEnd)
-                                .padding(8.dp)
-                                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(11.dp))
-                                .clickable { if (!uploading) pickImage() }
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                        ) {
-                            Text("重选", color = Color.White, fontSize = 11.sp)
+                            Text("从手机相册选,可多选至 ${MOMENT_IMAGE_MAX} 张,发布后 TA 也能看到", color = AppTheme.TextTertiary, fontSize = 10.sp)
                         }
                     }
-                    if (uploading) {
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(14.dp)),
-                            contentAlignment = Alignment.Center,
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text("上传中…", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            itemsIndexed(uploadedUrls) { index, url ->
+                                Box(modifier = Modifier.size(72.dp)) {
+                                    Image(
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                                        painter = rememberAsyncImagePainter(url),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                    )
+                                    // 右上 X 删除(黑 45% 圆,上传中拦)
+                                    Box(
+                                        modifier = Modifier.align(Alignment.TopEnd)
+                                            .padding(3.dp)
+                                            .size(18.dp)
+                                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(9.dp))
+                                            .clickable { if (!uploading) uploadedUrls.removeAt(index) },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        AppIcon(AppIconType.Close, Color.White, Modifier.size(10.dp))
+                                    }
+                                }
+                            }
+                            if (uploadedUrls.size < MOMENT_IMAGE_MAX) {
+                                item {
+                                    // 条尾追加块(余量内才显;background+clickable 同节点铁律⑤)
+                                    Box(
+                                        modifier = Modifier.size(72.dp)
+                                            .background(Color(0xFFF5F6FA), RoundedCornerShape(10.dp))
+                                            .clickable { if (!uploading) pickImage() },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        AppIcon(AppIconType.Plus, Color(0xFFC8CCD8), Modifier.size(24.dp))
+                                    }
+                                }
+                            }
+                        }
+                        if (uploading) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth()
+                                    .height(72.dp)
+                                    .background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("上传中…", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            }
                         }
                     }
                 }
@@ -631,20 +809,26 @@ private fun PublishButton(publishing: Boolean, onClick: () -> Unit) {
 }
 
 /**
- * MomentPreviewOverlay — 大图预览浮层(黑底 0.9 全屏,新写无先例):大图 ContentScale.Fit
- * 最大化展示 + 底部信息卡(配文粗体/发布者+时间/删除钮仅上传者本人——mine 由调用方
- * SessionStore.userId 判定,服务端 1_003_008_001 仍兜底);点击黑底关闭,信息卡 clickable
- * 吞透传防误关;删除中拦所有出口
+ * MomentPreviewOverlay — 大图预览浮层(M15 多图横滑 + 点赞;黑底 0.9 全屏):图区 HorizontalPager
+ * 逐页 ContentScale.Fit(MainPager 五 Tab 同款 API,浮层内嵌 pager 仓内首例——横滑手势与黑底
+ * clickable 关闭共存,R1 真机目测)+ 多图页码胶囊(读 currentPage 重组即更新,零额外状态)+
+ * 底部信息卡(配文粗体/发布者+时间/点赞钮双方均可含自己 D-20e/删除钮仅上传者本人——mine 由
+ * 调用方 SessionStore.userId 判定,服务端 1_003_008_001 仍兜底);点击黑底关闭,信息卡
+ * clickable 吞透传防误关;删除中拦所有出口
  */
 @Composable
 private fun MomentPreviewOverlay(
     info: MomentInfo,
+    likeSubmitting: Boolean,
     deleting: Boolean,
+    onToggleLike: (MomentInfo) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val mine = info.userId == SessionStore.userId
     val timeLabel = chatDayLabelFriendly(info.createTime)
+    val urls = if (info.imageUrls.isEmpty()) listOf(info.imageUrl) else info.imageUrls
+    val previewPagerState = rememberPagerState(pageCount = { urls.size })
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.9f))
@@ -652,13 +836,37 @@ private fun MomentPreviewOverlay(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.weight(1f))
-            // 大图 Fit:不裁切看全貌(黑底透出,加载中纯黑无占位可接受——预览必先过缩略图)
-            Image(
-                modifier = Modifier.fillMaxWidth().weight(2.2f),
-                painter = rememberAsyncImagePainter(info.imageUrl),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-            )
+            // 大图横滑区 Fit:不裁切看全貌(黑底透出,加载中纯黑无占位可接受——预览必先过缩略图);
+            // 单图 pager 页数 1 退化同静态 Image,零分支
+            Box(modifier = Modifier.fillMaxWidth().weight(2.2f)) {
+                HorizontalPager(
+                    state = previewPagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    pageSpacing = 12.dp,
+                ) { pageIndex ->
+                    Image(
+                        modifier = Modifier.fillMaxSize(),
+                        painter = rememberAsyncImagePainter(urls[pageIndex]),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+                if (urls.size > 1) {
+                    // 页码胶囊(TopCenter):currentPage 变化触发重组,零额外状态
+                    Box(
+                        modifier = Modifier.align(Alignment.TopCenter)
+                            .padding(top = 10.dp)
+                            .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            "${previewPagerState.currentPage + 1}/${urls.size}",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.weight(1f))
             // 底部信息卡:clickable{} 吞点击防透传到黑底误关
             Column(
@@ -685,7 +893,33 @@ private fun MomentPreviewOverlay(
                         Text(timeLabel, color = AppTheme.TextTertiary, fontSize = 12.sp)
                     }
                     Spacer(modifier = Modifier.weight(1f))
+                    // 点赞钮(M15):双方均可赞任意瞬间含自己(D-20e);回包真值经 toggleLike
+                    // 原位替换,此处只读 info 落态;likeSubmitting/删除中拦
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .background(Color.Transparent, RoundedCornerShape(14.dp))
+                            .clickable { if (!likeSubmitting && !deleting) onToggleLike(info) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        AppIcon(
+                            AppIconType.Heart,
+                            if (info.liked) AppTheme.Danger else AppTheme.TextTertiary,
+                            Modifier.size(16.dp),
+                            filled = info.liked,
+                        )
+                        if (info.likeCount > 0) {
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                "${info.likeCount}",
+                                color = if (info.liked) AppTheme.Danger else AppTheme.TextTertiary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    }
                     if (mine) {
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             if (deleting) "删除中…" else "删除",
                             color = AppTheme.Danger,
@@ -719,3 +953,6 @@ private const val MOMENT_MAX_EDGE = 1080
 
 /** 配文长度上限(与服务端 @Length(max=64) 对齐) */
 private const val MOMENT_TEXT_MAX = 64
+
+/** 单条瞬间图片上限(与服务端 @Size(max=9) 对齐,M15;发布浮层按余量多选) */
+private const val MOMENT_IMAGE_MAX = 9
