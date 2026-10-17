@@ -530,3 +530,49 @@ ALTER TABLE `love_user`
 -- ----------------------------
 ALTER TABLE `love_message`
     ADD COLUMN `recalled` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否已撤回（M12 墓碑标记：撤回不删行，content 原文留档审计；与 deleted 逻辑删独立）';
+
+-- ============================================================================
+-- M14 段：恋爱清单表 + 菜单/按钮权限（INTEGRATION-DESIGN.md §12.4 预留落位 / §5.2 wish 组）
+-- 本段追加于 M12 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- love_wish 继承 BaseDO 走【逻辑删除】（deleted 列 + DO 侧 @TableLogic），与 love_moment 同路线；
+-- 解绑/重绑后数据保留，couple_id 留历史值，重绑产生新 couple_id（D-11）。
+-- 与 love_message kind=2 心愿卡消息【并存不替代】（D-19a）：kind=2 是快照式聊天消息，
+-- 本表是可勾选完成的共享清单实体；wish_key 不升级外键（快照哲学）。
+-- 无 uk（couple 双方均可添加多条，moment 先例），逻辑删后重新添加恒走 insert 新行；
+-- done 对应 bit(1)（MyBatis Plus 自动映射 Boolean），done_by/done_time 可空（未完成 NULL）；
+-- 完成消息「恰发一条」由 WishMapper.markDone 的 CAS（WHERE done = b'0'）单闸保证（D-19b），
+-- 无 celebrated 类防重发列；删除权限 = 仅创建者本人（1_003_009_001 用户维度校验，防误删），
+-- 不存在/跨 couple 统一 1_003_009_000 防探测；admin 兜底可删任何。
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `love_wish`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '心愿编号',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（couple 共享，双方互见；解绑重绑后旧心愿留历史值）',
+  `user_id` bigint NOT NULL COMMENT '创建人用户编号（仅创建者本人可删，D-19e）',
+  `title` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '心愿标题（≤64 字，service trim 后落库）',
+  `done` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否完成（bit(1)↔Boolean 自动映射）',
+  `done_by` bigint NULL DEFAULT NULL COMMENT '完成人用户编号（勾选者，可与创建人不同；未完成为 NULL）',
+  `done_time` datetime NULL DEFAULT NULL COMMENT '完成时间（未完成为 NULL）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_couple_id`(`couple_id` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '恋爱清单表（情侣业务）';
+
+-- ----------------------------
+-- 菜单/按钮权限 SQL（M14，「情侣业务」目录下第九个管理页）
+-- 挂接：目录 id 按 type+name 回查（同 M3.5/M5/M8/M9 段理由，不依赖前段 LAST_INSERT_ID）；
+-- 幂等：按钮（按 permission）→ 管理菜单（按 component_name）先行 DELETE，先子后父（M-3 同款）。
+-- ----------------------------
+DELETE FROM `system_menu` WHERE `permission` IN ('love:wish:query', 'love:wish:delete');
+DELETE FROM `system_menu` WHERE `component_name` = 'LoveWish';
+
+SELECT @loveDirectoryId := `id` FROM `system_menu` WHERE `type` = 1 AND `name` = '情侣业务' AND `deleted` = b'0' LIMIT 1;
+
+-- 管理菜单九：恋爱清单（component_name 唯一 = LoveWish，M5/M8/M9 实况同款无 Menu 后缀）
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('恋爱清单', '', 2, 9, @loveDirectoryId, 'wish', 'ep:collection', 'love/wish/index', 'LoveWish', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+SELECT @parentId := LAST_INSERT_ID();
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('心愿查询', 'love:wish:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('心愿删除', 'love:wish:delete', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');

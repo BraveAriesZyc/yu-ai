@@ -10,6 +10,7 @@ import cn.iocoder.yudao.framework.common.exception.ErrorCode;
  * 消息 1-003-003-xxx；情侣 1-003-004-xxx；账号/鉴权 1-003-005-xxx；纪念日 1-003-006-xxx（M5）；
  * 打卡 1-003-007-xxx（M8）。
  * 相册瞬间 1-003-008-xxx（M9）。
+ * 恋爱清单 1-003-009-xxx（M14）。
  *
  * 短信验证码本身的错误（未发送、已过期、不正确等）由 system 的 SmsCodeApi 抛其自有错误码，不在本段定义。
  */
@@ -97,5 +98,18 @@ public interface ErrorCodeConstants {
      * 伴侣不能删对方的瞬间（防误删），admin 兜底可删任何（LoveAdminMomentServiceImpl 不校验此码）
      */
     ErrorCode MOMENT_DELETE_FORBIDDEN = new ErrorCode(1_003_008_001, "只能删除自己发布的瞬间");
+
+    // ========== 恋爱清单 模块 1-003-009-xxx（M14 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。app done/delete 与 admin delete
+     * 三处共用：不存在 / 跨 couple 统一按此码拒绝（防探测，MESSAGE_NOT_EXISTS 口径——
+     * couple 内双方本就经 list 互见全部心愿，统一码只对跨 couple 有信息屏蔽意义）
+     */
+    ErrorCode WISH_NOT_EXISTS = new ErrorCode(1_003_009_000, "心愿不存在");
+    /**
+     * M14 冻结决策（D-19e）：删除权限 = 仅创建者本人（用户维度校验，照 moment 口径）——
+     * 伴侣不能删对方添加的心愿（防误删），admin 兜底可删任何（LoveAdminWishServiceImpl 不校验此码）
+     */
+    ErrorCode WISH_DELETE_FORBIDDEN = new ErrorCode(1_003_009_001, "只能删除自己创建的心愿");
 
 }
