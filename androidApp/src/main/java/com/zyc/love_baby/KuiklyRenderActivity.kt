@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.tencent.kuikly.core.render.android.IKuiklyRenderExport
@@ -42,9 +44,27 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
             return if (pn.isNotEmpty()) {
                 return pn
             } else {
-                "main"
+                PAGE_MAIN
             }
         }
+
+    // 双击返回退出(2026-10-17 真机反馈:主界面误触返回手势直接退 App 太生硬):仅根页面
+    // (main)启用本 callback 接管返回——首次提示「再按一次退出」,2s 内再次返回才 finish;
+    // 二级页(每个 @Page 经 KRRouterAdapter 独立起一个 KuiklyRenderActivity 实例)callback
+    // 不启用,系统默认出栈行为不变
+    private var lastBackPressAt = 0L
+
+    private val backToExitCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            val now = System.currentTimeMillis()
+            if (now - lastBackPressAt < EXIT_INTERVAL_MS) {
+                finish() // 根 Activity finish = 退出任务(与原「返回即退」终态一致)
+            } else {
+                lastBackPressAt = now
+                Toast.makeText(this@KuiklyRenderActivity, "再按一次退出", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +74,8 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         hrContainerView = findViewById(R.id.hr_container)
         loadingView = findViewById(R.id.hr_loading)
         errorView = findViewById(R.id.hr_error)
+        onBackPressedDispatcher.addCallback(this, backToExitCallback)
+        backToExitCallback.isEnabled = pageName == PAGE_MAIN
         kuiklyRenderViewDelegator.onAttach(hrContainerView, "", pageName, createPageData())
     }
 
@@ -140,6 +162,12 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
 
         private const val KEY_PAGE_NAME = "pageName"
         private const val KEY_PAGE_DATA = "pageData"
+
+        /** 根页面名(pageName 缺省值):仅此页面接管返回做双击退出 */
+        private const val PAGE_MAIN = "main"
+
+        /** 双击返回退出的判定窗口 */
+        private const val EXIT_INTERVAL_MS = 2_000L
 
         /** 主题持久化 key,与 shared ThemeStore.PREF_KEY 保持一致 */
         private const val THEME_KEY = "app_theme_id"
