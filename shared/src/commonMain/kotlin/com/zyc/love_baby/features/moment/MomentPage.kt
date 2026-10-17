@@ -364,15 +364,15 @@ internal fun MomentPage(pager: Pager) {
                         }
                         if (hasMore) {
                             item(key = "load-more") {
+                                // 胶囊三层写法(铁律 14/15,M12 三轮定稿,2026-10-17 真机反馈同源:
+                                // 背景直挂 Text 落原生 TextView 块,文字 gravity 失控在胶囊内偏移
+                                // =「边距对齐似乎有问题」):外层 Box 容器居中 → 内层 Box 载
+                                // background+clickable+padding → Text 作子节点
                                 Box(
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Text(
-                                        if (loadingMore) "加载中…" else "加载更多",
-                                        color = if (loadingMore) AppTheme.TextTertiary else theme.brandStart,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
+                                    Box(
                                         modifier = Modifier
                                             .background(
                                                 if (loadingMore) Color.Transparent else theme.brandStart.copy(alpha = 0.08f),
@@ -380,7 +380,14 @@ internal fun MomentPage(pager: Pager) {
                                             )
                                             .clickable { if (!loadingMore) loadMore() }
                                             .padding(horizontal = 16.dp, vertical = 7.dp),
-                                    )
+                                    ) {
+                                        Text(
+                                            if (loadingMore) "加载中…" else "加载更多",
+                                            color = if (loadingMore) AppTheme.TextTertiary else theme.brandStart,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -402,8 +409,10 @@ internal fun MomentPage(pager: Pager) {
             MomentAddOverlay(
                 pager = pager,
                 onPublished = { info ->
-                    moments.add(0, info) // 发布成功头插落态(create 回包含服务端 id/createTime)
-                    hasMore = true
+                    // 发布成功头插落态(create 回包含服务端 id/createTime)。不动 hasMore:
+                    // 发布只头插新条目,不改变「下方还有无更老未加载条目」的事实——置 true
+                    // 会让「加载更多」闪现数秒等轮询纠偏(2026-10-17 真机反馈)
+                    moments.add(0, info)
                 },
                 onDismiss = { showAdd = false },
             )
