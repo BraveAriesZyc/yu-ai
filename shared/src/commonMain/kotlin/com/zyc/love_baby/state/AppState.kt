@@ -13,6 +13,8 @@ import com.zyc.love_baby.base.BridgeModule
 import com.zyc.love_baby.base.WebSocketModule
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.data.model.AnniversaryInfo
+import com.zyc.love_baby.data.model.CheckinInfo
+import com.zyc.love_baby.data.model.CheckinSummaryInfo
 import com.zyc.love_baby.data.model.MessageInfo
 import com.zyc.love_baby.data.model.MoodOptionInfo
 import com.zyc.love_baby.data.model.MoodRecordInfo
@@ -20,6 +22,7 @@ import com.zyc.love_baby.data.model.TodoInfo
 import com.zyc.love_baby.network.AnniversaryApi
 import com.zyc.love_baby.network.ApiConfig
 import com.zyc.love_baby.network.ApiResult
+import com.zyc.love_baby.network.CheckinApi
 import com.zyc.love_baby.network.MessageApi
 import com.zyc.love_baby.network.MoodApi
 import com.zyc.love_baby.network.TodoApi
@@ -439,6 +442,115 @@ internal fun anniversaryCountdownLabel(item: AnniversaryInfo, todayIndex: Long):
         c > 0 -> "还有 $c 天"
         c == 0L -> "就是今天"
         else -> "已 ${-c} 天"
+    }
+}
+
+// ---------- 每日打卡(M8,§12.4 预留落位;纯日期点 + 共同连续,无补打/无撤销) ----------
+
+/**
+ * CheckinStore 每日打卡:当月缓存 + 汇总 + 写穿透(§7.4 TodoStore 范式)。
+ * checkins 只装「最后一次成功拉取的月份」的 couple 双方记录(displayMonth 标记);
+ * 今日双布尔(checkedToday/partnerCheckedToday)独立于月缓存——翻月浏览不丢今天的打卡状态,
+ * 每次拉到当月明细时按服务端校准。
+ */
+internal object CheckinStore {
+    /** 当月打卡缓存(§5.2 checkin/list couple 维度双方记录);切月/进入整表覆盖 */
+    var checkins by mutableStateOf(emptyList<CheckinInfo>())
+        private set
+
+    /** 日历展示月(yyyy-MM;空串=未初始化,进入时由页面传当月起拉) */
+    var displayMonth by mutableStateOf("")
+        private set
+
+    /** 打卡汇总(首页「今日打卡」条与打卡页页头共用;null=尚未拉到,调用方显 "--") */
+    var summary by mutableStateOf<CheckinSummaryInfo?>(null)
+        private set
+
+    /** 我今天是否已打卡(独立于月缓存:翻月浏览不丢今日状态;check 成功置位,拉当月明细校准) */
+    var checkedToday by mutableStateOf(false)
+        private set
+
+    /** TA 今天是否已打卡(同上;仅拉到当月明细时可校准) */
+    var partnerCheckedToday by mutableStateOf(false)
+        private set
+
+    /** 我在 [dateKey](yyyy-MM-dd)的打卡记录;无记录回 null(月历格按空缺渲染) */
+    fun myCheckinOn(dateKey: String): CheckinInfo? =
+        checkins.firstOrNull { it.userId == SessionStore.userId && it.checkinDate == dateKey }
+
+    /** 伴侣在 [dateKey] 的打卡记录(userId ≠ 我;页仅在已绑定时可达) */
+    fun partnerCheckinOn(dateKey: String): CheckinInfo? =
+        checkins.firstOrNull { it.userId != SessionStore.userId && it.checkinDate == dateKey }
+
+    /** 切月请求序号:连点切月并发防护(MoodStore.loadMonth 同款)——仅最后一个发出的请求可落状态 */
+    private var monthReqSeq = 0
+
+    /**
+     * 按月拉取(§7.4 拉取触发点:进入/切月):成功才更新 displayMonth 与缓存,
+     * 失败保留现月数据静默返回(只读降级);month 空串(尚未初始化)直接幂等返回。
+     * 过期回包作废(M3 评审修正:连点切月请求乱序完成,后完成的旧月回包不得覆盖新月)
+     */
+    suspend fun loadMonth(pager: Pager, month: String): ApiResult {
+        if (month.isEmpty()) return ApiResult.Ok(JSONObject())
+        val seq = ++monthReqSeq
+        val result = CheckinApi.list(pager, month)
+        if (seq != monthReqSeq) return result // 过期回包:期间已有更新的切月请求,不落状态
+        if (result is ApiResult.Ok) {
+            displayMonth = month
+            val rows = CheckinInfo.listFrom(result.dataArray)
+            checkins = rows
+            syncTodayFlags(pager, month, rows)
+        }
+        return result
+    }
+
+    /**
+     * 拉取汇总(§7.4 触发点:首页 bindState 首拉 / 打卡页进入 / check 成功后):
+     * 成功整对象覆盖,失败静默保留旧值——只读降级,toast 交给写失败场景
+     */
+    suspend fun loadSummary(pager: Pager): ApiResult {
+        val result = CheckinApi.summary(pager)
+        if (result is ApiResult.Ok) {
+            summary = CheckinSummaryInfo.from(result.data)
+        }
+        return result
+    }
+
+    /**
+     * 打卡今天(§7.4 写穿透):uk 幂等由服务端保证(重复打卡回已有记录不打错),端上按成功处理。
+     * 回包落态:checkedToday 置位;回包记录并入当月缓存(仅当回包月 == 展示月,防跨月脏插);
+     * 随后重拉 summary(打卡直接改变 streak/累计,跨日口径本地增量算不准,整对象覆盖最稳)
+     */
+    suspend fun check(pager: Pager): ApiResult {
+        val result = CheckinApi.check(pager)
+        if (result is ApiResult.Ok) {
+            checkedToday = true
+            val info = CheckinInfo.from(result.data)
+            if (info != null && displayMonth.isNotEmpty() && info.checkinDate.take(7) == displayMonth) {
+                checkins = checkins.filterNot {
+                    it.userId == info.userId && it.checkinDate == info.checkinDate
+                } + info
+            }
+            loadSummary(pager)
+        }
+        return result
+    }
+
+    /** 登出/换号/解绑清内存(MainPager 接线调用),防上会话/他人打卡残留 */
+    fun reset() {
+        checkins = emptyList()
+        displayMonth = ""
+        summary = null
+        checkedToday = false
+        partnerCheckedToday = false
+    }
+
+    /** 请求月 = 当月时按服务端明细校准今日双布尔(翻月浏览不丢今天的打卡状态) */
+    private fun syncTodayFlags(pager: Pager, month: String, rows: List<CheckinInfo>) {
+        val todayKey = currentDate(pager) // yyyy-MM-dd(dateFormatter 设备时区,UTC 兜底)
+        if (todayKey.take(7) != month) return
+        checkedToday = rows.any { it.userId == SessionStore.userId && it.checkinDate == todayKey }
+        partnerCheckedToday = rows.any { it.userId != SessionStore.userId && it.checkinDate == todayKey }
     }
 }
 

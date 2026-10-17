@@ -116,6 +116,14 @@ internal fun MinePage(
                     )
                     AppMenuDivider()
                     AppMenuRow(
+                        icon = AppIconType.Todo,
+                        iconTint = Color(0xFF6C7BFF),
+                        iconBg = Color(0xFFEDEFFF),
+                        title = "每日打卡",
+                        onClick = { openCheckinPage(pager) }, // M8:接打卡独立页(月历 + 共同连续)
+                    )
+                    AppMenuDivider()
+                    AppMenuRow(
                         icon = AppIconType.Heart,
                         iconTint = Color(0xFFFF5A8C),
                         iconBg = Color(0xFFFFEAF1),
@@ -195,6 +203,17 @@ private fun openAnniversaryList(pager: Pager) {
     try {
         pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
             .openPage("anniversaryList", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/**
+ * openCheckinPage — 路由打开每日打卡页(M8;openAnniversaryList 同款新 Activity 压栈)
+ */
+private fun openCheckinPage(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("checkinPage", JSONObject())
     } catch (_: Exception) {
     }
 }

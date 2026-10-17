@@ -41,6 +41,7 @@ import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.AnniversaryStore
 import com.zyc.love_baby.state.ChatPushStore
 import com.zyc.love_baby.state.ChatStore
+import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
 import com.zyc.love_baby.state.MoodStore
@@ -421,6 +422,7 @@ internal fun MainPageImpl(pager: BasePager) {
                 CoupleStore.reset()
                 TodoStore.reset()
                 AnniversaryStore.reset()
+                CheckinStore.reset()
                 ChatStore.reset()
                 MoodStore.reset()
             }
@@ -436,6 +438,7 @@ internal fun MainPageImpl(pager: BasePager) {
                 ChatStore.reset()
                 TodoStore.reset()
                 AnniversaryStore.reset()
+                CheckinStore.reset()
                 MoodStore.reset()
                 // 统计随关系清场归零(首页「在一起(天)」回 "--",我的页三项回 0)
                 StatsStore.reset()

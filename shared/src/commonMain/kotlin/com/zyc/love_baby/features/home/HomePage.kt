@@ -3,6 +3,7 @@ package com.zyc.love_baby.features.home
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.tencent.kuikly.compose.foundation.background
+import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
@@ -17,9 +18,11 @@ import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
+import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
+import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.module.RouterModule
@@ -41,6 +44,7 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.features.chat.todayDayIndexGmt8
 import com.zyc.love_baby.state.AnniversaryStore
+import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
 import com.zyc.love_baby.state.StatsStore
@@ -64,15 +68,28 @@ fun HomePage(pager: Pager, onNavigate: (Int) -> Unit) {
     LaunchedEffect(CoupleStore.bindState) {
         if (CoupleStore.bindState != CoupleBindState.BOUND) return@LaunchedEffect
         AnniversaryStore.loadList(pager)
+        // 今日打卡条(M8):summary 供条上「连续 N 天」展示;checkin 明细不在此拉
+        //(独立页进入时拉当月),条上今日状态吃 CheckinStore.checkedToday(独立页打卡后回首页仍准)
+        CheckinStore.loadSummary(pager)
     }
     LazyColumn(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         item {
             HeaderWithStats(pager)
         }
         item {
+            // 今日打卡条(M8):HeaderWithStats 悬浮统计卡之下、快捷入口之上
+            Column(modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)) {
+                Spacer(modifier = Modifier.height(36.dp)) // 避让悬浮统计卡(offset y=20dp 伸出)
+                TodayCheckinEntry(
+                    pager = pager,
+                    bound = CoupleStore.bindState == CoupleBindState.BOUND,
+                )
+            }
+        }
+        item {
             // 快捷入口
             Column(modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)) {
-                Spacer(modifier = Modifier.height(36.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 AppSectionTitle("快捷入口")
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -188,5 +205,74 @@ private fun openAnniversaryList(pager: Pager) {
         pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
             .openPage("anniversaryList", JSONObject())
     } catch (_: Exception) {
+    }
+}
+
+/** 路由打开每日打卡独立页(openAnniversaryList 同款) */
+private fun openCheckinPage(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("checkinPage", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/**
+ * 今日打卡条(M8):共同 streak + 今日状态,onClick 开打卡独立页(AnniversaryRow 同款横条视觉)。
+ * 今日状态文案吃 CheckinStore.checkedToday/partnerCheckedToday(独立页打卡后回首页即时翻转);
+ * summary 只供「连续 N 天」徽标,未拉到/streak=0 隐藏徽标不挡入口
+ */
+@Composable
+private fun TodayCheckinEntry(pager: Pager, bound: Boolean) {
+    val theme = ThemeStore.current
+    val summary = CheckinStore.summary
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .background(AppTheme.CardBg, RoundedCornerShape(16.dp))
+            .clickable { if (bound) openCheckinPage(pager) }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // 🔥 方块(AnniversaryRow emoji 方块同视觉)
+        Box(
+            modifier = Modifier.size(38.dp)
+                .background(theme.brandStart.copy(alpha = 0.10f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("🔥", fontSize = 18.sp)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "今日打卡",
+                color = AppTheme.TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                when {
+                    !bound -> "绑定后和 TA 一起打卡"
+                    CheckinStore.checkedToday && CheckinStore.partnerCheckedToday -> "今天已共同打卡 ✓"
+                    CheckinStore.checkedToday -> "我已打卡,等 TA 中"
+                    else -> "还没有打卡,点一下"
+                },
+                color = AppTheme.TextTertiary,
+                fontSize = 11.sp,
+            )
+        }
+        val streak = summary?.commonStreak ?: 0
+        if (bound && streak > 0) {
+            Text(
+                "连续 $streak 天",
+                color = theme.brandStart,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        }
+        if (bound) {
+            AppIcon(AppIconType.ChevronRight, Color(0xFFC8CCD8), Modifier.size(16.dp))
+        }
     }
 }
