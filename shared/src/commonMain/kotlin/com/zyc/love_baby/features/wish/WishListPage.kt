@@ -9,8 +9,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import com.tencent.kuikly.compose.animation.core.tween
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
+import com.tencent.kuikly.compose.foundation.gestures.animateScrollBy
 import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
 import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
@@ -40,6 +42,7 @@ import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.input.pointer.PointerEventPass
 import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
 import com.tencent.kuikly.compose.ui.input.pointer.positionChangeIgnoreConsumed
+import com.tencent.kuikly.compose.ui.platform.LocalDensity
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
@@ -157,20 +160,20 @@ internal fun WishListPage(pager: Pager) {
         { params: KeyboardParams -> keyboardHeight = params.height }
     }
     val myId = SessionStore.userId
+    // 键盘推升动画用(组合期捕获):density 供 dp→px,navBar 补齐键盘回调不含的导航栏高度
+    val density = LocalDensity.current
+    val navBarDp = navBarSafePaddingDp()
 
-    // 键盘弹起自动滚到底(2026-10-18 真机反馈「键盘顶起输入条和清单叠一起没边距」):键盘
-    // 盖住下半屏后,当前视口的清单尾项直接紧贴输入条顶缘,无呼吸观感=叠一起;滚到底让尾部
-    // Spacer 的 20dp 呼吸落在输入条正上方(点输入框=准备添加,看尾部活跃清单语义自洽)。
-    // 收起不滚(保持阅读位置)。流畅度二修(同日真机反馈「顶起不太流畅」):delay 提到 260ms
-    // 等系统键盘动画(~260ms)走完再滚,跳变不与键盘升顶打架;并用 animateScrollToItem 平滑
-    // 滚底——ChatPage 弃用它的两个前提在此均不成立(陈旧 canScrollForward 闸门=追加后立即
-    // 调才有,此处延迟后 layoutInfo 已新鲜;卡顿实锤在 Pager 域,本页独立页无 Pager);
-    // 已在底部时动画直接结束,失败模式无害
+    // 键盘弹起列表同步推升(2026-10-18 三轮打磨):①snap scrollToItem 延时跳变与键盘动画打架
+    // ②delay(260)+animateScrollToItem 变成「键盘先弹完、清单后推」两段式——均不流畅。正解=
+    // 列表上滚量自算为键盘全遮盖(键盘高+navBar——keyboardHeight 回调不含导航栏区域),与键盘
+    // 升起并行动画成一体运动。animateScrollBy 逐帧 scrollBy 驱动(tween 260 对齐键盘动画
+    // 时长),目标距离与 layoutInfo 无关,无 ChatPage 弃用 animateScrollToItem 的陈旧闸门
+    // 问题;已在底部时消耗 0 动画自然结束,失败模式无害。收起不滚(保持位置,微信同款)
     LaunchedEffect(keyboardHeight) {
         if (keyboardHeight <= 0f) return@LaunchedEffect
-        delay(260)
-        val count = listState.layoutInfo.totalItemsCount
-        if (count > 1) listState.animateScrollToItem(count - 1)
+        val px = with(density) { (keyboardHeight.dp + navBarDp).toPx() }
+        listState.animateScrollBy(px, tween(durationMillis = 260))
     }
 
     // D-19f 分层排序:进行中在前(保持服务端序 = id 升序),已完成沉底按 doneTime 倒序
