@@ -9,10 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import com.tencent.kuikly.compose.animation.core.tween
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
-import com.tencent.kuikly.compose.foundation.gestures.animateScrollBy
 import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
 import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
@@ -105,7 +103,9 @@ private const val REFRESH_MIN_VISIBLE_MS = 600L
  *      MomentPage/ChatPage 先例);添加条 POST 成功才清输入
  * 功能:
  *  - couple 共享清单(双方互见;点亮=对方):服务端 create_time asc, id asc 全量 → 端上分层排序
- *    (D-19f):进行中在前(服务端序同 id 升序),已完成沉底按 doneTime 倒序
+ *    (D-19f,2026-10-18 用户裁决翻转):已完成块置顶按 doneTime 倒序当历史区,进行中队列居
+ *    列表尾(服务端序同 id 升序)——最新心愿恒在输入条正上方,键盘推升/添加成功走「滚到底」
+ *    即露出最新(微信同构;原「进行中在前/已完成沉底」时列表尾是已完成块,顶起露不出最新项)
  *  - 勾选完成:done=true 服务端 CAS 恰发一条「我们一起完成了「title」🎉」到悄悄话(端上零新增
  *    消息逻辑,勾选者本端该消息靠切聊天 Tab 增量拉自愈);重复勾选幂等(回包真值不变)
  *  - 时间展示:行副文案与详情弹框均显「创建于 …」/「…完成于 …」(友好日+时刻,GMT+8);
@@ -170,14 +170,16 @@ internal fun WishListPage(pager: Pager) {
     // 几何不自洽;改实际高度驱动让位,任何行数下尾项呼吸完整
     var inputBarHeight by remember { mutableStateOf(44.dp) }
 
-    // 键盘弹起列表按需同步推升(2026-10-18 四轮打磨,微信/QQ 语义「内容不多不顶,盖住才顶」):
+    // 键盘弹起列表按需同步推升(2026-10-18 五轮打磨,微信/QQ 语义「内容不多不顶,盖住才顶」):
     // ①snap scrollToItem 延时跳变与键盘动画打架 ②delay(260)+animateScrollToItem 键盘先弹完
-    // 清单后推 ③无脑推固定量——内容少时把尾部空白推上来、顶部内容跑掉。正解=推升前判
-    // 「最后一个可见内容项(排除尾部 Spacer)的底缘是否被键盘顶缘盖住」:盖不住(清单短,内容
-    // 全在键盘上方)不推;被盖才推,上滚量=键盘全遮盖(键盘高+navBar——keyboardHeight 回调
-    // 不含导航栏区域),animateScrollBy 逐帧驱动(tween 260 对齐键盘动画时长)与键盘升起并行
-    // 成一体运动,消耗制天然 clamp 到底(已在底部消耗 0 结束)。lastContent 位置不受尾部
-    // Spacer 长高影响,判据对 measure 时序免疫。收起不滚(保持位置,微信同款)
+    // 清单后推 ③无脑推固定量——内容少时把尾部空白推上来、顶部内容跑掉 ④推固定遮盖量——
+    // 旧序(进行中在前/已完成沉底)下列表尾是已完成块,推完露出的不是最新项(真机反馈:
+    // 「顶起来了清单应该显示最新的」)。⑤正解=分层翻转(已完成置顶当历史区、进行中队列居
+    // 列表尾,见 D-19f 注释)后,最新项=列表最后内容项,推升即「滚到底」:判据保持「最后一个
+    // 可见内容项(排除尾部 Spacer)的底缘是否被键盘顶缘盖住」(盖不住=清单短全在键盘上方,不推);
+    // 被盖才 animateScrollToItem 滚到底(尾 Spacer 公式=键盘让位+条高让位+20 呼吸,到底后最新项
+    // 底缘正好贴输入条上方 20dp,任意已完成数量自洽;已到底 canScrollForward=false 静默不滚),
+    // 与键盘升起并行成一体运动。收起不滚(保持位置,微信同款)
     LaunchedEffect(keyboardHeight) {
         if (keyboardHeight <= 0f) return@LaunchedEffect
         val info = listState.layoutInfo
@@ -185,12 +187,15 @@ internal fun WishListPage(pager: Pager) {
         val coverEdge = info.viewportEndOffset - coverPx // 键盘顶缘在视口内的 y(Kuikly 无 viewportMainAxisExtent,viewportEndOffset 同坐标系)
         val lastContent = info.visibleItemsInfo.lastOrNull { it.index < info.totalItemsCount - 1 }
         if (lastContent == null || lastContent.offset + lastContent.size <= coverEdge) return@LaunchedEffect
-        listState.animateScrollBy(coverPx, tween(durationMillis = 260))
+        listState.animateScrollToItem(info.totalItemsCount - 1)
     }
 
-    // D-19f 分层排序:进行中在前(保持服务端序 = id 升序),已完成沉底按 doneTime 倒序
-    // (doneTime=0 兜底排最后)
-    val display = wishes.filter { !it.done } + wishes.filter { it.done }.sortedByDescending { it.doneTime }
+    // D-19f 分层排序(2026-10-18 用户裁决翻转,原「进行中在前/已完成沉底」):已完成块置顶按
+    // doneTime 倒序(desc=刚完成的紧贴活跃区,整条时间线自上而下单调递增:最早完成→最近完成
+    // →最早许愿→最新许愿),进行中队列居列表尾保持服务端序(id 升序=最老在上最新在下)。
+    // 动机=键盘推升/添加成功都走「滚到底」:最新心愿必须恒在列表最后内容位(输入条正上方),
+    // 沉底时列表尾是已完成块,顶起露出的不是最新项(真机反馈)。doneTime=0 兜底排块内最前
+    val display = wishes.filter { it.done }.sortedByDescending { it.doneTime } + wishes.filter { !it.done }
     val doneCount = wishes.count { it.done }
 
     // 拉全量:进页首拉 / 下拉刷新 / 失败重试共用;成功清空重填,失败置 loadFailed。
@@ -466,9 +471,11 @@ internal fun WishListPage(pager: Pager) {
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
-            // 添加按钮(POST 成功才清输入:失败保留文案可重试,TodoPage 先例)。服务端 create_time asc
-            // 同序 → 新心愿落活跃块尾;display 中下标 = 活跃数-1,awaitMeasured 等 measure 落地
-            // 再滚(铁律13:过早 scrollToItem 撞 stale totalItemsCount 越界守卫被静默吞)
+            // 添加按钮(POST 成功才清输入:失败保留文案可重试,TodoPage 先例)。新心愿落活跃块尾
+            // = 列表最后内容位(D-19f 翻转后),滚动走「滚到底」:scrollToItem(Spacer 下标)顶对齐
+            // 请求超出滚动上限被 clamp 到底 → 新项底缘贴输入条上方 20dp(微信发消息同款瞬间贴底);
+            // awaitMeasured 等 measure 落地再滚(铁律13:过早 scrollToItem 撞 stale totalItemsCount
+            // 越界守卫被静默吞;item 序 0=刷新头,1..wishes.size=内容,wishes.size+1=Spacer)
             AppIconButton(
                 AppIconType.Plus,
                 onClick = {
@@ -482,11 +489,8 @@ internal fun WishListPage(pager: Pager) {
                                 inputText = ""
                                 WishInfo.from(result.data)?.let { fresh ->
                                     wishes.add(fresh)
-                                    val targetIndex = wishes.count { !it.done } - 1
-                                    if (targetIndex >= 0) {
-                                        listState.awaitMeasured(targetIndex + 1)
-                                        listState.scrollToItem(targetIndex)
-                                    }
+                                    listState.awaitMeasured(wishes.size + 2)
+                                    listState.scrollToItem(wishes.size + 1)
                                 }
                             } else {
                                 toastCoupleResult(pager, result)
