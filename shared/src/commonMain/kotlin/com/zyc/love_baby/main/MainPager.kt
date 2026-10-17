@@ -27,7 +27,9 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.UserProfile
 import com.zyc.love_baby.features.auth.GatePanel
+import com.zyc.love_baby.features.chat.ChatImagePreviewOverlay
 import com.zyc.love_baby.features.chat.ChatPage
+import com.zyc.love_baby.features.chat.ChatRecallConfirmOverlay
 import com.zyc.love_baby.features.couple.BindUnbindConfirm
 import com.zyc.love_baby.features.couple.BindingPanel
 import com.zyc.love_baby.features.couple.toastCouple
@@ -182,15 +184,21 @@ internal fun MainPageImpl(pager: BasePager) {
     var logoutSubmitting by remember { mutableStateOf(false) }
     // 头像上传进行中(文件服务里程碑):浮层头像行文案切换 + 拦重复发起(原生模块 inFlight 外的 UI 层判重)
     var avatarUploading by remember { mutableStateOf(false) }
-    // M10 聊天页全屏大图预览开合(ChatPage onOverlayChange 上报):并入 overlayActive 关横滑
-    var chatOverlayActive by remember { mutableStateOf(false) }
+    // M12 聊天页两枚全屏浮层状态提升(2026-10-17 二轮修复):大图预览/撤回确认挂本根 Box 底栏
+    // 之后(与解绑/昵称/登出/心情管理四浮层同语言:黑幕盖住底栏、遮罩挡触摸、底栏压暗可见不可点)
+    // ——页内挂载在 Pager 子树 z 序盖不住浮岛底栏,首轮「浮层开着底栏不组合」真机反馈生硬弃用。
+    // ChatPage 经值+回写双通道读写,提交函数 submitChatRecall 随浮层同迁于此
+    var chatImagePreviewUrl by remember { mutableStateOf("") }
+    var chatRecallTargetId by remember { mutableStateOf("") }
+    var chatRecallSubmitting by remember { mutableStateOf(false) } // POST 在飞(浮层撤回钮防双击)
     val scope = rememberCoroutineScope()
     // 浮层开着时关闭背景滚动(横滑 Pager + 当前页列表):Kuikly 浮层遮罩的 clickable 只吃
     // tap 不吃拖拽,背景原生滚动容器仍收 down/move(2026-10-17 真机实证「浮层开着还能滚
     // 背景/横滑切页」)——LazyColumn/LazyVerticalGrid/HorizontalPager 均有官方 userScrollEnabled
     // 开关,浮层任一开着即全关,是最干净的阻断通道(遮罩拦截方案在 Kuikly 原生视图层不成立)
     val overlayActive =
-        showUnbindConfirm || showNicknameEdit || showLogoutConfirm || showMoodManage || chatOverlayActive
+        showUnbindConfirm || showNicknameEdit || showLogoutConfirm || showMoodManage ||
+            chatImagePreviewUrl.isNotEmpty() || chatRecallTargetId.isNotEmpty()
     // Tab 跳转统一走 scrollToPage 瞬时直达(底栏点切/首页快捷入口/心情页「去悄悄话」),胶囊由
     // pillPosition(=targetPage 瞬移)驱动零动画帧,见 AppBottomBar.SlidingPill。⚠ 勿改回
     // animateScrollToPage(2026-10-16 真机「底栏异常
@@ -308,6 +316,22 @@ internal fun MainPageImpl(pager: BasePager) {
         }
     }
 
+    // M12 撤回提交(浮层状态提升随迁):POST Ok 后墓碑已由 ChatStore.recall 内部 markLocalRecalled
+    // 即地置灰,关浮层即见;失败也关浮层 + toast(超窗 1_003_003_001 由服务端权威兜底,不在端上
+    // 复制时间窗判定细节)
+    fun submitChatRecall() {
+        if (chatRecallSubmitting || chatRecallTargetId.isEmpty()) return
+        chatRecallSubmitting = true
+        scope.launch {
+            val result = ChatStore.recall(pager, chatRecallTargetId)
+            chatRecallSubmitting = false
+            chatRecallTargetId = ""
+            if (result !is ApiResult.Ok) {
+                toastCoupleResult(pager, result)
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(ThemeStore.current.bg)) {
         HorizontalPager(
             state = pagerState,
@@ -328,7 +352,10 @@ internal fun MainPageImpl(pager: BasePager) {
                     myNickname = profile?.nickname.orEmpty(),
                     myAvatar = profile?.avatar.orEmpty(),
                     pageVisible = selectedTab == 3,
-                    onOverlayChange = { chatOverlayActive = it },
+                    imagePreviewUrl = chatImagePreviewUrl,
+                    onImagePreviewChange = { chatImagePreviewUrl = it },
+                    recallTargetId = chatRecallTargetId,
+                    onRecallTargetChange = { chatRecallTargetId = it },
                 )
                 else -> MinePage(
                     pager = pager,
@@ -343,24 +370,34 @@ internal fun MainPageImpl(pager: BasePager) {
 
         // 悬浮底部导航(后组合压在页面上层;底部避让导航栏/手势条安全距离)
         // 角标(M11):聊天 Tab 未读红点,快照状态驱动(unreadCount 变化仅重组底栏区块)
-        // 2026-10-17 层级修复:聊天页两个全屏浮层(大图预览/撤回确认)挂在 ChatPage 内部
-        // (Pager 子树,z 序低于本浮岛底栏)盖不住也拦不住它——真机反馈「大图开着底栏还亮着」
-        // → chatOverlayActive 期间整块不组合:黑幕本就 fillMaxSize 盖满全屏(Pager fillMaxSize
-        // 含底栏区域),底栏退场即真全屏,同微信图片浏览器语义。MinePage/MoodPage 系浮层挂本根
-        // Box 且后于底栏组合(天然盖住),不参与此开关行为不变
-        if (!chatOverlayActive) {
-            Box(
-                modifier = Modifier.align(Alignment.BottomCenter)
-                    .padding(horizontal = 14.dp)
-                    .padding(bottom = 10.dp + navBarSafePaddingDp()),
-            ) {
-                AppBottomBar(
-                    selectedIndex = selectedTab,
-                    pillPosition = pillPosition,
-                    badges = mapOf(3 to ChatStore.unreadCount),
-                    onSelect = goTo,
-                )
-            }
+        // 底栏无条件组合(2026-10-17 二轮修复:首轮「聊天浮层开着不组合底栏」真机反馈底栏直接
+        // 消失太生硬,弃用;浮层语义回归全 App 统一的黑幕盖住/压暗/遮罩挡触摸,见下方两浮层挂载)
+        Box(
+            modifier = Modifier.align(Alignment.BottomCenter)
+                .padding(horizontal = 14.dp)
+                .padding(bottom = 10.dp + navBarSafePaddingDp()),
+        ) {
+            AppBottomBar(
+                selectedIndex = selectedTab,
+                pillPosition = pillPosition,
+                badges = mapOf(3 to ChatStore.unreadCount),
+                onSelect = goTo,
+            )
+        }
+
+        // M12 聊天页两枚全屏浮层(状态提升,挂底栏之后=天然盖住:黑幕下底栏压暗可见、遮罩挡
+        // 触摸不可点,与本文件其余四枚根级浮层同语言);ChatPage 页内不再挂载。开着时横滑与
+        // 聊天列表滚动经 overlayActive 一并关(遮罩只吃 tap 不吃拖拽,F6);切 Tab 由 ChatPage
+        // pageVisible effect 回写清空收口
+        if (chatImagePreviewUrl.isNotEmpty()) {
+            ChatImagePreviewOverlay(url = chatImagePreviewUrl, onDismiss = { chatImagePreviewUrl = "" })
+        }
+        if (chatRecallTargetId.isNotEmpty()) {
+            ChatRecallConfirmOverlay(
+                submitting = chatRecallSubmitting,
+                onDismiss = { chatRecallTargetId = "" },
+                onConfirm = { submitChatRecall() },
+            )
         }
 
         // 解绑二次确认浮层(F6,§7.7):后于底栏组合 → 整层盖住底栏,遮罩挡触摸底栏不可误触;

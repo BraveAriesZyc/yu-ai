@@ -132,8 +132,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    输入条上方浮「预览条」(缩略图+✕取消+发送) → 点发送才 ChatStore.sendImage 入聊天(M12 起发送
  *    后 2 分钟内可长按撤回,确认条防误发)。上传动作收口页内 pickImage(瞬态 UI 态不进 ChatStore,
  *    同 pendingSendScroll 裁决);
- *  - 消息撤回(M12):发送后 2 分钟内长按自己发的气泡(文本/心愿/图片)→ 页内确认浮层 →
- *    ChatStore.recall(POST recall,服务端权威校验归属+时间窗,recalled 墓碑列不删行);本端 Ok
+ *  - 消息撤回(M12):发送后 2 分钟内长按自己发的气泡(文本/心愿/图片)→ 确认浮层(挂 MainPager
+ *    根,见参数注释)→ ChatStore.recall(POST recall,服务端权威校验归属+时间窗,recalled 墓碑列
+ *    不删行);本端 Ok
  *    即地变灰条,TA 在线走 WS love-message-recall 信号(ChatPushStore→ChatStore.applyRecall),
  *    离线靠切 Tab 进页 ChatStore.resync 全量重拉纠偏(增量拉按 id>lastId 扫不到老消息变更)。
  *    墓碑行整行替换居中灰条提示(你/对方撤回了一条消息)并打断分组;长按走 combinedClickable
@@ -141,7 +142,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    会给原本无手势的气泡凭空加按压视觉;Image 与既有 clickable 指示器持平走短重载)
  *    发送收口 ChatStore.sendImage(appendDedupe/不推游标语义单源)。图片气泡 180dp 定方 Crop(高度恒定,
  *    LazyColumn item 不随加载跳动),点击开全屏大图浮层(黑 0.9+Fit+点击关闭;F6:浮层开着列表
- *    userScrollEnabled=false + MainPager 横滑经 onOverlayChange 一并关——遮罩只吃 tap 不吃拖拽)
+ *    userScrollEnabled=false,MainPager 横滑随浮层开合经 overlayActive 一并关——遮罩只吃 tap 不吃拖拽)
  *  - ⚠ partnerReply 本地假回复已随 M3 整体移除,TA 的消息靠 message/list 增量拉取(§7.4)
  */
 private val quickStickers = listOf("贴贴", "mua~", "想你了", "举高高", "晚安鸭")
@@ -174,7 +175,15 @@ fun ChatPage(
     myNickname: String = "",
     myAvatar: String = "",
     pageVisible: Boolean = false,
-    onOverlayChange: (Boolean) -> Unit = {},
+    // M12 二轮修复(2026-10-17 真机反馈):两枚全屏浮层(大图预览/撤回确认)状态提升 MainPager
+    // 根挂载——页内浮层挂 Tab 子树 z 序低于浮岛底栏,盖不住也拦不住;首轮「浮层开着底栏不组合」
+    // 真机反馈生硬(底栏直接消失),弃用。浮层本体移 ChatImagePreviewOverlay/ChatRecallConfirmOverlay
+    // 由 MainPager 挂根 Box 底栏之后(与解绑/昵称/登出/心情管理四浮层同语言:黑幕盖住底栏、
+    // 遮罩挡触摸、底栏压暗可见不可点),本页经「值 + 回写」双通道读写,不再持有浮层状态
+    imagePreviewUrl: String = "",
+    onImagePreviewChange: (String) -> Unit = {},
+    recallTargetId: String = "",
+    onRecallTargetChange: (String) -> Unit = {},
 ) {
     val theme = ThemeStore.current
     var inputText by remember { mutableStateOf("") }
@@ -182,17 +191,12 @@ fun ChatPage(
     var refreshing by remember { mutableStateOf(false) }
     var loadFailed by remember { mutableStateOf(false) }
     var keyboardHeight by remember { mutableStateOf(0f) } // 键盘高度(dp,KeyboardParams.height),0 = 收起
-    // M10 图片消息三态(瞬态 UI 态留页内,同 pendingSendScroll 裁决;ChatStore 只收最终发送):
+    // M10 图片消息两态(瞬态 UI 态留页内,同 pendingSendScroll 裁决;ChatStore 只收最终发送):
     // imageUploading 选图上传中(拦重复点图片按钮/发送);pendingImageUrl 预览条 URL(空串=无待发图,
-    // ✕ 取消/发送成功即清);imagePreviewUrl 全屏大图预览 URL(空串=关,开着时列表滚动+MainPager
-    // 横滑一并关,F6)
+    // ✕ 取消/发送成功即清)。全屏大图浮层状态(imagePreviewUrl)不在此持有——2026-10-17 二轮修复
+    // 起由 MainPager 持有并经参数下传(见上方参数注释)
     var imageUploading by remember { mutableStateOf(false) }
     var pendingImageUrl by remember { mutableStateOf("") }
-    var imagePreviewUrl by remember { mutableStateOf("") }
-    // M12 撤回确认浮层:recallTargetId = 待撤回消息 id(空串=关,开着时列表滚动/MainPager 横滑一并关);
-    // recallSubmitting = POST 在飞(浮层撤回钮防双击)。瞬态 UI 态留页内,同 imagePreviewUrl 裁决
-    var recallTargetId by remember { mutableStateOf("") }
-    var recallSubmitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     // P3a 发送滚底标志(2026-10-16):本端发送(文本/贴纸)POST 成功置位,由 messages.size effect
@@ -298,20 +302,8 @@ fun ChatPage(
         }
     }
 
-    // M12 撤回提交:POST Ok 后墓碑已由 ChatStore.recall 内部 markLocalRecalled 即地置灰,关浮层即见;
-    // 失败也关浮层 + toast(超窗 1_003_003_001 由服务端权威兜底,不在端上复制时间窗判定细节)
-    fun submitRecall() {
-        if (recallSubmitting || recallTargetId.isEmpty()) return
-        recallSubmitting = true
-        scope.launch {
-            val result = ChatStore.recall(pager, recallTargetId)
-            recallSubmitting = false
-            recallTargetId = ""
-            if (result !is ApiResult.Ok) {
-                toastCoupleResult(pager, result)
-            }
-        }
-    }
+    // M12 撤回提交随浮层状态提升迁往 MainPager(submitChatRecall):浮层与提交态同属浮层语言
+    // 的一个整体,页内只保留「开浮层」的动作(onRecallTargetChange)
 
     // 昵称首字(§1/§7):take(1) 按 code point,emoji 昵称不截坏;空昵称兜底「TA」/「我」。
     // 头像 URL(文件服务里程碑):我方走 MainPager 下发的 profile.avatar,TA 方走 CoupleStore
@@ -330,9 +322,9 @@ fun ChatPage(
     LaunchedEffect(SessionStore.userId, CoupleStore.bindState) {
         if (SessionStore.userId.isEmpty() || CoupleStore.bindState != CoupleBindState.BOUND) {
             loadFailed = false
-            pendingImageUrl = "" // M10 登出/解绑清场:待发图与大图浮层一并弃
-            imagePreviewUrl = ""
-            recallTargetId = "" // M12 撤回确认浮层同清(在飞提交结果落 ChatStore 幂等无害)
+            pendingImageUrl = "" // M10 登出/解绑清场:待发图弃
+            onImagePreviewChange("")
+            onRecallTargetChange("") // M12 浮层清场走回写(MainPager 清态;在飞提交结果落 ChatStore 幂等无害)
             return@LaunchedEffect
         }
         loadFailed = ChatStore.loadInitial(pager) !is ApiResult.Ok
@@ -343,15 +335,10 @@ fun ChatPage(
     // 切 Tab 不中断,回来即绪
     LaunchedEffect(pageVisible) {
         if (!pageVisible) {
-            imagePreviewUrl = ""
-            recallTargetId = "" // M12 撤回确认浮层同随离页收口
+            onImagePreviewChange("")
+            onRecallTargetChange("") // M12 撤回确认浮层同随离页收口(回写 MainPager)
         }
         ChatStore.setChatVisible(pager, pageVisible) // M11:进出页上报,置 true 即主动 sync 一次(与补拉尾钩子双保险,D6)
-    }
-    // M10/M12 浮层开合上报 MainPager(横滑切 Tab 必须随浮层关:遮罩只吃 tap 不吃拖拽,不接线则
-    // 预览开着横滑会切 Tab、黑浮层驻留聊天 Tab 不可见,F6)
-    LaunchedEffect(imagePreviewUrl, recallTargetId) {
-        onOverlayChange(imagePreviewUrl.isNotEmpty() || recallTargetId.isNotEmpty())
     }
     // 下拉刷新(§7.4):官方 pullToRefreshItem(须为 LazyColumn 首个 item),刷新走 loadIncrement;
     // Store 层在飞串行等待(F13),指示器到真正拉完才收起;成功即消除失败态
@@ -585,36 +572,42 @@ fun ChatPage(
                             .padding(top = topPad),
                     ) {
                         if (showDayDivider) {
-                            // 日期分隔条:单节点(背景+文字同节点,无 clickable),整宽居中胶囊。
-                            // 居中走 Box+contentAlignment 容器模式(AppIconTile/上传蒙层等全 App
-                            // 真机验证过的可靠通道),不依赖 ColumnScope.align(ParentData)——
-                            // 2026-10-17 真机反馈该通道胶囊居中不可靠(墓碑行首报),两处统一改写
+                            // 日期分隔条:整宽居中胶囊。三层写法(2026-10-17 二轮真机反馈定稿):
+                            // ①外层 Box(fillMaxWidth)+contentAlignment=Center 容器居中(ColumnScope.align
+                            // 的 ParentData 通道真机不可靠);②背景+padding 挂内层 Box、Text 作子节点——
+                            // 背景直挂 Text 会落在原生 TextView 上(可能被拉宽,文字 start 偏左不居中),
+                            // 全 App 真机验证过的胶囊(贴纸/发送/重试)全是背景挂 Box 写法,勿再直挂 Text
                             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    chatDayLabel(msg.createTime),
-                                    fontSize = 10.sp,
-                                    color = AppTheme.TextSecondary,
+                                Box(
                                     modifier = Modifier
                                         .background(AppTheme.TextTertiary.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
                                         .padding(horizontal = 10.dp, vertical = 3.dp),
-                                )
+                                ) {
+                                    Text(
+                                        chatDayLabel(msg.createTime),
+                                        fontSize = 10.sp,
+                                        color = AppTheme.TextSecondary,
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                         }
                         if (msg.recalled) {
                             // M12 墓碑行:整行替换为居中胶囊灰条(同日期分隔条胶囊语言,alpha 0.10 底),
-                            // 不画头像/气泡/时间行;上方日期分隔条照常保留。居中走 Box+contentAlignment
-                            // 容器模式(2026-10-17 真机反馈 ColumnScope.align 胶囊不居中,与日期条
-                            // 统一改写,见上注释)
+                            // 不画头像/气泡/时间行;上方日期分隔条照常保留。三层写法同日期条(外层
+                            // 容器居中 + 背景挂内层 Box、Text 作子节点,勿背景直挂 Text)
                             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    if (msg.isMine) "你撤回了一条消息" else "对方撤回了一条消息",
-                                    fontSize = 11.sp,
-                                    color = AppTheme.TextTertiary,
+                                Box(
                                     modifier = Modifier
                                         .background(AppTheme.TextTertiary.copy(alpha = 0.10f), RoundedCornerShape(9.dp))
                                         .padding(horizontal = 10.dp, vertical = 4.dp),
-                                )
+                                ) {
+                                    Text(
+                                        if (msg.isMine) "你撤回了一条消息" else "对方撤回了一条消息",
+                                        fontSize = 11.sp,
+                                        color = AppTheme.TextTertiary,
+                                    )
+                                }
                             }
                         } else {
                             // M12 长按撤回:仅自己发的消息且在 2 分钟窗内可长按(else 分支已排除
@@ -625,7 +618,7 @@ fun ChatPage(
                             val onRecall: (() -> Unit)? = if (canRecall) {
                                 {
                                     focusManager.clearFocus()
-                                    recallTargetId = msg.id
+                                    onRecallTargetChange(msg.id) // M12 二轮:开浮层=回写 MainPager(浮层挂根 Box)
                                 }
                             } else {
                                 null
@@ -659,7 +652,7 @@ fun ChatPage(
                                         mine = msg.isMine,
                                         onClick = {
                                             focusManager.clearFocus()
-                                            imagePreviewUrl = msg.imageUrl
+                                            onImagePreviewChange(msg.imageUrl) // M12 二轮:回写 MainPager
                                         },
                                         onLongClick = onRecall,
                                     )
@@ -818,21 +811,9 @@ fun ChatPage(
             }
         }
 
-        // M10 全屏大图预览:挂 Column 之后(最后子节点)自然盖住含输入条的全部内容(微信同款);
-        // 列表滚动已随 imagePreviewUrl 关闭(userScrollEnabled),MainPager 横滑经 onOverlayChange
-        // 一并关(F6:遮罩只吃 tap 不吃拖拽);切 Tab 由 pageVisible effect 收口
-        if (imagePreviewUrl.isNotEmpty()) {
-            ChatImagePreviewOverlay(url = imagePreviewUrl, onDismiss = { imagePreviewUrl = "" })
-        }
-        // M12 撤回确认浮层:同大图浮层挂根 Box 尾部盖住全部内容;列表滚动与 MainPager 横滑已随
-        // onOverlayChange 关闭;切 Tab 由 pageVisible effect 收口
-        if (recallTargetId.isNotEmpty()) {
-            ChatRecallConfirmOverlay(
-                submitting = recallSubmitting,
-                onDismiss = { recallTargetId = "" },
-                onConfirm = { submitRecall() },
-            )
-        }
+        // M10/M12 全屏大图预览与撤回确认两枚浮层不再页内挂载——2026-10-17 二轮修复(真机反馈
+        // 页内浮层盖不住浮岛底栏)起状态提升 MainPager 根 Box(底栏之后)统一挂载,见 MainPager;
+        // 本页仅经 imagePreviewUrl/recallTargetId 参数驱动列表滚动门(userScrollEnabled)
     }
 }
 
@@ -1161,11 +1142,12 @@ private fun ChatImagePreviewBar(
 
 /**
  * ChatImagePreviewOverlay — 全屏大图预览浮层(M10, MomentPreviewOverlay 轻量版:无配文/无删除):
- * 黑 0.9 全屏 + ContentScale.Fit + 点击任意处关闭。挂 ChatPage 根 Box 内 Column 之后
- * (自然盖住含输入条的全部内容);打开期间列表滚动与 MainPager 横滑均已关(F6)
+ * 黑 0.9 全屏 + ContentScale.Fit + 点击任意处关闭。挂 MainPager 根 Box 底栏之后(M12 二轮修复
+ * 状态提升,黑幕盖住底栏、遮罩挡触摸);ChatPage 经参数开合,开着时列表滚动与 MainPager 横滑
+ * 均已关(F6)
  */
 @Composable
-private fun ChatImagePreviewOverlay(url: String, onDismiss: () -> Unit) {
+internal fun ChatImagePreviewOverlay(url: String, onDismiss: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.9f))
@@ -1184,11 +1166,12 @@ private fun ChatImagePreviewOverlay(url: String, onDismiss: () -> Unit) {
 /**
  * ChatRecallConfirmOverlay — 撤回确认浮层(M12):黑 0.45 幕 + 白卡 20dp 圆角,「撤回这条消息?」
  * + 说明文案,取消(灰)/撤回(Danger)双钮;submitting 期间幕/双钮防点、撤回钮显「撤回中…」。
- * 挂 ChatPage 根 Box 内大图浮层之后;开着时列表滚动与 MainPager 横滑一并关(onOverlayChange);
- * 确认走 submitRecall(POST Ok → ChatStore 已地置墓碑,关浮层即时见灰条)
+ * 挂 MainPager 根 Box 底栏之后(M12 二轮修复状态提升,与大图浮层同层);开着时列表滚动与
+ * MainPager 横滑一并关;确认走 MainPager.submitChatRecall(POST Ok → ChatStore 已地置墓碑,
+ * 关浮层即时见灰条)
  */
 @Composable
-private fun ChatRecallConfirmOverlay(
+internal fun ChatRecallConfirmOverlay(
     submitting: Boolean,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
