@@ -533,8 +533,8 @@ private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick:
 /**
  * MomentAddOverlay — 发布瞬间浮层(M15 多图:最多 9 张;独立页内根级挂载,一次性表单:成功即收,
  * AnniversaryAddOverlay 同款浮岛式键盘避让)。M15 真机反馈裁决「没上传不调接口,点击发布才是上传」:
- * 选图 FileModule.pickImages 仅回本地 content:// URI(零压缩零上传零网络,缩略图经 KRImageAdapter
- * content: 分支直载),getUser 热身与逐张上传全部挪到发布时点——submit = 热身 → 串行 uploadImage
+ * 选图 FileModule.pickImages 仅回本地 file:// 副本(零压缩零上传零网络,原生落盘规避 content URI
+ * 授权衰减),getUser 热身与逐张上传全部挪到发布时点——submit = 热身 → 串行 uploadImage
  * (进度「上传中 i/N」,uploadedMap 缓存已传 URL,失败重试跳过已传张)→ MomentApi.create 头插上报。
  * 取消选图(code=1)静默不 toast;getModule=null 渐进降级 toast
  */
@@ -547,9 +547,9 @@ private fun MomentAddOverlay(
     val theme = ThemeStore.current
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    val localUris = remember { mutableStateListOf<String>() } // 待发本地图(content://,发布时才上传)
-    // 已传缓存(uri→服务端 URL,跨 submit 存活):发布失败重试跳过已传张不重复产服务端文件;
-    // 重选同图(同 content URI)直接复用已传 URL。删除缩略图不必清(URI 不在 localUris 即不参与)
+    val localUris = remember { mutableStateListOf<String>() } // 待发本地图(file:// 原生落盘副本,发布时才上传)
+    // 已传缓存(路径→服务端 URL,跨 submit 存活):发布失败重试跳过已传张不重复产服务端文件;
+    // 重选同图会落新文件新路径(不命中缓存重新上传,可接受)。删除缩略图不必清(不在 localUris 即不参与)
     val uploadedMap = remember { mutableMapOf<String, String>() }
     var draft by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }
@@ -936,11 +936,13 @@ private fun MomentPreviewOverlay(
                         }
                     }
                     // 点赞钮(M15):双方均可赞任意瞬间含自己(D-20e);回包真值经 toggleLike
-                    // 原位替换,此处只读 info 落态;likeSubmitting/删除中拦
+                    // 原位替换,此处只读 info 落态;likeSubmitting/删除中拦。
+                    // ⚠ 不得挂透明 background+RoundedCornerShape:纯装饰圆角也触发原生轮廓
+                    // 裁剪削掉贴边文字(2026-10-17 真机反馈「删除文字显示不完整」根因),
+                    // 无实底热区一律裸 clickable+padding
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .background(Color.Transparent, RoundedCornerShape(14.dp))
                             .clickable { if (!likeSubmitting && !deleting) onToggleLike(info) }
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                     ) {
@@ -969,8 +971,8 @@ private fun MomentPreviewOverlay(
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
+                            // 裸 clickable+padding(透明圆角背景会轮廓裁剪削字,见上⚠)
                             modifier = Modifier
-                                .background(Color.Transparent, RoundedCornerShape(14.dp))
                                 .clickable { if (!deleting) onDelete() }
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                         )

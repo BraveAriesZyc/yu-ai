@@ -12,9 +12,10 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
  *  直传不经 HttpClient 无 401 单飞刷新,上传前先经 UserApi.getUser 热身——热身属上传动作的一部分,
  *  放在提交时点而非选图时点,M15 真机反馈「没上传不调接口」裁决)
  * 入参(三方法,M15 真机反馈拆分「选图」与「上传」两步):
- *  - pickImages(maxCount, onResult):仅选图,零压缩零上传零网络调用,回本地 content:// URI 字符串
- *    (可直接喂 rememberAsyncImagePainter 展示,Android 端 KRImageAdapter 已扩 content: 分支),
- *    发布/发送时点再逐个传 uploadImage——选图阶段不产生任何服务端调用与孤儿文件
+ *  - pickImages(maxCount, onResult):仅选图,零压缩零上传零网络调用,回本地 file:// 路径字符串
+ *    (Android 原生选图当下把 content:// 字节落盘私有缓存再收口——content URI 临时授权随时间
+ *    衰减,延迟到发布时点再读部分张失败真机实证;file:// 喂 rememberAsyncImagePainter 展示与
+ *    uploadImage 上传皆稳),发布/发送时点再逐个传 uploadImage——选图阶段零服务端调用零孤儿文件
  *  - uploadImage(url, token, uri, maxEdge, onResult):单张本地图压缩+上传(多张由调用方串行逐张
  *    调,进度可报);url 为完整上传端点(ApiConfig.url(pager, "/infra/file/upload")),token 由原生
  *    拼 Authorization: Bearer;maxEdge 压缩边长上限(缺省 512 头像场景,相册/聊天场景传 1080)
@@ -39,7 +40,8 @@ internal class FileModule : Module() {
     }
 
     /** 仅选图不上传(M15 真机反馈「本地预览,发布才上传」裁决;一次性回调):回 data 为本地
-     *  content:// URI——maxCount=1 单 URI 字符串 / >1 JSON 数组字符串(双形态同 pickAndUpload) */
+     *  file:// 路径(原生已落盘缓存副本)——maxCount=1 单值字符串 / >1 JSON 数组字符串
+     *  (双形态同 pickAndUpload) */
     fun pickImages(maxCount: Int = 1, onResult: CallbackFn) {
         val methodArgs = JSONObject()
         methodArgs.put("maxCount", maxCount)

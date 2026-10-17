@@ -21,6 +21,7 @@ import okhttp3.RequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
@@ -28,8 +29,10 @@ import java.util.concurrent.TimeUnit
  * 权限)收 onActivityResult,经类级静态入口 onPickResult 转发回活跃实例,按 pendingMode 分流。
  *  - pickAndUpload(头像,M4 老契约):选图 → Glide 压缩 → okhttp multipart 直传一条龙,选图即动作
  *    本身无取消路径(无孤儿文件),保留;maxCount>1 多选串行压缩上传 fail-fast「第N张…」(M15)。
- *  - pickImages(M15 真机反馈「没上传不调接口,点击发布才是上传」裁决):仅选图回本地 content://
- *    URI 字符串,零压缩零上传零网络——展示由 KRImageAdapter content: 分支(Glide 原生支持)承担。
+ *  - pickImages(M15 真机反馈「没上传不调接口,点击发布才是上传」裁决):仅选图零压缩零上传零
+ *    网络,收口前先把 content:// 字节落盘 cacheDir/pick_cache 转成 file:(content URI 临时
+ *    授权随时间衰减,延迟读取部分张失败真机实证)——回本地 file: 路径字符串,展示与上传全走
+ *    本地稳态副本(KRImageAdapter file 分支 / Glide 本命支持)。
  *  - uploadImage(M15):单张本地 URI → Glide 压缩 → multipart 直传,压缩移后台线程(主线程
  *    Bitmap.compress 100-300ms×N 张是「选图/发布卡顿」根因),回 data 单 URL 字符串。
  * 压缩链:centerInside 等比缩到 maxEdge 内(EXIF 自动矫正),JPEG 80 出图避开 16MB 服务端限制;
@@ -67,8 +70,9 @@ class KRFileModule : KuiklyRenderBaseModule() {
         }
     }
 
-    /** 仅选图(M15):ACTION_PICK 选完直接回本地 URI,不压缩不上传;maxCount 缺省 1 单选,
-     *  >1 多选。收口 data 双形态同 pickAndUpload(maxCount=1 单 URI 字符串 / >1 JSON 数组字符串) */
+    /** 仅选图(M15):ACTION_PICK 选完字节落盘 cacheDir 转 file:// 再收口,不压缩不上传零网络;
+     *  maxCount 缺省 1 单选,>1 多选。收口 data 双形态同 pickAndUpload(=1 单 file:// 字符串 /
+     *  >1 JSON 数组字符串) */
     private fun pickImages(params: String?, callback: KuiklyRenderCallback?) {
         if (params.isNullOrEmpty()) {
             callback?.invoke(mapOf("code" to -1, "msg" to "参数缺失"))
@@ -188,7 +192,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
     }
 
     /** 选图结果处理(uris=null/空=取消/读图失败):须主线程(桥 Activity/Glide 回调均已在主线程);
-     *  按 pendingMode 分流——PICK 只回本地 URI(零网络),PICK_UPLOAD 走压缩上传链 */
+     *  按 pendingMode 分流——PICK 落盘转 file:// 后收口(零网络),PICK_UPLOAD 走压缩上传链 */
     private fun handlePickResult(uris: List<Uri>?) {
         val callback = resultCallback
         if (!inFlight || callback == null) {
@@ -198,21 +202,55 @@ class KRFileModule : KuiklyRenderBaseModule() {
             finishFlight(callback, CODE_CANCEL, "未选择图片")
             return
         }
-        if (pendingMode == MODE_PICK) {
-            // 仅选图:本地 URI 直接收口(双形态同 pickAndUpload 契约),展示/上传由 common 侧驱动
-            val data = if (pendingMaxCount > 1) {
-                val arr = JSONArray()
-                uris.forEach { arr.put(it.toString()) }
-                arr.toString()
-            } else {
-                uris[0].toString()
-            }
-            finishFlight(callback, 0, "", data)
-            return
-        }
         val context = context
         if (context == null) {
             finishFlight(callback, CODE_ERROR, "上下文不可用")
+            return
+        }
+        if (pendingMode == MODE_PICK) {
+            // 仅选图:立即把 content:// 字节拷贝到 cacheDir 转 file:// 再收口。真机实证(2026-10-17):
+            // ACTION_PICK 的 content URI 临时授权/可达性随时间衰减,延迟到发布时点再读(Glide 载
+            // content)部分张 onLoadFailed「图片读取失败」;选图当下权限新鲜文件必达,字节流拷贝
+            // (不解码,几十 ms/张)后台串行,收口 file:// 后展示(KRImageAdapter file 分支)与
+            // 上传(Glide 压缩)全走本地稳态路径。单张拷贝失败剔除尽量交付其余,全失败回错
+            BG_EXECUTOR.execute {
+                val dir = File(context.cacheDir, PICK_CACHE_DIR)
+                dir.deleteRecursively() // 每次选图先清旧缓存(防积累,卸载系统兜底)
+                dir.mkdirs()
+                val copied = ArrayList<String>()
+                uris.forEachIndexed { index, uri ->
+                    try {
+                        val file = File(dir, "pick_${System.currentTimeMillis()}_$index.jpg")
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            file.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        if (file.length() > 0) {
+                            copied.add("file://${file.absolutePath}")
+                        }
+                    } catch (_: Exception) {
+                        // 单张失败剔除,不中断其余
+                    }
+                }
+                mainHandler.post {
+                    val cb = resultCallback
+                    if (!inFlight || cb == null) {
+                        return@post // 已收口/模块销毁,拷贝结果作废
+                    }
+                    if (copied.isEmpty()) {
+                        finishFlight(cb, CODE_ERROR, "图片读取失败,请重试")
+                    } else {
+                        // 双形态同 pickAndUpload 契约(maxCount=1 单值字符串 / >1 JSON 数组字符串)
+                        val data = if (pendingMaxCount > 1) {
+                            val arr = JSONArray()
+                            copied.forEach { arr.put(it) }
+                            arr.toString()
+                        } else {
+                            copied[0]
+                        }
+                        finishFlight(cb, 0, "", data)
+                    }
+                }
+            }
             return
         }
         processNext(context, uris, 0, ArrayList())
@@ -260,7 +298,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
             .override(pendingMaxEdge)
             .into(object : CustomTarget<Bitmap>() {
                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                    COMPRESS_EXECUTOR.execute {
+                    BG_EXECUTOR.execute {
                         val bytes = ByteArrayOutputStream().use { out ->
                             resource.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
                             out.toByteArray()
@@ -390,10 +428,13 @@ class KRFileModule : KuiklyRenderBaseModule() {
         private const val MODE_PICK_UPLOAD = 2
         private const val MODE_UPLOAD = 3
 
-        /** 压缩后台单线程执行器(串行:一次压一张,内存有界;daemon 不阻进程退出) */
-        private val COMPRESS_EXECUTOR = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
-            Thread(r, "kr-image-compress").apply { isDaemon = true }
+        /** 图片后台单线程执行器(串行:压缩与选图落盘共用,一次一任务内存有界;daemon 不阻进程退出) */
+        private val BG_EXECUTOR = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "kr-image-bg").apply { isDaemon = true }
         }
+
+        /** 选图落盘缓存目录名(cacheDir 下;每次 pickImages 清空重建) */
+        private const val PICK_CACHE_DIR = "pick_cache"
 
         /** 当前活跃模块实例(桥 Activity 静态入口转发目标;init 登记、onDestroy 注销) */
         @Volatile

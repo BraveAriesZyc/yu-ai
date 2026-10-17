@@ -130,7 +130,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    列表容器被动观察器不消费事件不扰原生滚动;程序化滚底无指针事件天然不误伤(LazyColumn 注释)
  *  - 下拉刷新/停留 5s 轮询/切 Tab 补拉在 ChatStore 串行(指示器不闪现);文本 500 字上限 + 3 行输入
  *  - 图片消息(M10 预览确认流程,M15 真机反馈改「发送时才上传」):输入行图片按钮 → pickImages
- *    仅选图回本地 URI(零网络,预览条缩略图经 KRImageAdapter content: 分支直载)→ 输入条上方浮
+ *    仅选图回本地 file:// 副本(零网络,原生落盘规避 content URI 授权衰减)→ 输入条上方浮
  *    「预览条」(缩略图+✕取消+发送)→ 点发送才热身+uploadImage(1080) 上传 → ChatStore.sendImage
  *    入聊天(M12 起发送后 2 分钟内可长按撤回,确认条防误发)。上传动作收口页内 sendPendingImage
  *    (瞬态 UI 态不进 ChatStore,同 pendingSendScroll 裁决;取消/重选零孤儿文件);

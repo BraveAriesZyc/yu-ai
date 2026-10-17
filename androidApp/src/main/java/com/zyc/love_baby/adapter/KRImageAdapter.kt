@@ -30,9 +30,9 @@ class KRImageAdapter(val context: Context) : IKRImageAdapter {
         } else if (imageLoadOption.isWebUrl() ||
             imageLoadOption.isAssets() ||
             imageLoadOption.isFile() ||
-            // content://(系统相册选图的本地 URI,上传链路早已验证 Glide 原生支持):M15 真机反馈
-            // 「选图仅本地预览、发布才上传」的地基——HRImageLoadOption 无 content 判定,不并入
-            // Glide 分支则 content URI 不命中任何分支 → 图片空白
+            // content://(系统相册选图的本地 URI,Glide 原生支持):M15「选图仅本地预览、发布才
+            // 上传」地基;现 pickImages 已改选图当下落盘转 file:// 收口(content URI 授权随时间
+            // 衰减,延迟读取部分张失败真机实证),此分支保留兜底防空白
             imageLoadOption.src.startsWith("content:")
         ) {
             // http/assets/file/content 图片使用 glide 加载
