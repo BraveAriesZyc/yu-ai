@@ -54,6 +54,7 @@ import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
+import com.zyc.love_baby.onSizeChangedDp
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.components.AppCheckbox
 import com.zyc.love_baby.components.AppGradientHeader
@@ -163,6 +164,11 @@ internal fun WishListPage(pager: Pager) {
     // 键盘推升动画用(组合期捕获):density 供 dp→px,navBar 补齐键盘回调不含的导航栏高度
     val density = LocalDensity.current
     val navBarDp = navBarSafePaddingDp()
+    // 添加条实际高度(onSizeChangedDp 回写,2026-10-18 真机反馈「添加完后输入框高度变了」):
+    // TextField maxLines=3 随内容竖向生长(多行 ~76dp),添加成功清空缩回单行(44dp)高度跳变
+    // 是微信同款正常行为,但尾 Spacer 原按恒定 44dp 让位——多行时清单尾项被输入条盖住,
+    // 几何不自洽;改实际高度驱动让位,任何行数下尾项呼吸完整
+    var inputBarHeight by remember { mutableStateOf(44.dp) }
 
     // 键盘弹起列表按需同步推升(2026-10-18 四轮打磨,微信/QQ 语义「内容不多不顶,盖住才顶」):
     // ①snap scrollToItem 延时跳变与键盘动画打架 ②delay(260)+animateScrollToItem 键盘先弹完
@@ -404,14 +410,15 @@ internal fun WishListPage(pager: Pager) {
                 }
                 // 尾部 Spacer:给悬浮添加条让位(独立页自持几何,2026-10-18 修——原照抄 TodoPage
                 // 的 86/150 底栏让位常数,本页是 @Page 二级页无浮岛底栏,收起时输入条悬空离底
-                // 一大截;现收起 = 条 bottom 12+条高 44+呼吸 20=76;键盘弹起同步长高 =
-                // 键盘高+navBar+12+44+呼吸 20=76,滚底的尾项完整落在键盘/输入条上方)
+                // 一大截;收起 = 条 bottom 12+条高+呼吸 20,键盘弹起同步长高 = 键盘高+navBar+
+                // 12+条高+呼吸 20。条高原恒定 44dp,现 onSizeChangedDp 回写实际值——maxLines=3
+                // 多行时同样让位完整,见 inputBarHeight 注释)
                 item {
                     Spacer(
                         modifier = Modifier.height(
                             max(
-                                76.dp + navBarSafePaddingDp(),
-                                keyboardHeight.dp + navBarSafePaddingDp() + 76.dp,
+                                32.dp + inputBarHeight + navBarSafePaddingDp(),
+                                keyboardHeight.dp + navBarSafePaddingDp() + 32.dp + inputBarHeight,
                             ),
                         ),
                     )
@@ -428,6 +435,8 @@ internal fun WishListPage(pager: Pager) {
         Row(
             modifier = Modifier.align(Alignment.BottomCenter)
                 .padding(horizontal = AppTheme.PageHPadding)
+                // 回写条体实际高度(不含 bottom padding)驱动尾 Spacer 让位
+                .onSizeChangedDp { inputBarHeight = it.height.dp }
                 .padding(
                     bottom = max(
                         12.dp + navBarSafePaddingDp(),
