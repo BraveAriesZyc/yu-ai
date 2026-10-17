@@ -164,16 +164,22 @@ internal fun WishListPage(pager: Pager) {
     val density = LocalDensity.current
     val navBarDp = navBarSafePaddingDp()
 
-    // 键盘弹起列表同步推升(2026-10-18 三轮打磨):①snap scrollToItem 延时跳变与键盘动画打架
-    // ②delay(260)+animateScrollToItem 变成「键盘先弹完、清单后推」两段式——均不流畅。正解=
-    // 列表上滚量自算为键盘全遮盖(键盘高+navBar——keyboardHeight 回调不含导航栏区域),与键盘
-    // 升起并行动画成一体运动。animateScrollBy 逐帧 scrollBy 驱动(tween 260 对齐键盘动画
-    // 时长),目标距离与 layoutInfo 无关,无 ChatPage 弃用 animateScrollToItem 的陈旧闸门
-    // 问题;已在底部时消耗 0 动画自然结束,失败模式无害。收起不滚(保持位置,微信同款)
+    // 键盘弹起列表按需同步推升(2026-10-18 四轮打磨,微信/QQ 语义「内容不多不顶,盖住才顶」):
+    // ①snap scrollToItem 延时跳变与键盘动画打架 ②delay(260)+animateScrollToItem 键盘先弹完
+    // 清单后推 ③无脑推固定量——内容少时把尾部空白推上来、顶部内容跑掉。正解=推升前判
+    // 「最后一个可见内容项(排除尾部 Spacer)的底缘是否被键盘顶缘盖住」:盖不住(清单短,内容
+    // 全在键盘上方)不推;被盖才推,上滚量=键盘全遮盖(键盘高+navBar——keyboardHeight 回调
+    // 不含导航栏区域),animateScrollBy 逐帧驱动(tween 260 对齐键盘动画时长)与键盘升起并行
+    // 成一体运动,消耗制天然 clamp 到底(已在底部消耗 0 结束)。lastContent 位置不受尾部
+    // Spacer 长高影响,判据对 measure 时序免疫。收起不滚(保持位置,微信同款)
     LaunchedEffect(keyboardHeight) {
         if (keyboardHeight <= 0f) return@LaunchedEffect
-        val px = with(density) { (keyboardHeight.dp + navBarDp).toPx() }
-        listState.animateScrollBy(px, tween(durationMillis = 260))
+        val info = listState.layoutInfo
+        val coverPx = with(density) { (keyboardHeight.dp + navBarDp).toPx() }
+        val coverEdge = info.viewportEndOffset - coverPx // 键盘顶缘在视口内的 y(Kuikly 无 viewportMainAxisExtent,viewportEndOffset 同坐标系)
+        val lastContent = info.visibleItemsInfo.lastOrNull { it.index < info.totalItemsCount - 1 }
+        if (lastContent == null || lastContent.offset + lastContent.size <= coverEdge) return@LaunchedEffect
+        listState.animateScrollBy(coverPx, tween(durationMillis = 260))
     }
 
     // D-19f 分层排序:进行中在前(保持服务端序 = id 升序),已完成沉底按 doneTime 倒序
