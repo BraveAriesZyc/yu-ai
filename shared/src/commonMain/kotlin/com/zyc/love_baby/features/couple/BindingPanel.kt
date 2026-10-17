@@ -29,6 +29,7 @@ import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppMenuGroup
@@ -286,24 +287,24 @@ internal fun BoundPartnerCard(pager: Pager, onUnbindClick: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 双层环文字头像(品牌渐变环 + 白底首字);头像图展示/上传接文件服务属后续里程碑
+                // 头像(双层环:品牌渐变环 + 白底内圆):partnerAvatar 非空走远程图(AppAvatar 圆角
+                // 裁切,加载中/失败白底透出),空串回退首字文字头像(视觉与原占位一致)。M4 头像
+                // 功能落地后补的展示接线——原「头像图属后续里程碑」占位一直没接 couple 回包,
+                // 真机反馈(2026-10-17)情侣空间卡双方手机永远显示首字不改;伴侣换头像靠 couple/get
+                // 刷新进来(已绑定 60s 轮询/回前台即拉),无需额外推送
                 Box(
                     modifier = Modifier.size(46.dp)
                         .background(ThemeStore.current.brandBrush, RoundedCornerShape(23.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        modifier = Modifier.size(40.dp)
-                            .background(Color.White, RoundedCornerShape(20.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            partnerName.take(1),
-                            color = ThemeStore.current.brandStart,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    AppAvatar(
+                        partnerName.take(1),
+                        size = 40.dp,
+                        bgColor = Color.White,
+                        textColor = ThemeStore.current.brandStart,
+                        fontSize = 17.sp,
+                        avatarUrl = couple.partnerAvatar,
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
