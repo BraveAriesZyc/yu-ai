@@ -161,6 +161,10 @@ private val IMAGE_BUBBLE_SIZE = 180.dp
 /** 撤回时间窗(毫秒,与服务端 RECALL_WINDOW_SECONDS=120 对齐):端上预判可长按,服务端权威兜底超窗 */
 private const val RECALL_WINDOW_MS = 120_000L
 
+// 下拉刷新指示器最短可见时长(三页同值:MomentPage/ChatPage/WishListPage,注释互引):
+// 本地服务端往返几十 ms,不设下限则「刷新中…」一闪而过,用户无法确认刷新是否发生
+private const val REFRESH_MIN_VISIBLE_MS = 600L
+
 /**
  * TA 气泡底:同色渐变(视觉=纯白,AppAvatar 同款先例)。⚠ 必须与我方 brandBrush 同走
  * background(brush=) 重载——Kuikly 的 background(color=) 与 background(brush=) 写两个不同
@@ -563,13 +567,21 @@ fun ChatPage(
                 // M10/M12 F6:全屏浮层(大图/撤回确认)开着时关列表滚动(遮罩只吃 tap 不吃拖拽,拖列表会穿透到浮层下层)
                 userScrollEnabled = imagePreviewUrl.isEmpty() && recallTargetId.isEmpty(),
             ) {
+                // 最短驻留(2026-10-17 真机反馈「松手立马恢复原状,不知道好没好」,三页同款:
+                // MomentPage/WishListPage):本地服务端几十 ms 即回,「刷新中…」一闪而过——
+                // 不足 REFRESH_MIN_VISIBLE_MS 补齐再收;失败 toast(增量拉失败原本完全静默)
                 pullToRefreshItem(
                     state = pullState,
                     onRefresh = {
                         refreshing = true
                         scope.launch {
+                            val t0 = nowEpochMs()
                             val result = ChatStore.loadIncrement(pager)
-                            if (result is ApiResult.Ok) loadFailed = false
+                            val ok = result is ApiResult.Ok
+                            if (ok) loadFailed = false
+                            val elapsed = nowEpochMs() - t0
+                            if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
+                            if (!ok) toastCouple(pager, "刷新失败，请重试")
                             refreshing = false
                         }
                     },

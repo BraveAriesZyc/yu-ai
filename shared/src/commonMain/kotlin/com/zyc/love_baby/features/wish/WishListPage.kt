@@ -72,6 +72,7 @@ import com.zyc.love_baby.features.mood.TimelineLoading
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.WishApi
 import com.zyc.love_baby.state.SessionStore
+import com.zyc.love_baby.state.nowEpochMs
 import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -80,6 +81,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /** 文本长度上限(与服务端 AppWishCreateReqVO @Length(max=64) 对齐;maxLength 原生层拒绝 + take 兜底) */
 private const val WISH_INPUT_MAX_LENGTH = 64
+
+// 下拉刷新指示器最短可见时长(三页同值:MomentPage/ChatPage/WishListPage,注释互引):
+// 本地服务端往返几十 ms,不设下限则「刷新中…」一闪而过,用户无法确认刷新是否发生
+private const val REFRESH_MIN_VISIBLE_MS = 600L
 
 /**
  * WishListPage — 恋爱清单页(@Page 注册名 "wishListPage"):共享心愿清单 + 勾选完成自动发庆祝消息(M14)
@@ -158,15 +163,19 @@ internal fun WishListPage(pager: Pager) {
     val display = wishes.filter { !it.done } + wishes.filter { it.done }.sortedByDescending { it.doneTime }
     val doneCount = wishes.count { it.done }
 
-    // 拉全量:进页首拉 / 下拉刷新 / 失败重试共用;成功清空重填,失败置 loadFailed
-    suspend fun fetchFirst() {
+    // 拉全量:进页首拉 / 下拉刷新 / 失败重试共用;成功清空重填,失败置 loadFailed。
+    // 回 ok 供下拉刷新分支做最短驻留与失败 toast;loadFailed 仅在列表为空时才置——
+    // 已有内容时刷新失败保留原清单(切失败态会让整个列表消失),首拉/重试路径列表必空,
+    // 语义字节不变(MomentPage fetchFirst 同款口径)
+    suspend fun fetchFirst(): Boolean {
         val result = WishApi.list(pager)
         val ok = result is ApiResult.Ok
         if (ok) {
             wishes.clear()
             wishes.addAll(WishInfo.listFrom((result as ApiResult.Ok).dataArray))
         }
-        loadFailed = !ok
+        loadFailed = !ok && wishes.isEmpty()
+        return ok
     }
 
     // 静默对账拉取(可见期轮询专用):Ok 才按服务端真值全量覆盖;失败保留现值,不翻转 loadFailed
@@ -313,13 +322,20 @@ internal fun WishListPage(pager: Pager) {
                 // 滚动仍收事件,MinePage/MomentPage 同款)
                 userScrollEnabled = deleteTarget == null && detailTarget == null,
             ) {
-                // 下拉刷新(官方 pullToRefreshItem 须为首个 item,MomentPage 先例)
+                // 下拉刷新(官方 pullToRefreshItem 须为首个 item,MomentPage 先例):重拉全量。
+                // 最短驻留(2026-10-17 真机反馈「松手立马恢复原状,不知道好没好」):本地服务端
+                // 几十 ms 即回,「刷新中…」一闪而过——不足 REFRESH_MIN_VISIBLE_MS 补齐再收;
+                // 失败 toast(成功不 toast,清单自己会更新,肉眼可辨)
                 pullToRefreshItem(
                     state = pullState,
                     onRefresh = {
                         refreshing = true
                         scope.launch {
-                            fetchFirst()
+                            val t0 = nowEpochMs()
+                            val ok = fetchFirst()
+                            val elapsed = nowEpochMs() - t0
+                            if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
+                            if (!ok) toastCouple(pager, "刷新失败，请重试")
                             refreshing = false
                         }
                     },

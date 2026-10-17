@@ -71,6 +71,7 @@ import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.MomentApi
 import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.SessionStore
+import com.zyc.love_baby.state.nowEpochMs
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.delay
@@ -149,8 +150,11 @@ internal fun MomentPage(pager: Pager) {
     val listState = rememberLazyListState()
     val pullState = rememberPullToRefreshState(isRefreshing = refreshing)
 
-    // 拉首页(beforeId=0):load 进页 / 下拉刷新共用;成功清空重填,失败置 loadFailed(刷新静默)
-    suspend fun fetchFirst() {
+    // 拉首页(beforeId=0):load 进页 / 下拉刷新共用;成功清空重填,失败置 loadFailed(刷新静默)。
+    // 回 ok 供下拉刷新分支做最短驻留与失败 toast;loadFailed 仅在列表为空时才置——
+    // 已有内容时刷新失败保留原列表(切失败态会让整个墙消失,真机反馈「不知道好没好」的一部分),
+    // 首拉/重试路径列表必空,语义字节不变
+    suspend fun fetchFirst(): Boolean {
         val result = MomentApi.list(pager, "0", PAGE_SIZE)
         val ok = result is ApiResult.Ok
         if (ok) {
@@ -161,7 +165,8 @@ internal fun MomentPage(pager: Pager) {
             moments.clear()
             moments.addAll(list)
         }
-        loadFailed = !ok
+        loadFailed = !ok && moments.isEmpty()
+        return ok
     }
 
     fun load() {
@@ -304,13 +309,21 @@ internal fun MomentPage(pager: Pager) {
                 // 背景列表原生滚动仍收事件(MinePage/MoodPage 同款,2026-10-17 真机实证)
                 userScrollEnabled = !showAdd && preview == null,
             ) {
-                // 下拉刷新(官方 pullToRefreshItem 须为首个 item,ChatPage 先例):重拉首页
+                // 下拉刷新(官方 pullToRefreshItem 须为首个 item,ChatPage 先例):重拉首页。
+                // 最短驻留(2026-10-17 真机反馈「松手立马恢复原状,不知道好没好」):本地服务端
+                // 几十 ms 即回,指示器还没展开完就开始收回动画,「刷新中…」一闪而过——请求耗时
+                // 不足 REFRESH_MIN_VISIBLE_MS 时补齐再收,让状态至少完整显示一拍;失败 toast
+                // (成功不 toast,数据自己会更新,肉眼可辨)
                 pullToRefreshItem(
                     state = pullState,
                     onRefresh = {
                         refreshing = true
                         scope.launch {
-                            fetchFirst()
+                            val t0 = nowEpochMs()
+                            val ok = fetchFirst()
+                            val elapsed = nowEpochMs() - t0
+                            if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
+                            if (!ok) toastCouple(pager, "刷新失败，请重试")
                             refreshing = false
                         }
                     },
@@ -1011,3 +1024,7 @@ private const val MOMENT_TEXT_MAX = 64
 
 /** 单条瞬间图片上限(与服务端 @Size(max=9) 对齐,M15;发布浮层按余量多选) */
 private const val MOMENT_IMAGE_MAX = 9
+
+// 下拉刷新指示器最短可见时长(三页同值:MomentPage/ChatPage/WishListPage,注释互引):
+// 本地服务端往返几十 ms,不设下限则「刷新中…」一闪而过,用户无法确认刷新是否发生
+private const val REFRESH_MIN_VISIBLE_MS = 600L
