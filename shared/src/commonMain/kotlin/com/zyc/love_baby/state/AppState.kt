@@ -12,10 +12,12 @@ import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BridgeModule
 import com.zyc.love_baby.base.WebSocketModule
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.data.model.AnniversaryInfo
 import com.zyc.love_baby.data.model.MessageInfo
 import com.zyc.love_baby.data.model.MoodOptionInfo
 import com.zyc.love_baby.data.model.MoodRecordInfo
 import com.zyc.love_baby.data.model.TodoInfo
+import com.zyc.love_baby.network.AnniversaryApi
 import com.zyc.love_baby.network.ApiConfig
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.MessageApi
@@ -36,6 +38,9 @@ import kotlin.time.ExperimentalTime
  * 功能:
  *  - TodoStore 待办清单:id 一律 String(§5.1 NumberSerializer 数字/字符串双向兼容);整表覆盖 + 写穿透
  *    (乐观更新失败回滚 / create 成功才用服务端回包追加,§7.4)
+ *  - AnniversaryStore 纪念日(M5,D-17):整表覆盖 + 写穿透同范式;倒数算术是 (list, todayIndex)
+ *    纯函数(commonMain 禁 java.time,daysFromCivil/civilFromDays/daysInMonthYear 公历算术),
+ *    每年重复 2/29 钳当年月末、过期 +1 年,首页卡与独立页共消费
  *  - MoodStore 心愿选择(端上字典保留,§7.4)+ 每日心情月历缓存(双方记录,当月)
  *  - ChatPushStore WS 触发器(D-16):长连接只发「有新消息」纯信号,驱动 ChatStore.loadIncrement;
  *    未桥接端(iOS/ohos/H5)与断线由既有 5s 轮询兜底——渐进降级,数据完整性恒由 lastId 游标保证
@@ -125,8 +130,8 @@ internal fun firstWeekdayOfMondayFirst(year: Int, month: Int): Int {
 /** (年,月,日) → "yyyy-MM-dd"(日历格与服务端 moodDate 字符串直接比对,§5.2 端上不做格式换算) */
 internal fun dateKeyOf(year: Int, month: Int, day: Int): String = "$year-${pad2(month)}-${pad2(day)}"
 
-/** Howard Hinnant days_from_civil:公历 (y,m,d) → 距 1970-01-01 天数 */
-private fun daysFromCivil(y0: Int, m: Int, d: Int): Long {
+/** Howard Hinnant days_from_civil:公历 (y,m,d) → 距 1970-01-01 天数(纪念日倒数纯函数复用,放宽 internal) */
+internal fun daysFromCivil(y0: Int, m: Int, d: Int): Long {
     val y = if (m <= 2) y0 - 1 else y0
     val era = (if (y >= 0) y else y - 399) / 400
     val yoe = y - era * 400
@@ -302,6 +307,138 @@ internal object TodoStore {
     fun reset() {
         todos = emptyList()
         filter = 0
+    }
+}
+
+// ---------- 纪念日(M5,§12.4 预留落位;D-17:倒数算术全端上,服务端只存原始日期) ----------
+
+/**
+ * AnniversaryStore 纪念日清单:整表覆盖 + 写穿透(§7.4 TodoStore 同范式)。
+ * anniversaries 保留服务端序(anniv_date asc, id asc),展示序由顶层 [sortedAnniversaries]
+ * 纯函数在消费侧重排——跨天只重算不重拉
+ */
+internal object AnniversaryStore {
+    var anniversaries by mutableStateOf(emptyList<AnniversaryInfo>())
+        private set
+
+    /**
+     * 全量拉取(§7.4 触发点:首页 bindState 首拉 / 独立页进入 / 回前台):整表覆盖。
+     * 失败静默——只读降级,旧数据可见(§11),不 toast(toast 交给「写失败」场景)
+     */
+    suspend fun loadList(pager: Pager): ApiResult {
+        val result = AnniversaryApi.list(pager)
+        if (result is ApiResult.Ok) {
+            anniversaries = AnniversaryInfo.listFrom(result.dataArray)
+        }
+        return result
+    }
+
+    /**
+     * 新增:create 成功后用回包(含服务端 id)追加;失败不落任何本地态(调用方 toast,§7.4)。
+     * 不做乐观插入:id 必须来自服务端(LazyColumn key/后续 delete 都靠它);回包解析失败不落态
+     * 但按成功返回——服务端已建行,下次 loadList 整表覆盖自愈(TodoStore.add 同款口径)
+     */
+    suspend fun add(
+        pager: Pager,
+        title: String,
+        annivDate: String,
+        repeatType: Int,
+        emoji: String,
+    ): ApiResult {
+        val result = AnniversaryApi.create(pager, title, annivDate, repeatType, emoji)
+        if (result is ApiResult.Ok) {
+            AnniversaryInfo.from(result.data)?.let { info ->
+                anniversaries = anniversaries + info
+            }
+        }
+        return result
+    }
+
+    /** 删除:乐观移除 → delete 失败回滚 + 调用方 toast(§7.4 写穿透失败即回滚,TodoStore.delete 同款) */
+    suspend fun delete(pager: Pager, id: String): ApiResult {
+        val snapshot = anniversaries
+        anniversaries = anniversaries.filter { it.id != id }
+        val result = AnniversaryApi.delete(pager, id)
+        if (result !is ApiResult.Ok) {
+            anniversaries = snapshot
+        }
+        return result
+    }
+
+    /** 登出/换号/解绑清内存(MainPager 接线调用),防上会话/他人纪念日残留 */
+    fun reset() {
+        anniversaries = emptyList()
+    }
+}
+
+/** "yyyy-MM-dd" → 天序号(1970-01-01=0);非法输入(空/格式错/日历不存在如 2-30)回 null,调用方按无效沉底 */
+internal fun anniversaryDayIndex(dateKey: String): Long? {
+    val parts = dateKey.split("-")
+    val y = parts.getOrNull(0)?.toIntOrNull() ?: return null
+    val m = parts.getOrNull(1)?.toIntOrNull() ?: return null
+    val d = parts.getOrNull(2)?.toIntOrNull() ?: return null
+    if (y !in 1..9999 || m !in 1..12 || d !in 1..daysInMonthYear(y, m)) return null
+    return daysFromCivil(y, m, d)
+}
+
+/**
+ * 距 [item] 下一次发生的倒数天数(相对 [todayIndex],GMT+8 天序号):
+ *  - 每年重复(repeatType=1):下一次 = 今年的月日,已过(今天不算)则 +1 年;2/29 类不存在于
+ *    当年的月日用 [daysInMonthYear] 钳到当年月末(2/29→2/28,不折算 3/1,D-17 冻结口径)
+ *  - 一次性(repeatType=2):目标日天序号 − 今天,可为负(已过)
+ * 解析失败回 null(首页显 "--",列表沉底)
+ */
+internal fun anniversaryCountdownDays(item: AnniversaryInfo, todayIndex: Long): Long? {
+    val base = anniversaryDayIndex(item.annivDate) ?: return null
+    if (item.repeatType != 1) return base - todayIndex
+    val (_, m, d) = civilFromDays(base)
+    val clamp: (Int) -> Int = { year -> d.coerceAtMost(daysInMonthYear(year, m)) }
+    val thisYear = civilFromDays(todayIndex).first
+    val thisOccurrence = daysFromCivil(thisYear, m, clamp(thisYear))
+    val target = if (thisOccurrence < todayIndex) {
+        val nextYear = thisYear + 1
+        daysFromCivil(nextYear, m, clamp(nextYear))
+    } else {
+        thisOccurrence
+    }
+    return target - todayIndex
+}
+
+/**
+ * 展示序(D-17):将来的(倒数 ≥ 0,含今天)按倒数升序在前;已过一次性沉底(倒数升序 = 日期
+ * 升序,同义);解析失败最后。纯函数(不写 Store)——HomePage 与独立页共同消费,跨天只需重算
+ */
+internal fun sortedAnniversaries(
+    items: List<AnniversaryInfo>,
+    todayIndex: Long,
+): List<AnniversaryInfo> =
+    items
+        .map { it to anniversaryCountdownDays(it, todayIndex) }
+        .sortedWith(
+            compareBy(
+                { (_, c) ->
+                    when {
+                        c == null -> 2 // 解析失败最后
+                        c < 0 -> 1     // 已过一次性沉底
+                        else -> 0      // 将来/今天在前
+                    }
+                },
+                { (_, c) -> c ?: Long.MAX_VALUE },
+            ),
+        )
+        .map { it.first }
+
+/** 最近一个将来的纪念日倒数(min 非负);无(空表/只剩已过一次性/解析全失败)回 null——首页显 "--" */
+internal fun nextAnniversaryCountdownDays(items: List<AnniversaryInfo>, todayIndex: Long): Long? =
+    items.mapNotNull { anniversaryCountdownDays(it, todayIndex) }.filter { it >= 0 }.minOrNull()
+
+/** 倒数徽标文案:还有 N 天 / 就是今天(=0)/ 已 N 天(一次性已过);解析失败回空串(调用方隐藏徽标) */
+internal fun anniversaryCountdownLabel(item: AnniversaryInfo, todayIndex: Long): String {
+    val c = anniversaryCountdownDays(item, todayIndex) ?: return ""
+    return when {
+        c > 0 -> "还有 $c 天"
+        c == 0L -> "就是今天"
+        else -> "已 ${-c} 天"
     }
 }
 
