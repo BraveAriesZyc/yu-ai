@@ -129,10 +129,11 @@ import kotlinx.coroutines.withTimeoutOrNull
  *  - 拖拽收键盘(2026-10-16 Q3):键盘开着手指拖列表竖向越 touchSlop 即 clearFocus(微信语义),
  *    列表容器被动观察器不消费事件不扰原生滚动;程序化滚底无指针事件天然不误伤(LazyColumn 注释)
  *  - 下拉刷新/停留 5s 轮询/切 Tab 补拉在 ChatStore 串行(指示器不闪现);文本 500 字上限 + 3 行输入
- *  - 图片消息(M10,预览确认流程):输入行图片按钮 → 系统选图 → pickAndUpload(1080) 自动上传 →
- *    输入条上方浮「预览条」(缩略图+✕取消+发送) → 点发送才 ChatStore.sendImage 入聊天(M12 起发送
- *    后 2 分钟内可长按撤回,确认条防误发)。上传动作收口页内 pickImage(瞬态 UI 态不进 ChatStore,
- *    同 pendingSendScroll 裁决);
+ *  - 图片消息(M10 预览确认流程,M15 真机反馈改「发送时才上传」):输入行图片按钮 → pickImages
+ *    仅选图回本地 URI(零网络,预览条缩略图经 KRImageAdapter content: 分支直载)→ 输入条上方浮
+ *    「预览条」(缩略图+✕取消+发送)→ 点发送才热身+uploadImage(1080) 上传 → ChatStore.sendImage
+ *    入聊天(M12 起发送后 2 分钟内可长按撤回,确认条防误发)。上传动作收口页内 sendPendingImage
+ *    (瞬态 UI 态不进 ChatStore,同 pendingSendScroll 裁决;取消/重选零孤儿文件);
  *  - 消息撤回(M12):发送后 2 分钟内长按自己发的气泡(文本/心愿/图片)→ 确认浮层(挂 MainPager
  *    根,见参数注释)→ ChatStore.recall(POST recall,服务端权威校验归属+时间窗,recalled 墓碑列
  *    不删行);本端 Ok
@@ -192,12 +193,15 @@ fun ChatPage(
     var refreshing by remember { mutableStateOf(false) }
     var loadFailed by remember { mutableStateOf(false) }
     var keyboardHeight by remember { mutableStateOf(0f) } // 键盘高度(dp,KeyboardParams.height),0 = 收起
-    // M10 图片消息两态(瞬态 UI 态留页内,同 pendingSendScroll 裁决;ChatStore 只收最终发送):
-    // imageUploading 选图上传中(拦重复点图片按钮/发送);pendingImageUrl 预览条 URL(空串=无待发图,
-    // ✕ 取消/发送成功即清)。全屏大图浮层状态(imagePreviewUrl)不在此持有——2026-10-17 二轮修复
+    // M10 图片消息三态(瞬态 UI 态留页内,同 pendingSendScroll 裁决;ChatStore 只收最终发送):
+    // M15 真机反馈「没上传不调接口,点击发送才是上传」——选图与上传拆开:pickImage 仅选图零网络
+    // (imagePicking 系统相册往返中,拦重复点图片钮);pendingImageUri 预览条本地 URI(空串=无待
+    // 发图,✕ 取消/发送成功即清,取消零孤儿文件);imageUploading 仅发送时点的原生上传中(预览条
+    // 蒙层+禁取消/重发)。全屏大图浮层状态(imagePreviewUrl)不在此持有——2026-10-17 二轮修复
     // 起由 MainPager 持有并经参数下传(见上方参数注释)
+    var imagePicking by remember { mutableStateOf(false) }
     var imageUploading by remember { mutableStateOf(false) }
-    var pendingImageUrl by remember { mutableStateOf("") }
+    var pendingImageUri by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     // P3a 发送滚底标志(2026-10-16):本端发送(文本/贴纸)POST 成功置位,由 messages.size effect
@@ -238,27 +242,74 @@ fun ChatPage(
     // 只写原生偏移)不产生任何指针事件,天然不误伤发送/进页/贴底跟随滚底(铁律13)
     val focusManager = LocalFocusManager.current
 
-    // M10 选图+上传动作收口(MomentAddOverlay.pickImage 平移):guard 上传中 → clearFocus 收键盘 →
-    // getUser 热身(原生直传不经 HttpClient,无 401 单飞刷新,先焐热 token)→ getModule 判空降级
-    // (iOS/ohos/H5 未桥接端 toast)→ suspendCoroutine 包 pickAndUpload(maxEdge=1080)。成功且仍处
-    // 登录+BOUND 才落 pendingImageUrl(防登出/解绑竞态晚到回包写回脏态);已有待发图时再点 = 重选覆盖
+    // M15 仅选图(pickImages,零网络):guard 选图中/上传中 → clearFocus 收键盘 → getModule 判空
+    // 降级(iOS/ohos/H5 未桥接端 toast)→ suspendCoroutine 包 pickImages(1)。成功且仍处登录+BOUND
+    // 才落 pendingImageUri(防登出/解绑竞态晚到回包写回脏态);已有待发图时再点 = 重选覆盖;
+    // code=1 用户取消静默(反复试探动作,不 toast)。热身/上传已挪发送时点(用户裁决)
     fun pickImage() {
-        if (imageUploading) return
+        if (imagePicking || imageUploading) return
         focusManager.clearFocus()
-        imageUploading = true
+        imagePicking = true
         scope.launch {
-            UserApi.getUser(pager)
-            var failMsg = "上传失败,请重试"
-            val fileUrl = try {
+            var failMsg = "选择图片失败,请重试"
+            var cancelled = false
+            val pickedUri = try {
                 val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
                 if (module == null) {
                     failMsg = "当前端暂不支持选择照片"
                     null
                 } else {
                     suspendCoroutine<String?> { cont ->
-                        module.pickAndUpload(
+                        module.pickImages(1) { result ->
+                            val code = result?.optInt("code", -1) ?: -1
+                            val data = result?.optString("data").orEmpty()
+                            if (code == 0 && data.isNotEmpty()) {
+                                cont.resume(data)
+                            } else {
+                                if (code == 1) cancelled = true // 用户取消:静默
+                                else result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
+                                cont.resume(null)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                null
+            }
+            imagePicking = false
+            if (cancelled) return@launch
+            if (pickedUri.isNullOrEmpty()) {
+                toastCouple(pager, failMsg)
+            } else if (SessionStore.userId.isNotEmpty() &&
+                CoupleStore.bindState == CoupleBindState.BOUND
+            ) {
+                pendingImageUri = pickedUri
+            }
+        }
+    }
+
+    // M15 预览条发送 = 上传时点(用户裁决):热身(原生直传不经 HttpClient,无 401 单飞刷新,
+    // 先焐热 token)→ uploadImage 单张压缩上传(后台线程压缩)→ ChatStore.sendImage 入列。
+    // 上传失败 toast 保留预览图可重发(重试重新上传,服务端多一份无引用文件可接受);
+    // 复用 sending 态:发送期间输入条 Send 钮同步 loading,视觉一致
+    fun sendPendingImage() {
+        if (sending || imageUploading || imagePicking || pendingImageUri.isEmpty()) return
+        sending = true
+        imageUploading = true
+        scope.launch {
+            UserApi.getUser(pager) // 热身:焐热 token(选图阶段零 API 调用,热身属发送动作一部分)
+            var failMsg = "上传失败,请重试"
+            var fileUrl: String? = null
+            try {
+                val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+                if (module == null) {
+                    failMsg = "当前端暂不支持发送照片"
+                } else {
+                    fileUrl = suspendCoroutine { cont ->
+                        module.uploadImage(
                             ApiConfig.url(pager, "/infra/file/upload"),
                             SessionStore.accessToken,
+                            pendingImageUri,
                             CHAT_IMAGE_MAX_EDGE,
                         ) { result ->
                             val code = result?.optInt("code", -1) ?: -1
@@ -275,27 +326,17 @@ fun ChatPage(
             } catch (_: Exception) {
                 null
             }
-            imageUploading = false
             if (fileUrl.isNullOrEmpty()) {
+                imageUploading = false
+                sending = false
                 toastCouple(pager, failMsg)
-            } else if (SessionStore.userId.isNotEmpty() &&
-                CoupleStore.bindState == CoupleBindState.BOUND
-            ) {
-                pendingImageUrl = fileUrl
+                return@launch
             }
-        }
-    }
-
-    // M10 预览条发送:POST 成功清预览并滚底(滚底触发器同文本发送);失败 toast 保留预览图可重发
-    // (无脏数据 §7.4)。复用 sending 态:发送期间输入条 Send 钮同步 loading,视觉一致
-    fun sendPendingImage() {
-        if (sending || imageUploading || pendingImageUrl.isEmpty()) return
-        sending = true
-        scope.launch {
-            val result = ChatStore.sendImage(pager, pendingImageUrl)
+            imageUploading = false
+            val result = ChatStore.sendImage(pager, fileUrl)
             sending = false
             if (result is ApiResult.Ok) {
-                pendingImageUrl = ""
+                pendingImageUri = ""
                 triggerSendScroll()
             } else {
                 toastCoupleResult(pager, result)
@@ -332,7 +373,7 @@ fun ChatPage(
     LaunchedEffect(SessionStore.userId, CoupleStore.bindState) {
         if (SessionStore.userId.isEmpty() || CoupleStore.bindState != CoupleBindState.BOUND) {
             loadFailed = false
-            pendingImageUrl = "" // M10 登出/解绑清场:待发图弃
+            pendingImageUri = "" // M10 登出/解绑清场:待发图弃
             onImagePreviewChange("")
             onRecallTargetChange("") // M12 浮层清场走回写(MainPager 清态;在飞提交结果落 ChatStore 幂等无害)
             return@LaunchedEffect
@@ -756,14 +797,15 @@ fun ChatPage(
                 }
             }
 
-            // M10 图片预览条(预览确认流程防误发;M12 起发送后 2 分钟内可长按撤回):上传中/有待发图时显示在输入条上方,
-            // 随输入行键盘避让 padding 整体顶起(普通 Column 节点,无需特殊处理)
-            if (imageUploading || pendingImageUrl.isNotEmpty()) {
+            // M10 图片预览条(预览确认流程防误发;M12 起发送后 2 分钟内可长按撤回):有待发图时
+            // 显示在输入条上方(发送上传中蒙层同条),随输入行键盘避让 padding 整体顶起(普通
+            // Column 节点,无需特殊处理)
+            if (imageUploading || pendingImageUri.isNotEmpty()) {
                 ChatImagePreviewBar(
-                    url = pendingImageUrl,
+                    url = pendingImageUri,
                     uploading = imageUploading,
                     sending = sending,
-                    onCancel = { if (!imageUploading) pendingImageUrl = "" },
+                    onCancel = { if (!imageUploading) pendingImageUri = "" },
                     onSend = { sendPendingImage() },
                 )
             }
@@ -787,10 +829,10 @@ fun ChatPage(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // M10 图片入口:36dp 轻量 ghost 钮(与 44dp brand 渐变发送钮区分主次);
-                // guard 上传中拦重复点击(pickImage 内也拦,双保险)
+                // guard 选图中/上传中拦重复点击(pickImage 内也拦,双保险)
                 Box(
                     modifier = Modifier.size(36.dp)
-                        .clickable { if (!imageUploading) pickImage() },
+                        .clickable { if (!imagePicking && !imageUploading) pickImage() },
                     contentAlignment = Alignment.Center,
                 ) {
                     AppIcon(AppIconType.Image, AppTheme.TextSecondary, Modifier.size(20.dp))
@@ -1111,11 +1153,11 @@ private fun ImageBubble(
 }
 
 /**
- * ChatImagePreviewBar — 待发图片预览条(M10 预览确认流程):选图→自动上传→此处确认→点发送才入
- * 聊天(确认条防误发;M12 起发送后 2 分钟内可长按撤回)。缩略图 56dp 方(浅灰底恒驻;上传中
- * 黑 28% 蒙层+「上传中…」,MomentAddOverlay 同款);✕ 取消仅非上传中可点(上传不可中断,
- * 已传文件留档 infra_file);发送胶囊 uploading/sending 降透明禁用(guard 另在 sendPendingImage)。
- * 背景与 clickable 同节点(铁律⑦)
+ * ChatImagePreviewBar — 待发图片预览条(M10 预览确认流程;M15 真机反馈改「发送时才上传」):
+ * 选图(仅本地预览)→此处确认→点发送才压缩上传+入聊天(确认条防误发;M12 起发送后 2 分钟内
+ * 可长按撤回)。缩略图 56dp 方(浅灰底恒驻;发送上传中黑 28% 蒙层+「上传中…」,MomentAddOverlay
+ * 同款);✕ 取消仅非上传中可点(上传不可中断,取消/重选零孤儿文件);发送胶囊
+ * uploading/sending 降透明禁用(guard 另在 sendPendingImage)。背景与 clickable 同节点(铁律⑦)
  */
 @Composable
 private fun ChatImagePreviewBar(

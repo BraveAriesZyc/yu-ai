@@ -27,8 +27,15 @@ class KRImageAdapter(val context: Context) : IKRImageAdapter {
     ) {
         if (imageLoadOption.isBase64()) {
             loadFromBase64(imageLoadOption, callback)
-        } else if (imageLoadOption.isWebUrl() || imageLoadOption.isAssets() || imageLoadOption.isFile()) {
-            // http/assets/file 图片使用 glide 加载
+        } else if (imageLoadOption.isWebUrl() ||
+            imageLoadOption.isAssets() ||
+            imageLoadOption.isFile() ||
+            // content://(系统相册选图的本地 URI,上传链路早已验证 Glide 原生支持):M15 真机反馈
+            // 「选图仅本地预览、发布才上传」的地基——HRImageLoadOption 无 content 判定,不并入
+            // Glide 分支则 content URI 不命中任何分支 → 图片空白
+            imageLoadOption.src.startsWith("content:")
+        ) {
+            // http/assets/file/content 图片使用 glide 加载
             requestImage(imageLoadOption, callback)
         }
     }

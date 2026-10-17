@@ -81,7 +81,7 @@ import kotlinx.coroutines.launch
  * 用法:我的页「我们的相册」菜单 RouterModule.openPage 打开;返回键 closePage。
  *      独立二级页(CheckinPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:MomentApi/MomentInfo(页内自持不进 AppState,M7 时间线页先例——页销毁即弃,登出/解绑零
- *      reset);FileModule.pickAndUpload(maxEdge=1080,M4 上传链路复用);couple 组 toast;
+ *      reset);FileModule.pickImages/uploadImage(maxEdge=1080,选图本地预览+发布时上传,M15);couple 组 toast;
  *      chat.chatDayLabelFriendly(时间文案);mood.TimelineLoading/LoadFailed;RouterModule(返回)
  * 事件:返回钮 closePage;卡片点击开大图预览;FAB「+」开发布浮层;失败态「重试」重拉;
  *      「加载更多」beforeId=当前最小 id 翻页;下拉刷新(官方 pullToRefreshItem,ChatPage 先例)重拉首页
@@ -95,9 +95,10 @@ import kotlinx.coroutines.launch
  *    点击进大图预览
  *  - 可见期 5s 静默轮询对账(M15,D-20c:点赞/对方增删不发 WS 靠轮询感知,M14 心愿清单同款;
  *    恒拉首页合并删账/增改账,data class 相等跳过,失败静默自愈)
- *  - 发布浮层:多图选图即上传(pickAndUpload maxEdge=1080 maxCount=余量,suspendCoroutine 包装,
- *    MainPager submitAvatarUpload 同款;回包双形态解析 D-20f)+ LazyRow 缩略条(右上 X 删除/
- *    条尾 Plus 追加)+ 配文输入(定高行居中)+ 发布(POST create,回包头插落态不重拉)
+ *  - 发布浮层:选图仅本地预览零网络(pickImages 回 content:// URI,KRImageAdapter 已扩 content:
+ *    分支直载;M15 真机反馈「没上传不调接口,点击发布才是上传」)+ LazyRow 缩略条(右上 X 删除/
+ *    条尾 Plus 追加)+ 发布时点热身+逐张 uploadImage(进度「上传中 i/N」,失败重试跳过已传张)
+ *    → POST create(回包头插落态不重拉)
  *  - 大图预览:黑底 0.9 全屏 HorizontalPager 逐页 Fit + 多图页码胶囊 + 底部信息卡(配文/
  *    发布者/时间/点赞钮双方均可 D-20e 回包真值原位替换/删除钮仅上传者本人——服务端
  *    1_003_008_001 兜底,端上只显不拦校验);点击黑底关闭,信息卡 clickable 吞透传
@@ -154,6 +155,8 @@ internal fun MomentPage(pager: Pager) {
         val ok = result is ApiResult.Ok
         if (ok) {
             val list = MomentInfo.listFrom((result as ApiResult.Ok).dataArray)
+            // hasMore 绝对值重算仅限此处:fetchFirst 清空重填(进页/下拉刷新),已加载知识整体
+            // 重置;轮询 fetchSilentMerge 不清列表,hasMore 只降不升(见其③注释)
             hasMore = list.size >= PAGE_SIZE
             moments.clear()
             moments.addAll(list)
@@ -258,8 +261,11 @@ internal fun MomentPage(pager: Pager) {
                 anchor++
             }
         }
-        // ③hasMore 纠偏:对方删光/缩容时首窗口不满页即无更多(发新只会变多,无碍)
-        hasMore = fresh.size >= PAGE_SIZE
+        // ③hasMore 只降不升(2026-10-17 真机反馈「加载更多反复复现」修复):轮询恒拉满页首窗口,
+        //   若置 true 会把已加载到底的 hasMore 反复打回(按钮复现,点了又拉不出新条目);窗口
+        //   不满页=对方删光/缩容,降 false。置 true 只属 loadMore 追加页回包与 fetchFirst(其
+        //   清空重填、已加载知识整体重置,绝对值重算安全)
+        if (fresh.size < PAGE_SIZE) hasMore = false
     }
 
     // 独立页每次打开都是新 Pager 组合,LaunchedEffect(Unit) 即每次进入都重拉
@@ -530,12 +536,11 @@ private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick:
 
 /**
  * MomentAddOverlay — 发布瞬间浮层(M15 多图:最多 9 张;独立页内根级挂载,一次性表单:成功即收,
- * AnniversaryAddOverlay 同款浮岛式键盘避让)。选图流程:FileModule.pickAndUpload(maxEdge=1080,
- * maxCount=当前余量)选图即上传(suspendCoroutine 包装,MainPager.submitAvatarUpload 先例:先
- * getUser 热身保 token 新鲜——原生直传不经 HttpClient 无 401 单飞;getModule=null 渐进降级
- * toast),上传中蒙层拦点击;回包双形态解析(D-20f:数组字符串逐项 / 单 URL 兜底),成功 append
- * 缩略条(LazyRow,右上 X 删除 / 条尾 Plus 追加)。发布校验:未选图 toast 拦;POST create
- * 成功回包 MomentInfo 头插上报后关浮层,失败 toast 不关
+ * AnniversaryAddOverlay 同款浮岛式键盘避让)。M15 真机反馈裁决「没上传不调接口,点击发布才是上传」:
+ * 选图 FileModule.pickImages 仅回本地 content:// URI(零压缩零上传零网络,缩略图经 KRImageAdapter
+ * content: 分支直载),getUser 热身与逐张上传全部挪到发布时点——submit = 热身 → 串行 uploadImage
+ * (进度「上传中 i/N」,uploadedMap 缓存已传 URL,失败重试跳过已传张)→ MomentApi.create 头插上报。
+ * 取消选图(code=1)静默不 toast;getModule=null 渐进降级 toast
  */
 @Composable
 private fun MomentAddOverlay(
@@ -546,42 +551,40 @@ private fun MomentAddOverlay(
     val theme = ThemeStore.current
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    val uploadedUrls = remember { mutableStateListOf<String>() }
-    var uploading by remember { mutableStateOf(false) }
+    val localUris = remember { mutableStateListOf<String>() } // 待发本地图(content://,发布时才上传)
+    // 已传缓存(uri→服务端 URL,跨 submit 存活):发布失败重试跳过已传张不重复产服务端文件;
+    // 重选同图(同 content URI)直接复用已传 URL。删除缩略图不必清(URI 不在 localUris 即不参与)
+    val uploadedMap = remember { mutableMapOf<String, String>() }
     var draft by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }
+    // 发布进度文案(空串 = 空闲):「上传中 i/N…」/「发布中…」,PublishButton 据此显态禁点
+    var publishStep by remember { mutableStateOf("") }
     var keyboardHeight by remember { mutableStateOf(0f) }
     val onKeyboardHeightChange: (KeyboardParams) -> Unit = remember {
         { params: KeyboardParams -> keyboardHeight = params.height }
     }
 
-    // 选图+压缩+直传一条龙(按余量多选,maxCount=9-已选;maxCount=1 回单 URL 字符串老契约):
-    // 链路与 MainPager.submitAvatarUpload 同构:热身 → getModule 判空降级 → suspendCoroutine
-    // 一次性回调收口;回包双形态解析(data 以 [ 开头 = JSON 数组字符串逐项,否则单 URL)
+    // 仅选图(pickImages,按余量多选 remain=9-已选):零网络零上传,本地 URI 直接进缩略条;
+    // 回包双形态解析(maxCount=1 单 URI 字符串 / >1 JSON 数组字符串,D-20f 同款);code=1 用户
+    // 取消静默(反复试探动作,旧「未选择图片」toast 属噪);热身/上传已挪发布时点
     fun pickImage() {
-        if (uploading) return
-        val remain = MOMENT_IMAGE_MAX - uploadedUrls.size
+        if (publishing) return
+        val remain = MOMENT_IMAGE_MAX - localUris.size
         if (remain <= 0) {
             toastCouple(pager, "最多 ${MOMENT_IMAGE_MAX} 张照片")
             return
         }
-        uploading = true
         scope.launch {
-            UserApi.getUser(pager) // 热身:原生直传不经 HttpClient(无 401 单飞刷新),先焐热 token
-            var failMsg = "上传失败,请重试"
-            val urls = try {
+            var failMsg = "选择图片失败,请重试"
+            var cancelled = false
+            val uris = try {
                 val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
                 if (module == null) {
                     failMsg = "当前端暂不支持选择照片"
                     null
                 } else {
                     suspendCoroutine<List<String>?> { cont ->
-                        module.pickAndUpload(
-                            ApiConfig.url(pager, "/infra/file/upload"),
-                            SessionStore.accessToken,
-                            MOMENT_MAX_EDGE,
-                            remain,
-                        ) { result ->
+                        module.pickImages(remain) { result ->
                             val code = result?.optInt("code", -1) ?: -1
                             val data = result?.optString("data").orEmpty()
                             if (code == 0 && data.isNotEmpty()) {
@@ -600,7 +603,8 @@ private fun MomentAddOverlay(
                                     cont.resume(listOf(data))
                                 }
                             } else {
-                                result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
+                                if (code == 1) cancelled = true // 用户取消:静默
+                                else result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
                                 cont.resume(null)
                             }
                         }
@@ -609,25 +613,72 @@ private fun MomentAddOverlay(
             } catch (_: Exception) {
                 null
             }
-            uploading = false
-            if (urls.isNullOrEmpty()) {
+            if (cancelled) return@launch
+            if (uris.isNullOrEmpty()) {
                 toastCouple(pager, failMsg)
             } else {
-                uploadedUrls.addAll(urls.take(remain)) // 防御:超余量截断
+                localUris.addAll(uris.take(remain)) // 防御:超余量截断
             }
         }
     }
 
+    // 发布 = 上传时点(用户裁决):热身(原生直传不经 HttpClient 无 401 单飞刷新)→ 逐张
+    // uploadImage 串行上传(uploadedMap 缓存已传 URL,失败重试跳过已传张不重复产文件)→
+    // 全部成功才 create(半成品只可能是服务端孤儿图片文件,瞬间未落库,无脏数据)。失败 toast
+    // 保留浮层与已选图,可改配文/删图后重试
     fun submit() {
         if (publishing) return
-        if (uploadedUrls.isEmpty()) {
+        if (localUris.isEmpty()) {
             toastCouple(pager, "先选一张照片吧")
             return
         }
         publishing = true
         scope.launch {
-            val result = MomentApi.create(pager, uploadedUrls.toList(), draft.trim())
+            UserApi.getUser(pager) // 热身:焐热 token(选图阶段零 API 调用,热身属发布动作一部分)
+            var failMsg = ""
+            for ((index, uri) in localUris.withIndex()) {
+                if (uploadedMap.containsKey(uri)) continue // 重选同图防重传(同 URI 复用已传 URL)
+                publishStep = "上传中 ${index + 1}/${localUris.size}…"
+                var fileUrl: String? = null
+                try {
+                    val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+                    if (module == null) {
+                        failMsg = "当前端暂不支持上传照片"
+                    } else {
+                        fileUrl = suspendCoroutine { cont ->
+                            module.uploadImage(
+                                ApiConfig.url(pager, "/infra/file/upload"),
+                                SessionStore.accessToken,
+                                uri,
+                                MOMENT_MAX_EDGE,
+                            ) { result ->
+                                val code = result?.optInt("code", -1) ?: -1
+                                val data = result?.optString("data").orEmpty()
+                                if (code == 0 && data.isNotEmpty()) {
+                                    cont.resume(data)
+                                } else {
+                                    result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
+                                    cont.resume(null)
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    null
+                }
+                if (fileUrl == null) {
+                    if (failMsg.isEmpty()) failMsg = "上传失败,请重试"
+                    publishing = false
+                    publishStep = ""
+                    toastCouple(pager, failMsg)
+                    return@launch
+                }
+                uploadedMap[uri] = fileUrl
+            }
+            publishStep = "发布中…"
+            val result = MomentApi.create(pager, localUris.mapNotNull { uploadedMap[it] }, draft.trim())
             publishing = false
+            publishStep = ""
             if (result is ApiResult.Ok) {
                 val info = MomentInfo.from(result.data)
                 if (info != null) onPublished(info)
@@ -678,14 +729,14 @@ private fun MomentAddOverlay(
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 // 选图区(M15 多图):未选 = 虚位引导(Plus + 文案);已选 = LazyRow 缩略条
-                // (72dp 方图 + 右上 X 删除 + 条尾余量内 Plus 追加;LazyRow 横向嵌在竖向 Column
-                // = 跨轴嵌套合法铁律);上传中蒙层拦点击(background 常驻不分支,铁律③)
-                if (uploadedUrls.isEmpty()) {
+                // (72dp 方图,本地 URI 直载 + 右上 X 删除 + 条尾余量内 Plus 追加;LazyRow 横向
+                // 嵌在竖向 Column = 跨轴嵌套合法铁律);发布中拦选图/删图
+                if (localUris.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxWidth()
                             .height(150.dp)
                             .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
-                            .clickable { if (!uploading) pickImage() },
+                            .clickable { if (!publishing) pickImage() },
                     ) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -705,49 +756,39 @@ private fun MomentAddOverlay(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            itemsIndexed(uploadedUrls) { index, url ->
+                            itemsIndexed(localUris) { index, uri ->
                                 Box(modifier = Modifier.size(72.dp)) {
                                     Image(
                                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
-                                        painter = rememberAsyncImagePainter(url),
+                                        painter = rememberAsyncImagePainter(uri),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                     )
-                                    // 右上 X 删除(黑 45% 圆,上传中拦)
+                                    // 右上 X 删除(黑 45% 圆,发布中拦)
                                     Box(
                                         modifier = Modifier.align(Alignment.TopEnd)
                                             .padding(3.dp)
                                             .size(18.dp)
                                             .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(9.dp))
-                                            .clickable { if (!uploading) uploadedUrls.removeAt(index) },
+                                            .clickable { if (!publishing) localUris.removeAt(index) },
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         AppIcon(AppIconType.Close, Color.White, Modifier.size(10.dp))
                                     }
                                 }
                             }
-                            if (uploadedUrls.size < MOMENT_IMAGE_MAX) {
+                            if (localUris.size < MOMENT_IMAGE_MAX) {
                                 item {
                                     // 条尾追加块(余量内才显;background+clickable 同节点铁律⑤)
                                     Box(
                                         modifier = Modifier.size(72.dp)
                                             .background(Color(0xFFF5F6FA), RoundedCornerShape(10.dp))
-                                            .clickable { if (!uploading) pickImage() },
+                                            .clickable { if (!publishing) pickImage() },
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         AppIcon(AppIconType.Plus, Color(0xFFC8CCD8), Modifier.size(24.dp))
                                     }
                                 }
-                            }
-                        }
-                        if (uploading) {
-                            Box(
-                                modifier = Modifier.fillMaxWidth()
-                                    .height(72.dp)
-                                    .background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text("上传中…", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -782,25 +823,26 @@ private fun MomentAddOverlay(
                     )
                 }
                 Spacer(modifier = Modifier.height(14.dp))
-                PublishButton(publishing) { submit() }
+                PublishButton(publishStep) { submit() }
             }
         }
     }
 }
 
-/** 发布钮(品牌渐变圆角大钮,BindPrimaryButton 语义本域私有复制——浮层提交场景文案不同) */
+/** 发布钮(品牌渐变圆角大钮,BindPrimaryButton 语义本域私有复制——浮层提交场景文案不同):
+ *  publishStep 非空 = 提交中,显进度文案(「上传中 i/N…」/「发布中…」)并禁点 */
 @Composable
-private fun PublishButton(publishing: Boolean, onClick: () -> Unit) {
+private fun PublishButton(publishStep: String, onClick: () -> Unit) {
     val theme = ThemeStore.current
     Box(
         modifier = Modifier.fillMaxWidth()
             .height(44.dp)
             .background(theme.brandBrush, RoundedCornerShape(22.dp))
-            .clickable { if (!publishing) onClick() },
+            .clickable { if (publishStep.isEmpty()) onClick() },
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            if (publishing) "发布中…" else "发 布",
+            if (publishStep.isEmpty()) "发 布" else publishStep,
             color = Color.White,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,

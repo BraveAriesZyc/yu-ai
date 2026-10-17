@@ -24,15 +24,19 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 
 /**
- * 选图上传一条龙原生实现(文件服务里程碑):ACTION_PICK 选图(KRPickImageActivity 透明桥收
- * onActivityResult)→ Glide 压缩(centerInside 等比缩到 maxEdge 内,自动 EXIF 矫正;maxEdge
- * 由 common 侧传入,缺省 512 头像场景,相册场景传 1080——M9)JPEG 80 出图避开 16MB 服务端限制
- * → okhttp multipart 直传 /app-api/infra/file/upload(MEMBER token)→ 解析 yudao CommonResult
- * 回调给 common 侧(base/FileModule 声明,一次性回调 keepCallbackAlive=false)。
- * M15 多选:maxCount>1 时 EXTRA_ALLOW_MULTIPLE 多选,选回串行「压缩→上传」逐张处理
- * (processNext 链),任一张失败 fail-fast 整批收口「第N张…」;maxCount=1 单张路径原样
- * (服务端 msg 透传,老契约字节不变)。收口 data:多选为 JSON 数组字符串,单选为单 URL 字符串。
- * 仅上传动作——URL 写回(user/update)由 common 侧收口,原生不碰业务接口。
+ * 选图/上传原生实现(文件服务里程碑,三方法):KRPickImageActivity 透明桥(ACTION_PICK 免存储
+ * 权限)收 onActivityResult,经类级静态入口 onPickResult 转发回活跃实例,按 pendingMode 分流。
+ *  - pickAndUpload(头像,M4 老契约):选图 → Glide 压缩 → okhttp multipart 直传一条龙,选图即动作
+ *    本身无取消路径(无孤儿文件),保留;maxCount>1 多选串行压缩上传 fail-fast「第N张…」(M15)。
+ *  - pickImages(M15 真机反馈「没上传不调接口,点击发布才是上传」裁决):仅选图回本地 content://
+ *    URI 字符串,零压缩零上传零网络——展示由 KRImageAdapter content: 分支(Glide 原生支持)承担。
+ *  - uploadImage(M15):单张本地 URI → Glide 压缩 → multipart 直传,压缩移后台线程(主线程
+ *    Bitmap.compress 100-300ms×N 张是「选图/发布卡顿」根因),回 data 单 URL 字符串。
+ * 压缩链:centerInside 等比缩到 maxEdge 内(EXIF 自动矫正),JPEG 80 出图避开 16MB 服务端限制;
+ * 直传端点 /app-api/infra/file/upload(MEMBER token),解析 yudao CommonResult 收口回调给
+ * common 侧(base/FileModule 声明,一次性回调 keepCallbackAlive=false)。
+ * 收口 data:多选为 JSON 数组字符串,单选为单值字符串(URL 或本地 URI,按方法语义)。
+ * 仅上传动作——URL 写回(user/update/create)由 common 侧收口,原生不碰业务接口。
  * 头契约与 HttpClient 一致:仅 Authorization: Bearer(token 内含租户上下文,无需 tenant-id 头)。
  */
 class KRFileModule : KuiklyRenderBaseModule() {
@@ -57,7 +61,82 @@ class KRFileModule : KuiklyRenderBaseModule() {
     override fun call(method: String, params: String?, callback: KuiklyRenderCallback?): Any? {
         return when (method) {
             METHOD_PICK_UPLOAD -> pickAndUpload(params, callback)
+            METHOD_PICK_IMAGES -> pickImages(params, callback)
+            METHOD_UPLOAD_IMAGE -> uploadImage(params, callback)
             else -> callback?.invoke(mapOf("code" to -1, "msg" to "方法不存在"))
+        }
+    }
+
+    /** 仅选图(M15):ACTION_PICK 选完直接回本地 URI,不压缩不上传;maxCount 缺省 1 单选,
+     *  >1 多选。收口 data 双形态同 pickAndUpload(maxCount=1 单 URI 字符串 / >1 JSON 数组字符串) */
+    private fun pickImages(params: String?, callback: KuiklyRenderCallback?) {
+        if (params.isNullOrEmpty()) {
+            callback?.invoke(mapOf("code" to -1, "msg" to "参数缺失"))
+            return
+        }
+        val maxCount = JSONObject(params).optInt("maxCount", 1).coerceAtLeast(1)
+        val activity = activity
+        if (activity == null || activity.isFinishing) {
+            callback?.invoke(mapOf("code" to -1, "msg" to "宿主不可用"))
+            return
+        }
+        if (inFlight) {
+            callback?.invoke(mapOf("code" to -1, "msg" to "图片处理中,请稍候"))
+            return
+        }
+        inFlight = true
+        resultCallback = callback
+        pendingMode = MODE_PICK
+        pendingMaxCount = maxCount
+        // ⚠ 必须 catch(同 pickAndUpload):桥 Activity 配置错误抛 ActivityNotFoundException 会
+        // 杀进程,必须收口回调回 toast
+        try {
+            activity.startActivity(
+                Intent(activity, KRPickImageActivity::class.java)
+                    .putExtra(KRPickImageActivity.EXTRA_MAX_COUNT, maxCount),
+            )
+        } catch (e: Exception) {
+            finishFlight(callback, CODE_ERROR, "无法打开相册,请重试")
+        }
+    }
+
+    /** 单张本地图压缩+上传(M15,配 pickImages):uri 为 pickImages 回包的本地 content:// URI,
+     *  Glide 原生支持直载;回 data 单 URL 字符串。多张场景由 common 侧串行逐张调用(进度可报) */
+    private fun uploadImage(params: String?, callback: KuiklyRenderCallback?) {
+        if (params.isNullOrEmpty()) {
+            callback?.invoke(mapOf("code" to -1, "msg" to "参数缺失"))
+            return
+        }
+        val paramJSON = JSONObject(params)
+        val url = paramJSON.optString("url")
+        val token = paramJSON.optString("token")
+        val uri = paramJSON.optString("uri")
+        if (url.isEmpty() || token.isEmpty() || uri.isEmpty()) {
+            callback?.invoke(mapOf("code" to -1, "msg" to "参数缺失"))
+            return
+        }
+        val maxEdge = paramJSON.optInt("maxEdge", DEFAULT_MAX_EDGE)
+        if (inFlight) {
+            callback?.invoke(mapOf("code" to -1, "msg" to "图片处理中,请稍候"))
+            return
+        }
+        val context = context
+        if (context == null) {
+            callback?.invoke(mapOf("code" to -1, "msg" to "上下文不可用"))
+            return
+        }
+        inFlight = true
+        resultCallback = callback
+        pendingMode = MODE_UPLOAD
+        pendingUploadUrl = url
+        pendingToken = token
+        pendingMaxEdge = maxEdge
+        compressAndUpload(context, Uri.parse(uri)) { fileUrl, msg ->
+            if (fileUrl != null) {
+                finishFlight(resultCallback, 0, "", fileUrl)
+            } else {
+                finishFlight(resultCallback, CODE_ERROR, msg)
+            }
         }
     }
 
@@ -88,6 +167,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         }
         inFlight = true
         resultCallback = callback
+        pendingMode = MODE_PICK_UPLOAD
         pendingUploadUrl = url
         pendingToken = token
         pendingMaxEdge = maxEdge
@@ -107,7 +187,8 @@ class KRFileModule : KuiklyRenderBaseModule() {
         }
     }
 
-    /** 选图结果处理(uris=null/空=取消/读图失败):须主线程(桥 Activity/Glide 回调均已在主线程) */
+    /** 选图结果处理(uris=null/空=取消/读图失败):须主线程(桥 Activity/Glide 回调均已在主线程);
+     *  按 pendingMode 分流——PICK 只回本地 URI(零网络),PICK_UPLOAD 走压缩上传链 */
     private fun handlePickResult(uris: List<Uri>?) {
         val callback = resultCallback
         if (!inFlight || callback == null) {
@@ -115,6 +196,18 @@ class KRFileModule : KuiklyRenderBaseModule() {
         }
         if (uris.isNullOrEmpty()) {
             finishFlight(callback, CODE_CANCEL, "未选择图片")
+            return
+        }
+        if (pendingMode == MODE_PICK) {
+            // 仅选图:本地 URI 直接收口(双形态同 pickAndUpload 契约),展示/上传由 common 侧驱动
+            val data = if (pendingMaxCount > 1) {
+                val arr = JSONArray()
+                uris.forEach { arr.put(it.toString()) }
+                arr.toString()
+            } else {
+                uris[0].toString()
+            }
+            finishFlight(callback, 0, "", data)
             return
         }
         val context = context
@@ -125,8 +218,8 @@ class KRFileModule : KuiklyRenderBaseModule() {
         processNext(context, uris, 0, ArrayList())
     }
 
-    /** 串行压缩上传链(M15):第 index 张 Glide 压缩 → upload,成功进下一张;index 到头整批
-     *  收口(data 多选 = JSON 数组字符串 / 单选 = 单 URL 字符串老契约);全链主线程 */
+    /** 串行压缩上传链(M15 多选,pickAndUpload 专用):第 index 张压缩上传,成功进下一张;
+     *  index 到头整批收口(data 多选 = JSON 数组字符串 / 单选 = 单 URL 字符串老契约) */
     private fun processNext(context: Context, uris: List<Uri>, index: Int, collected: MutableList<String>) {
         val callback = resultCallback ?: return // 已收口(如模块销毁清理),链终止
         if (index >= uris.size) {
@@ -140,38 +233,44 @@ class KRFileModule : KuiklyRenderBaseModule() {
             finishFlight(callback, 0, "", data)
             return
         }
-        // Glide 压缩:centerInside 等比缩到 maxEdge 内(EXIF 旋转自动矫正,相册竖拍图常见坑);
-        // 压完进 upload,链路仍持 callback 引用
+        // 压缩+上传单张;链路仍持 callback 引用,失败 msg 按「单张透传/多选第N张」分流(老契约)
+        compressAndUpload(context, uris[index]) { url, msg ->
+            if (url != null) {
+                collected.add(url)
+                processNext(context, uris, index + 1, collected)
+            } else if (uris.size == 1) {
+                // 单张:服务端 msg 透传(老契约字节不变)
+                finishFlight(resultCallback, CODE_ERROR, msg)
+            } else {
+                // 多选 fail-fast:第 N 张失败整批收口
+                finishFlight(resultCallback, CODE_ERROR, "第${index + 1}张图片上传失败")
+            }
+        }
+    }
+
+    /** 单张压缩+上传(公共底座):Glide centerInside 压缩(自动 EXIF 矫正)→ JPEG 出图 → upload。
+     *  ⚠ 压缩在后台单线程执行器:主线程 Bitmap.compress 100-300ms/张,连选多张反复阻塞主线程
+     *  是「选图卡/发布卡」的真机根因(M15 真机反馈);压完回主线程进 upload
+     *  (onDone 收口权在调用方——processNext 续链 / uploadImage 直接收口) */
+    private fun compressAndUpload(context: Context, uri: Uri, onDone: (url: String?, msg: String) -> Unit) {
         Glide.with(context)
             .asBitmap()
-            .load(uris[index])
+            .load(uri)
             .centerInside()
             .override(pendingMaxEdge)
             .into(object : CustomTarget<Bitmap>() {
                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                    val bytes = ByteArrayOutputStream().use { out ->
-                        resource.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
-                        out.toByteArray()
-                    }
-                    upload(bytes) { url, msg ->
-                        if (url != null) {
-                            collected.add(url)
-                            processNext(context, uris, index + 1, collected)
-                        } else if (uris.size == 1) {
-                            // 单张:服务端 msg 透传(老契约字节不变)
-                            finishFlight(resultCallback, CODE_ERROR, msg)
-                        } else {
-                            // 多选 fail-fast:第 N 张失败整批收口
-                            finishFlight(resultCallback, CODE_ERROR, "第${index + 1}张图片上传失败")
+                    COMPRESS_EXECUTOR.execute {
+                        val bytes = ByteArrayOutputStream().use { out ->
+                            resource.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                            out.toByteArray()
                         }
+                        mainHandler.post { upload(bytes, onDone) }
                     }
                 }
 
                 override fun onLoadFailed(errorDrawable: Drawable?) {
-                    mainHandler.post {
-                        val msg = if (uris.size == 1) "图片读取失败" else "第${index + 1}张图片读取失败"
-                        finishFlight(resultCallback, CODE_ERROR, msg)
-                    }
+                    mainHandler.post { onDone(null, "图片读取失败") }
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {
@@ -241,10 +340,11 @@ class KRFileModule : KuiklyRenderBaseModule() {
         }
     }
 
-    /** 统一收口:清流转状态+一次性回调;成功时额外带 data(单 URL 或 JSON 数组字符串) */
+    /** 统一收口:清流转状态+一次性回调;成功时额外带 data(单值或 JSON 数组字符串) */
     private fun finishFlight(callback: KuiklyRenderCallback?, code: Int, msg: String, data: String? = null) {
         inFlight = false
         resultCallback = null
+        pendingMode = MODE_NONE
         pendingUploadUrl = null
         pendingToken = null
         pendingMaxEdge = DEFAULT_MAX_EDGE
@@ -262,6 +362,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         mainHandler.removeCallbacksAndMessages(null)
         inFlight = false
         resultCallback = null
+        pendingMode = MODE_NONE
         pendingUploadUrl = null
         pendingToken = null
         pendingMaxEdge = DEFAULT_MAX_EDGE
@@ -276,15 +377,31 @@ class KRFileModule : KuiklyRenderBaseModule() {
         /** common 侧 base/FileModule.MODULE_NAME 同串(KR 前缀原生类名、HR 前缀注册名,照 WS 桥接惯例) */
         const val MODULE_NAME = "HRFileModule"
         private const val METHOD_PICK_UPLOAD = "pickAndUpload"
+        private const val METHOD_PICK_IMAGES = "pickImages"
+        private const val METHOD_UPLOAD_IMAGE = "uploadImage"
         private const val CODE_CANCEL = 1
         private const val CODE_ERROR = -1
         /** 压缩边长缺省(头像场景;common 侧不传 maxEdge 时走此值,512px 对 3x 屏头像圆环充裕) */
         private const val DEFAULT_MAX_EDGE = 512
         private const val JPEG_QUALITY = 80
+        /** 选图回包分流模式:handlePickResult 按发起方法分流(仅选图 / 选图即上传一条龙) */
+        private const val MODE_NONE = 0
+        private const val MODE_PICK = 1
+        private const val MODE_PICK_UPLOAD = 2
+        private const val MODE_UPLOAD = 3
+
+        /** 压缩后台单线程执行器(串行:一次压一张,内存有界;daemon 不阻进程退出) */
+        private val COMPRESS_EXECUTOR = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "kr-image-compress").apply { isDaemon = true }
+        }
 
         /** 当前活跃模块实例(桥 Activity 静态入口转发目标;init 登记、onDestroy 注销) */
         @Volatile
         var current: KRFileModule? = null
+
+        /** 发起时写入、收口清空的选图模式(仅选图 / 一条龙;onPickResult 分流依据) */
+        @Volatile
+        var pendingMode: Int = MODE_NONE
 
         /** 发起时写入、收口清空的上传参数(跟随模块自身 companion,不落桥 Activity 静态) */
         @Volatile
