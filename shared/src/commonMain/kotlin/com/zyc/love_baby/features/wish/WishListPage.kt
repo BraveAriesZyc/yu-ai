@@ -407,33 +407,12 @@ internal fun WishListPage(pager: Pager) {
             }
         }
 
-        // 删除确认浮层(页面级,无底栏无需 MainPager 收口;组合在列表/添加条之后 = 后组合者在上)
-        if (deleteTarget != null) {
-            DeleteWishOverlay(
-                deleting = deleting,
-                onConfirm = { confirmDelete() },
-                onDismiss = { if (!deleting) deleteTarget = null },
-            )
-        }
-
-        // 详情/操作弹框(2026-10-17 交互修订:行点击弹出;完成/取消完成在此确认,防误点亮)
-        detailTarget?.let { target ->
-            WishDetailOverlay(
-                wish = target,
-                myId = myId,
-                submitting = toggling,
-                onToggle = {
-                    detailTarget = null
-                    toggle(target)
-                },
-                onClose = { detailTarget = null },
-            )
-        }
-
         // 底部添加条(悬浮浮岛;2026-10-18 修独立页几何——原照抄 TodoPage 的 86dp 收起让位,
         // 那是给 MainPager 浮岛底栏留的,本页为 @Page 二级页无底栏,收起应贴底只留呼吸 12dp
         // +系统导航栏安全区;键盘避让公式保留 TodoPage 定稿:键盘 height 不含导航栏区域,
-        // 须叠加 navBarSafePaddingDp 补齐,弹起 bottom = 键盘高+navBar+12)
+        // 须叠加 navBarSafePaddingDp 补齐,弹起 bottom = 键盘高+navBar+12。
+        // 2026-10-18 层级修:必须组合在两弹框之前——Kuikly 后组合者在上,原排最后导致
+        // 弹框灰幕盖不住输入条(真机实证),调序后遮罩盖住输入条且触摸被灰幕吃掉)
         Row(
             modifier = Modifier.align(Alignment.BottomCenter)
                 .padding(horizontal = AppTheme.PageHPadding)
@@ -495,6 +474,29 @@ internal fun WishListPage(pager: Pager) {
                     }
                 },
                 iconSize = 22.dp,
+            )
+        }
+
+        // 删除确认浮层(页面级,无底栏无需 MainPager 收口;组合在列表/添加条之后 = 后组合者在上)
+        if (deleteTarget != null) {
+            DeleteWishOverlay(
+                deleting = deleting,
+                onConfirm = { confirmDelete() },
+                onDismiss = { if (!deleting) deleteTarget = null },
+            )
+        }
+
+        // 详情/操作弹框(2026-10-17 交互修订:行点击弹出;完成/取消完成在此确认,防误点亮)
+        detailTarget?.let { target ->
+            WishDetailOverlay(
+                wish = target,
+                myId = myId,
+                submitting = toggling,
+                onToggle = {
+                    detailTarget = null
+                    toggle(target)
+                },
+                onClose = { detailTarget = null },
             )
         }
     }
