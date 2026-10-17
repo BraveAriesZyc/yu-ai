@@ -73,6 +73,7 @@ import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.WishApi
 import com.zyc.love_baby.state.SessionStore
 import kotlin.math.abs
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -100,6 +101,8 @@ private const val WISH_INPUT_MAX_LENGTH = 64
  *    消息逻辑,勾选者本端该消息靠切聊天 Tab 增量拉自愈);重复勾选幂等(回包真值不变)
  *  - 时间展示:行副文案与详情弹框均显「创建于 …」/「…完成于 …」(友好日+时刻,GMT+8);
  *    自己许的未完成行附「等TA点亮」;删除仅创建者可见(1_003_009_001 服务端兜底)
+ *  - 同步:可见期 5s 静默轮询对账(组合在即活动在,返回键销毁即停),对方增删改/勾选 ≤5s
+ *    感知;写在飞/弹层挂着跳过,失败静默下周期自愈(D-16 轮询唯一真相)
  *  - 底部悬浮添加条照 TodoPage 逐常量(键盘避让 max 公式/take+maxLength 双保险/POST 成功才清输入/
  *    新行 awaitMeasured 滚可见);删除确认浮层挂着时列表 userScrollEnabled=false(F6)
  */
@@ -166,6 +169,20 @@ internal fun WishListPage(pager: Pager) {
         loadFailed = !ok
     }
 
+    // 静默对账拉取(可见期轮询专用):Ok 才按服务端真值全量覆盖;失败保留现值,不翻转 loadFailed
+    // 不 toast(下个周期自愈);与本地现值结构相等时跳过(WishInfo data class),避免无谓
+    // clear/addAll 打断浏览(key=id 槽位稳定,覆盖本身也不跳位,等值跳过纯省重组)
+    suspend fun fetchSilent() {
+        val result = WishApi.list(pager)
+        if (result is ApiResult.Ok) {
+            val fresh = WishInfo.listFrom(result.dataArray)
+            if (fresh != wishes.toList()) {
+                wishes.clear()
+                wishes.addAll(fresh)
+            }
+        }
+    }
+
     fun refresh() {
         if (loading || refreshing) return
         refreshing = true
@@ -219,6 +236,22 @@ internal fun WishListPage(pager: Pager) {
     LaunchedEffect(Unit) {
         fetchFirst()
         loading = false
+    }
+
+    // 可见期 5s 静默轮询(2026-10-17 用户反馈「一边勾选另一边不同步」):独立 @Page 组合在即
+    // 活动在(返回键 finish 销毁组合,协程随之取消,无需 pageVisible——那是 MainPager 五 Tab
+    // 的参数),拉服务端真值对账覆盖,对方增删改/勾选 ≤5s 感知;庆祝消息本身走聊天 WS 秒达,
+    // 清单状态以轮询为准(D-16 轮询唯一真相,chat 增量拉同哲学)。写操作在飞/弹层挂着时跳过
+    // (toggle 回包原位替换、删除乐观移除各管收敛,轮询别插手),失败静默下周期自愈
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000)
+            if (!toggling && !deleting && !refreshing && !loading &&
+                deleteTarget == null && detailTarget == null
+            ) {
+                fetchSilent()
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
