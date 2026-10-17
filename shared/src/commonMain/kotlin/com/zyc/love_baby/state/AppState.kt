@@ -774,7 +774,7 @@ internal object MoodStore {
 
 // ---------- 聊天 ----------
 
-internal enum class MsgKind { TEXT, WISH }
+internal enum class MsgKind { TEXT, WISH, IMAGE }
 
 /**
  * 悄悄话/心愿消息。M3 快照化:原 wishTitles 多标题结构删除,改为单条心愿消息四字段
@@ -791,6 +791,7 @@ internal data class ChatMsg(
     val wishKey: String = "",
     val colorHex: String = "",
     val iconName: String = "",
+    val imageUrl: String = "", // kind=IMAGE 时为图片完整 URL(content 列透传,M10)
     val createTime: Long = 0L, // epoch 毫秒(服务端 VO 回传);0 = 未回传,渲染侧整层隐藏时间元素
 )
 
@@ -883,6 +884,19 @@ internal object ChatStore {
     }
 
     /**
+     * 发图片消息(M10,§7.4 写穿透同 send):POST send-image 成功才用回包消息入列。
+     * **不推进游标**(同 send:本端 id 顶游标会吞掉对方并发低 id 消息)——本条由下轮增量拉回去重;
+     * 失败不追加,调用方 toast 后预览图保留可重发
+     */
+    suspend fun sendImage(pager: Pager, imageUrl: String): ApiResult {
+        val result = MessageApi.sendImage(pager, imageUrl)
+        if (result is ApiResult.Ok) {
+            MessageInfo.from(result.data)?.let { appendDedupe(listOf(toMsg(it))) }
+        }
+        return result
+    }
+
+    /**
      * 送出选中心愿(§7.4 写穿透):逐条 POST send-wishes,快照四字段 wishKey=wish.id/text=wish.title/
      * color=wish 主色 hex/icon=wish.icon 的 name(§5.2)。首错即停:某条失败立即停止余下,已成功发送的
      * 不回滚不重发(撤选已生效,剩余选中可重试补发,已送达的不重复发送);部分失败由调用方按
@@ -915,12 +929,13 @@ internal object ChatStore {
         initialLoaded = false
     }
 
-    /** MessageInfo → ChatMsg:isMine 以 senderId 比对当前会话;kind=2 走快照字段,其余按文本;
-     *  createTime 透传(消息时间行/日期分组用,send/sendWishes 走服务端回包 VO 天然有值) */
+    /** MessageInfo → ChatMsg:isMine 以 senderId 比对当前会话;kind=2 走快照字段,kind=3 图片
+     *  (imageUrl=content 透传),其余按文本;createTime 透传(消息时间行/日期分组用,send/sendWishes/
+     *  sendImage 走服务端回包 VO 天然有值) */
     private fun toMsg(info: MessageInfo): ChatMsg {
         val mine = info.senderId == SessionStore.userId
-        return if (info.kind == MessageInfo.KIND_WISH) {
-            ChatMsg(
+        return when (info.kind) {
+            MessageInfo.KIND_WISH -> ChatMsg(
                 id = info.id,
                 isMine = mine,
                 text = "",
@@ -931,8 +946,15 @@ internal object ChatStore {
                 iconName = info.icon,
                 createTime = info.createTime,
             )
-        } else {
-            ChatMsg(id = info.id, isMine = mine, text = info.content, createTime = info.createTime)
+            MessageInfo.KIND_IMAGE -> ChatMsg(
+                id = info.id,
+                isMine = mine,
+                text = "",
+                kind = MsgKind.IMAGE,
+                imageUrl = info.content,
+                createTime = info.createTime,
+            )
+            else -> ChatMsg(id = info.id, isMine = mine, text = info.content, createTime = info.createTime)
         }
     }
 

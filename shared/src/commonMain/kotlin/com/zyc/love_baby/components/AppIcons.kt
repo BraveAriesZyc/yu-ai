@@ -22,6 +22,7 @@ enum class AppIconType {
     Home, Todo, Shop, Mine,          // 底部导航
     ChevronRight, ChevronLeft, Plus, Search, // 通用
     Close, Check, Chat, Send,        // 通用
+    Image,                           // 通用(M10 聊天发图入口)
     Pin, Wallet, Service, Info,      // 我的页
     Components,                      // 组件列表入口
     Star, Heart, Bell, Moon, Sun,    // 业务装饰
@@ -378,6 +379,34 @@ fun DrawScope.drawAppIcon(type: AppIconType, color: Color, filled: Boolean = fal
                 close()
             }
             drawPath(plane, color)
+        }
+
+        AppIconType.Image -> {
+            // 圆角相框
+            val frame = Path().apply {
+                moveTo(f(7f), f(4f))
+                lineTo(f(17f), f(4f))
+                quadraticBezierTo(f(20f), f(4f), f(20f), f(7f))
+                lineTo(f(20f), f(17f))
+                quadraticBezierTo(f(20f), f(20f), f(17f), f(20f))
+                lineTo(f(7f), f(20f))
+                quadraticBezierTo(f(4f), f(20f), f(4f), f(17f))
+                lineTo(f(4f), f(7f))
+                quadraticBezierTo(f(4f), f(4f), f(7f), f(4f))
+                close()
+            }
+            drawPath(frame, color, style = strokeStyle)
+            // 左上小圆(太阳)
+            drawCircle(color, radius = f(1.6f), center = off(9f, 9f))
+            // 山形折线
+            val mountain = Path().apply {
+                moveTo(f(4.5f), f(17.5f))
+                lineTo(f(10f), f(12f))
+                lineTo(f(13.5f), f(15.5f))
+                lineTo(f(16f), f(13f))
+                lineTo(f(19.8f), f(16.8f))
+            }
+            drawPath(mountain, color, style = strokeStyle)
         }
     }
 }

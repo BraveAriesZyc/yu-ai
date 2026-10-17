@@ -16,7 +16,8 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
  *  - ⚠ send-wishes 快照式(§5.2):wishKey/text/color/icon 四字段整体入 love_message,服务端不校验
  *    wish 归属(无 wish 实体,文案字典留端上 §7.4),两设备还原靠快照字段而非字典版本
  *  - id/senderId 一律 String(§5.1,同 CoupleModels 惯例:optString 经 JSON.toString 对数字值回字符串);
- *    kind Int(1 文本悄悄话/2 心愿消息,比对常量 KIND_TEXT/KIND_WISH,渲染分支留 Store 层);
+ *    kind Int(1 文本悄悄话/2 心愿消息/3 图片消息,比对常量 KIND_TEXT/KIND_WISH/KIND_IMAGE,
+ *    渲染分支留 Store 层);
  *    wishKey/color/icon 可空,皆以空串表示缺省(CoupleModels 同款惯例),color 为 hex、icon 为 icon name
  *    字符串——Color/AppIconType 不可 JSON 序列化(§7.6 铁律⑥),映射留 Store 层;
  *    createTime 为 epoch 毫秒(yudao LocalDateTime 序列化),0 = 服务端未回传
@@ -47,6 +48,12 @@ internal data class MessageSendWishesReq(
         .put("icon", icon)
 }
 
+/** 发图片消息(message/send-image,kind=3,content 列存 URL,≤512,M10) */
+internal data class MessageSendImageReq(val imageUrl: String) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("imageUrl", imageUrl)
+}
+
 // ---------- 响应模型 ----------
 
 /**
@@ -65,9 +72,11 @@ internal data class MessageInfo(
 ) {
     companion object {
 
-        /** kind 值域(§4 love_message.kind:1 文本悄悄话 / 2 心愿消息);比对常量,渲染枚举映射留 Store 层 */
+        /** kind 值域(§4 love_message.kind:1 文本悄悄话 / 2 心愿消息 / 3 图片消息);
+         *  比对常量,渲染枚举映射留 Store 层 */
         const val KIND_TEXT = 1
         const val KIND_WISH = 2
+        const val KIND_IMAGE = 3
 
         /** id 为空判无效条目返回 null(listFrom 逐条跳过,不整体失败) */
         fun from(data: JSONObject?): MessageInfo? {

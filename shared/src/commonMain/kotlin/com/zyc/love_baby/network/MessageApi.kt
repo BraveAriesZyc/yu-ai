@@ -1,6 +1,7 @@
 package com.zyc.love_baby.network
 
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.data.model.MessageSendImageReq
 import com.zyc.love_baby.data.model.MessageSendReq
 import com.zyc.love_baby.data.model.MessageSendWishesReq
 
@@ -33,6 +34,7 @@ internal object MessageApi {
     private const val PATH_WISH_LIST = "/love/message/wish-list"
     private const val PATH_SEND = "/love/message/send"
     private const val PATH_SEND_WISHES = "/love/message/send-wishes"
+    private const val PATH_SEND_IMAGE = "/love/message/send-image"
 
     /**
      * 增量拉取:data 为数组(ApiResult.Ok.dataArray),服务端恒升序返回。
@@ -68,4 +70,8 @@ internal object MessageApi {
             isPost = true,
             body = MessageSendWishesReq(wishKey, text, color, icon).toJson(),
         )
+
+    /** 发图片消息(kind=3,content 列存 URL,M10):回包为落库后的单个消息 VO(供乐观替换与 lastId 推进) */
+    suspend fun sendImage(pager: Pager, imageUrl: String): ApiResult =
+        HttpClient.request(pager, PATH_SEND_IMAGE, isPost = true, body = MessageSendImageReq(imageUrl).toJson())
 }

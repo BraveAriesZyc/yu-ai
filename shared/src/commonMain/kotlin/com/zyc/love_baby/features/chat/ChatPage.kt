@@ -8,6 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import com.tencent.kuikly.compose.coil3.rememberAsyncImagePainter
+import com.tencent.kuikly.compose.foundation.Image
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
@@ -38,12 +40,14 @@ import com.tencent.kuikly.compose.material3.pullToRefreshItem
 import com.tencent.kuikly.compose.material3.rememberPullToRefreshState
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
+import com.tencent.kuikly.compose.ui.draw.clip
 import com.tencent.kuikly.compose.ui.graphics.Brush
 import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.graphics.SolidColor
 import com.tencent.kuikly.compose.ui.input.pointer.PointerEventPass
 import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
 import com.tencent.kuikly.compose.ui.input.pointer.positionChangeIgnoreConsumed
+import com.tencent.kuikly.compose.ui.layout.ContentScale
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
@@ -53,6 +57,7 @@ import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
+import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
@@ -63,8 +68,11 @@ import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.KuiklyTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
+import com.zyc.love_baby.network.ApiConfig
 import com.zyc.love_baby.network.ApiResult
+import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.ChatMsg
 import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CoupleBindState
@@ -73,6 +81,8 @@ import com.zyc.love_baby.state.MsgKind
 import com.zyc.love_baby.state.SessionStore
 import com.zyc.love_baby.state.appIconFromName
 import com.zyc.love_baby.state.colorFromHex
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlin.math.abs
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -114,12 +124,24 @@ import kotlinx.coroutines.withTimeoutOrNull
  *  - 拖拽收键盘(2026-10-16 Q3):键盘开着手指拖列表竖向越 touchSlop 即 clearFocus(微信语义),
  *    列表容器被动观察器不消费事件不扰原生滚动;程序化滚底无指针事件天然不误伤(LazyColumn 注释)
  *  - 下拉刷新/停留 5s 轮询/切 Tab 补拉在 ChatStore 串行(指示器不闪现);文本 500 字上限 + 3 行输入
+ *  - 图片消息(M10,预览确认流程):输入行图片按钮 → 系统选图 → pickAndUpload(1080) 自动上传 →
+ *    输入条上方浮「预览条」(缩略图+✕取消+发送) → 点发送才 ChatStore.sendImage 入聊天(消息无撤回,
+ *    确认条防误发)。上传动作收口页内 pickImage(瞬态 UI 态不进 ChatStore,同 pendingSendScroll 裁决);
+ *    发送收口 ChatStore.sendImage(appendDedupe/不推游标语义单源)。图片气泡 180dp 定方 Crop(高度恒定,
+ *    LazyColumn item 不随加载跳动),点击开全屏大图浮层(黑 0.9+Fit+点击关闭;F6:浮层开着列表
+ *    userScrollEnabled=false + MainPager 横滑经 onOverlayChange 一并关——遮罩只吃 tap 不吃拖拽)
  *  - ⚠ partnerReply 本地假回复已随 M3 整体移除,TA 的消息靠 message/list 增量拉取(§7.4)
  */
 private val quickStickers = listOf("贴贴", "mua~", "想你了", "举高高", "晚安鸭")
 
 /** 文本长度上限(与服务端 AppMessageSendReqVO @Length(max=500) 对齐;maxLength 原生层拒绝 + take 兜底) */
 private const val INPUT_MAX_LENGTH = 500
+
+/** 聊天图片上传压缩上限(maxEdge,与 M9 相册同口径 1080):气泡/预览条按方图展示,服务端 content 列 ≤512 存 URL */
+private const val CHAT_IMAGE_MAX_EDGE = 1080
+
+/** 图片气泡定方边长(180dp):高度恒定 → LazyColumn item 高度不随图片加载变化不跳;与输入区上限协调 */
+private val IMAGE_BUBBLE_SIZE = 180.dp
 
 /**
  * TA 气泡底:同色渐变(视觉=纯白,AppAvatar 同款先例)。⚠ 必须与我方 brandBrush 同走
@@ -132,13 +154,26 @@ private const val INPUT_MAX_LENGTH = 500
 private val taBubbleBrush = Brush.linearGradient(listOf(AppTheme.CardBg, AppTheme.CardBg))
 
 @Composable
-fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageVisible: Boolean = false) {
+fun ChatPage(
+    pager: Pager,
+    myNickname: String = "",
+    myAvatar: String = "",
+    pageVisible: Boolean = false,
+    onOverlayChange: (Boolean) -> Unit = {},
+) {
     val theme = ThemeStore.current
     var inputText by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
     var loadFailed by remember { mutableStateOf(false) }
     var keyboardHeight by remember { mutableStateOf(0f) } // 键盘高度(dp,KeyboardParams.height),0 = 收起
+    // M10 图片消息三态(瞬态 UI 态留页内,同 pendingSendScroll 裁决;ChatStore 只收最终发送):
+    // imageUploading 选图上传中(拦重复点图片按钮/发送);pendingImageUrl 预览条 URL(空串=无待发图,
+    // ✕ 取消/发送成功即清);imagePreviewUrl 全屏大图预览 URL(空串=关,开着时列表滚动+MainPager
+    // 横滑一并关,F6)
+    var imageUploading by remember { mutableStateOf(false) }
+    var pendingImageUrl by remember { mutableStateOf("") }
+    var imagePreviewUrl by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     // P3a 发送滚底标志(2026-10-16):本端发送(文本/贴纸)POST 成功置位,由 messages.size effect
@@ -179,6 +214,71 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
     // 只写原生偏移)不产生任何指针事件,天然不误伤发送/进页/贴底跟随滚底(铁律13)
     val focusManager = LocalFocusManager.current
 
+    // M10 选图+上传动作收口(MomentAddOverlay.pickImage 平移):guard 上传中 → clearFocus 收键盘 →
+    // getUser 热身(原生直传不经 HttpClient,无 401 单飞刷新,先焐热 token)→ getModule 判空降级
+    // (iOS/ohos/H5 未桥接端 toast)→ suspendCoroutine 包 pickAndUpload(maxEdge=1080)。成功且仍处
+    // 登录+BOUND 才落 pendingImageUrl(防登出/解绑竞态晚到回包写回脏态);已有待发图时再点 = 重选覆盖
+    fun pickImage() {
+        if (imageUploading) return
+        focusManager.clearFocus()
+        imageUploading = true
+        scope.launch {
+            UserApi.getUser(pager)
+            var failMsg = "上传失败,请重试"
+            val fileUrl = try {
+                val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+                if (module == null) {
+                    failMsg = "当前端暂不支持选择照片"
+                    null
+                } else {
+                    suspendCoroutine<String?> { cont ->
+                        module.pickAndUpload(
+                            ApiConfig.url(pager, "/infra/file/upload"),
+                            SessionStore.accessToken,
+                            CHAT_IMAGE_MAX_EDGE,
+                        ) { result ->
+                            val code = result?.optInt("code", -1) ?: -1
+                            val data = result?.optString("data").orEmpty()
+                            if (code == 0 && data.isNotEmpty()) {
+                                cont.resume(data)
+                            } else {
+                                result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
+                                cont.resume(null)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                null
+            }
+            imageUploading = false
+            if (fileUrl.isNullOrEmpty()) {
+                toastCouple(pager, failMsg)
+            } else if (SessionStore.userId.isNotEmpty() &&
+                CoupleStore.bindState == CoupleBindState.BOUND
+            ) {
+                pendingImageUrl = fileUrl
+            }
+        }
+    }
+
+    // M10 预览条发送:POST 成功清预览并滚底(滚底触发器同文本发送);失败 toast 保留预览图可重发
+    // (无脏数据 §7.4)。复用 sending 态:发送期间输入条 Send 钮同步 loading,视觉一致
+    fun sendPendingImage() {
+        if (sending || imageUploading || pendingImageUrl.isEmpty()) return
+        sending = true
+        scope.launch {
+            val result = ChatStore.sendImage(pager, pendingImageUrl)
+            sending = false
+            if (result is ApiResult.Ok) {
+                pendingImageUrl = ""
+                triggerSendScroll()
+            } else {
+                toastCoupleResult(pager, result)
+            }
+        }
+    }
+
     // 昵称首字(§1/§7):take(1) 按 code point,emoji 昵称不截坏;空昵称兜底「TA」/「我」。
     // 头像 URL(文件服务里程碑):我方走 MainPager 下发的 profile.avatar,TA 方走 CoupleStore
     // couple/get 回查;空走首字形态(AppAvatar 内部分支,加载中背景圆透出占位)
@@ -196,9 +296,21 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
     LaunchedEffect(SessionStore.userId, CoupleStore.bindState) {
         if (SessionStore.userId.isEmpty() || CoupleStore.bindState != CoupleBindState.BOUND) {
             loadFailed = false
+            pendingImageUrl = "" // M10 登出/解绑清场:待发图与大图浮层一并弃
+            imagePreviewUrl = ""
             return@LaunchedEffect
         }
         loadFailed = ChatStore.loadInitial(pager) !is ApiResult.Ok
+    }
+    // M10 切 Tab 关全屏大图浮层(pageVisible=false 即离页):全屏黑浮层跨 Tab 驻留不可见且拦手势;
+    // 预览条(非全屏)保留——上传协程属常驻组合的 rememberCoroutineScope,切 Tab 不中断,回来即绪
+    LaunchedEffect(pageVisible) {
+        if (!pageVisible) imagePreviewUrl = ""
+    }
+    // M10 浮层开合上报 MainPager(横滑切 Tab 必须随浮层关:遮罩只吃 tap 不吃拖拽,不接线则
+    // 预览开着横滑会切 Tab、黑浮层驻留聊天 Tab 不可见,F6)
+    LaunchedEffect(imagePreviewUrl) {
+        onOverlayChange(imagePreviewUrl.isNotEmpty())
     }
     // 下拉刷新(§7.4):官方 pullToRefreshItem(须为 LazyColumn 首个 item),刷新走 loadIncrement;
     // Store 层在飞串行等待(F13),指示器到真正拉完才收起;成功即消除失败态
@@ -345,6 +457,8 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
                         }
                     },
                 state = listState,
+                // M10 F6:全屏大图浮层开着时关列表滚动(遮罩只吃 tap 不吃拖拽,拖列表会穿透到浮层下层)
+                userScrollEnabled = imagePreviewUrl.isEmpty(),
             ) {
                 pullToRefreshItem(
                     state = pullState,
@@ -389,12 +503,13 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
                 itemsIndexed(
                     messages,
                     key = { _, m -> m.id }, // appendDedupe 保证唯一
-                    // contentType 三分(2026-10-16 Q2):text 池按 mine/TA 隔离,气泡视图槽位
-                    // 永不跨我方/对方复用——即便未来重新引入 color 路径背景,池子隔离也兜底
-                    // (每池上限 7,聊天量级无感)
+                    // contentType 五池(2026-10-16 Q2 起隔离;M10 加 image-mine/image-ta):wish/图片/文本
+                    // 各自再按 mine/TA 隔离,气泡视图槽位永不跨池复用——即便未来引入 color 路径背景或
+                    // 图片气泡做 mine/TA 分化,池子隔离也兜底(每池上限 7,聊天量级无感)
                     contentType = { _, m ->
                         when {
                             m.kind == MsgKind.WISH -> "wish"
+                            m.kind == MsgKind.IMAGE -> if (m.isMine) "image-mine" else "image-ta"
                             m.isMine -> "text-mine"
                             else -> "text-ta"
                         }
@@ -453,6 +568,15 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
                             when (msg.kind) {
                                 MsgKind.TEXT -> TextBubble(msg.text, mine = msg.isMine, groupTail = groupTail, theme = theme)
                                 MsgKind.WISH -> WishBubble(msg, theme = theme) // 卡片语言,不吃撇角
+                                // M10 图片气泡:定方 Crop 不吃撇角;点击开全屏大图(先收键盘)
+                                MsgKind.IMAGE -> ImageBubble(
+                                    msg.imageUrl,
+                                    mine = msg.isMine,
+                                    onClick = {
+                                        focusManager.clearFocus()
+                                        imagePreviewUrl = msg.imageUrl
+                                    },
+                                )
                             }
                             if (msg.isMine) {
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -515,6 +639,18 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
                 }
             }
 
+            // M10 图片预览条(预览确认流程,消息无撤回防误发):上传中/有待发图时显示在输入条上方,
+            // 随输入行键盘避让 padding 整体顶起(普通 Column 节点,无需特殊处理)
+            if (imageUploading || pendingImageUrl.isNotEmpty()) {
+                ChatImagePreviewBar(
+                    url = pendingImageUrl,
+                    uploading = imageUploading,
+                    sending = sending,
+                    onCancel = { if (!imageUploading) pendingImageUrl = "" },
+                    onSend = { sendPendingImage() },
+                )
+            }
+
             // 输入行(F2/F7 软键盘避让):keyboardHeightChange 回传键盘高度(dp)。⚠ 原生 Android11PlusKeyboardWatcher
             // 的 height = imeInsets.bottom - navigationBars.bottom(反编译核实)——不含导航栏区域,
             // 键盘实际顶边比它高出一条 navBar,故须再叠加 navBarSafePaddingDp() 补齐,否则输入框
@@ -533,6 +669,16 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
                     ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // M10 图片入口:36dp 轻量 ghost 钮(与 44dp brand 渐变发送钮区分主次);
+                // guard 上传中拦重复点击(pickImage 内也拦,双保险)
+                Box(
+                    modifier = Modifier.size(36.dp)
+                        .clickable { if (!imageUploading) pickImage() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppIcon(AppIconType.Image, AppTheme.TextSecondary, Modifier.size(20.dp))
+                }
+                Spacer(modifier = Modifier.width(6.dp))
                 Box(
                     modifier = Modifier.weight(1f)
                         .background(AppTheme.CardBg, RoundedCornerShape(22.dp)),
@@ -583,6 +729,13 @@ fun ChatPage(pager: Pager, myNickname: String = "", myAvatar: String = "", pageV
                     loading = sending,
                 )
             }
+        }
+
+        // M10 全屏大图预览:挂 Column 之后(最后子节点)自然盖住含输入条的全部内容(微信同款);
+        // 列表滚动已随 imagePreviewUrl 关闭(userScrollEnabled),MainPager 横滑经 onOverlayChange
+        // 一并关(F6:遮罩只吃 tap 不吃拖拽);切 Tab 由 pageVisible effect 收口
+        if (imagePreviewUrl.isNotEmpty()) {
+            ChatImagePreviewOverlay(url = imagePreviewUrl, onDismiss = { imagePreviewUrl = "" })
         }
     }
 }
@@ -769,6 +922,122 @@ private fun WishBubble(msg: ChatMsg, theme: KuiklyTheme) {
             if (msg.isMine) "等 TA 来兑现哦" else "悄悄记下,去帮 TA 兑现吧",
             color = AppTheme.TextTertiary,
             fontSize = 10.sp,
+        )
+    }
+}
+
+/**
+ * ImageBubble — 图片消息气泡(M10):180dp 定方 Crop 圆角(高度恒定 → LazyColumn item 高度不随
+ * 图片加载变化不跳,槽位复用稳定);浅灰占位底恒驻(加载中/失败透出,MomentCard 同色同思路)。
+ * ⚠ 不做 mine/TA 背景分化(mine 参数仅留签名占位):占位底恒 background(color=) 单值,
+ * 规避 Q2 color/brush 重载混用坑;不吃 TextBubble 的撇角(图片无方向语义)
+ */
+@Composable
+private fun ImageBubble(url: String, mine: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .background(Color(0xFFF5F6FA), RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .size(IMAGE_BUBBLE_SIZE),
+    ) {
+        Image(
+            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
+            painter = rememberAsyncImagePainter(url),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+        )
+    }
+}
+
+/**
+ * ChatImagePreviewBar — 待发图片预览条(M10 预览确认流程):选图→自动上传→此处确认→点发送才入
+ * 聊天(消息无撤回,防误发)。缩略图 56dp 方(浅灰底恒驻;上传中黑 28% 蒙层+「上传中…」,
+ * MomentAddOverlay 同款);✕ 取消仅非上传中可点(上传不可中断,已传文件留档 infra_file 同 D-12);
+ * 发送胶囊 uploading/sending 降透明禁用(guard 另在 sendPendingImage)。背景与 clickable 同节点(铁律⑦)
+ */
+@Composable
+private fun ChatImagePreviewBar(
+    url: String,
+    uploading: Boolean,
+    sending: Boolean,
+    onCancel: () -> Unit,
+    onSend: () -> Unit,
+) {
+    val theme = ThemeStore.current
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = AppTheme.PageHPadding, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier.size(56.dp)
+                .background(Color(0xFFF5F6FA), RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (url.isNotEmpty()) {
+                Image(
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                    painter = rememberAsyncImagePainter(url),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            if (uploading) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("上传中…", color = Color.White, fontSize = 11.sp)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Text("发出后不可撤回", color = AppTheme.TextTertiary, fontSize = 11.sp)
+        Spacer(modifier = Modifier.weight(1f))
+        // ✕ 取消:清预览条
+        Box(
+            modifier = Modifier.size(30.dp)
+                .clickable(onClick = onCancel),
+            contentAlignment = Alignment.Center,
+        ) {
+            AppIcon(AppIconType.Close, AppTheme.TextTertiary, Modifier.size(18.dp))
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        // 发送胶囊:上传中/发送中降透明禁用
+        Box(
+            modifier = Modifier.background(theme.brandBrush, RoundedCornerShape(17.dp))
+                .clickable(enabled = !uploading && !sending) { onSend() }
+                .padding(horizontal = 18.dp, vertical = 8.dp),
+        ) {
+            Text(
+                "发送",
+                color = Color.White.copy(alpha = if (uploading || sending) 0.6f else 1f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+/**
+ * ChatImagePreviewOverlay — 全屏大图预览浮层(M10, MomentPreviewOverlay 轻量版:无配文/无删除):
+ * 黑 0.9 全屏 + ContentScale.Fit + 点击任意处关闭。挂 ChatPage 根 Box 内 Column 之后
+ * (自然盖住含输入条的全部内容);打开期间列表滚动与 MainPager 横滑均已关(F6)
+ */
+@Composable
+private fun ChatImagePreviewOverlay(url: String, onDismiss: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.9f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            modifier = Modifier.fillMaxSize(),
+            painter = rememberAsyncImagePainter(url),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
         )
     }
 }

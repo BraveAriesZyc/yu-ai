@@ -182,12 +182,15 @@ internal fun MainPageImpl(pager: BasePager) {
     var logoutSubmitting by remember { mutableStateOf(false) }
     // 头像上传进行中(文件服务里程碑):浮层头像行文案切换 + 拦重复发起(原生模块 inFlight 外的 UI 层判重)
     var avatarUploading by remember { mutableStateOf(false) }
+    // M10 聊天页全屏大图预览开合(ChatPage onOverlayChange 上报):并入 overlayActive 关横滑
+    var chatOverlayActive by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     // 浮层开着时关闭背景滚动(横滑 Pager + 当前页列表):Kuikly 浮层遮罩的 clickable 只吃
     // tap 不吃拖拽,背景原生滚动容器仍收 down/move(2026-10-17 真机实证「浮层开着还能滚
     // 背景/横滑切页」)——LazyColumn/LazyVerticalGrid/HorizontalPager 均有官方 userScrollEnabled
     // 开关,浮层任一开着即全关,是最干净的阻断通道(遮罩拦截方案在 Kuikly 原生视图层不成立)
-    val overlayActive = showUnbindConfirm || showNicknameEdit || showLogoutConfirm || showMoodManage
+    val overlayActive =
+        showUnbindConfirm || showNicknameEdit || showLogoutConfirm || showMoodManage || chatOverlayActive
     // Tab 跳转统一走 scrollToPage 瞬时直达(底栏点切/首页快捷入口/心情页「去悄悄话」),胶囊由
     // pillPosition(=targetPage 瞬移)驱动零动画帧,见 AppBottomBar.SlidingPill。⚠ 勿改回
     // animateScrollToPage(2026-10-16 真机「底栏异常
@@ -325,6 +328,7 @@ internal fun MainPageImpl(pager: BasePager) {
                     myNickname = profile?.nickname.orEmpty(),
                     myAvatar = profile?.avatar.orEmpty(),
                     pageVisible = selectedTab == 3,
+                    onOverlayChange = { chatOverlayActive = it },
                 )
                 else -> MinePage(
                     pager = pager,
