@@ -163,7 +163,10 @@ internal fun AuthCard(content: @Composable ColumnScope.() -> Unit) {
 
 /**
  * 输入行:白底圆角行内嵌同包 TextField;可带尾部小件(如「获取验证码」)。
- * autoFocus 一律 false:Gate 出现即自动弹键盘会顶起整屏(§7.3 反馈走 toast,不依赖自动聚焦)
+ * autoFocus 一律 false:Gate 出现即自动弹键盘会顶起整屏(§7.3 反馈走 toast,不依赖自动聚焦)。
+ * 固定高 48dp 挂在行容器上、TextField 自适应内容行高由 CenterVertically 居中——原生
+ * EditText/TextArea gravity 恒 TOP|START,固定高度压在 TextField 上文字会顶到上缘
+ * (全仓输入框统一此「容器定高 + 内容居中」模式,BindInputField 同款)
  */
 @Composable
 internal fun AuthFieldCard(
@@ -176,12 +179,13 @@ internal fun AuthFieldCard(
 ) {
     Row(
         modifier = modifier.fillMaxWidth()
+            .height(48.dp)
             .background(AppTheme.CardBg, RoundedCornerShape(14.dp))
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextField(
-            modifier = Modifier.weight(1f).height(48.dp),
+            modifier = Modifier.weight(1f),
             value = value,
             onValueChange = onValueChange,
             placeholder = placeholder,

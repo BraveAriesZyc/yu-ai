@@ -160,7 +160,10 @@ private fun BindModeChip(
 }
 
 /**
- * 输入行:浅灰底圆角行内嵌同包 TextField(与白卡区分);autoFocus 一律 false,防面板一出现就弹键盘
+ * 输入行:浅灰底圆角行内嵌同包 TextField(与白卡区分);autoFocus 一律 false,防面板一出现就弹键盘。
+ * 固定高 48dp 挂在行容器上、TextField 自适应内容行高由 CenterVertically 居中——原生 EditText/TextArea
+ * gravity 恒 TOP|START(KRTextAreaView 硬编码 setGravity(51),textAlign 属性只改水平位),固定高度
+ * 直接压在 TextField 上会把文字/placeholder 顶到上缘(全仓输入框统一此「容器定高 + 内容居中」模式)
  */
 @Composable
 internal fun BindInputField(
@@ -172,12 +175,13 @@ internal fun BindInputField(
 ) {
     Row(
         modifier = modifier.fillMaxWidth()
+            .height(48.dp)
             .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextField(
-            modifier = Modifier.weight(1f).height(48.dp),
+            modifier = Modifier.weight(1f),
             value = value,
             onValueChange = onValueChange,
             placeholder = placeholder,

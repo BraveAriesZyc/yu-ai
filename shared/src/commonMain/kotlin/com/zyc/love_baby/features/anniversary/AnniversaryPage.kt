@@ -35,6 +35,7 @@ import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.text.input.KeyboardType
+import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.Dp
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -402,34 +403,36 @@ private fun AnniversaryAddOverlay(pager: Pager, onDismiss: () -> Unit) {
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
-            // 日期三段(数字键盘;全部 autoFocus=false 防开浮层即弹键盘)
+            // 日期三段(数字键盘;全部 autoFocus=false 防开浮层即弹键盘):
+            // 单位字「年/月/日」常驻后缀 + 示例数字 hint,客户一眼可读(替代隐晦的 yyyy/MM/dd)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AnnivDateField(
                     value = year,
                     onValueChange = { year = it.filter(Char::isDigit).take(4) },
-                    hint = "yyyy",
-                    width = 64.dp,
+                    hint = "2024",
+                    width = 58.dp,
                     maxLen = 4,
                     keyboardHeightChange = onKeyboardHeightChange,
                 )
-                DateSlash()
+                DateUnit("年")
                 AnnivDateField(
                     value = month,
                     onValueChange = { month = it.filter(Char::isDigit).take(2) },
-                    hint = "MM",
-                    width = 44.dp,
+                    hint = "8",
+                    width = 40.dp,
                     maxLen = 2,
                     keyboardHeightChange = onKeyboardHeightChange,
                 )
-                DateSlash()
+                DateUnit("月")
                 AnnivDateField(
                     value = day,
                     onValueChange = { day = it.filter(Char::isDigit).take(2) },
-                    hint = "dd",
-                    width = 44.dp,
+                    hint = "8",
+                    width = 40.dp,
                     maxLen = 2,
                     keyboardHeightChange = onKeyboardHeightChange,
                 )
+                DateUnit("日")
             }
             Spacer(modifier = Modifier.height(10.dp))
             // 重复类型胶囊(BindModeChips 同视觉,本域私有不复用 couple 组件)
@@ -447,7 +450,7 @@ private fun AnniversaryAddOverlay(pager: Pager, onDismiss: () -> Unit) {
     }
 }
 
-/** 输入行(浅灰底圆角,BindInputField 同视觉;键盘回调透传——浮层避让靠任一聚焦行上报) */
+/** 输入行(浅灰底圆角,BindInputField 同视觉;键盘回调透传——浮层避让靠任一聚焦行上报)。固定高挂行容器、TextField 自适应行高居中(原生 gravity 恒 TOP|START) */
 @Composable
 private fun AnnivInputRow(
     value: String,
@@ -457,12 +460,13 @@ private fun AnnivInputRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth()
+            .height(48.dp)
             .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextField(
-            modifier = Modifier.weight(1f).height(48.dp),
+            modifier = Modifier.weight(1f),
             value = value,
             onValueChange = onValueChange,
             placeholder = placeholder,
@@ -476,7 +480,9 @@ private fun AnnivInputRow(
 
 /**
  * 日期小段输入(数字键盘;maxLength 原生层拒绝超限输入 + take 截断双保险,BindInputField
- * 无键盘回调参数故本域自建;background 挂在 Box 包装层,TextField 透底)
+ * 无键盘回调参数故本域自建;background 挂在 Box 包装层,TextField 透底)。固定高 44dp 挂
+ * 外层 Box + contentAlignment=Center 居中(TextField 自带固定高度会被原生 TOP|START gravity
+ * 顶到上缘),数字水平居中走 TextStyle.textAlign(CoreTextField 会映射到原生 textAlign)
  */
 @Composable
 private fun AnnivDateField(
@@ -489,31 +495,36 @@ private fun AnnivDateField(
 ) {
     Box(
         modifier = Modifier.width(width)
+            .height(44.dp)
             .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
         TextField(
-            modifier = Modifier.fillMaxWidth().height(44.dp).maxLength(maxLen),
+            modifier = Modifier.fillMaxWidth().maxLength(maxLen),
             value = value,
             onValueChange = onValueChange,
             placeholder = hint,
             placeholderColor = AppTheme.TextTertiary,
             autoFocus = false,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 15.sp),
+            textStyle = TextStyle(
+                color = AppTheme.TextPrimary,
+                fontSize = 15.sp,
+                textAlign = TextAlign.Center,
+            ),
             keyboardHeightChange = keyboardHeightChange,
         )
     }
 }
 
-/** 日期段分隔符(独立小组件防三处复制) */
+/** 日期段单位后缀(「年/月/日」常驻可读,替代隐晦的 yyyy/MM/dd;示例数字见各段 hint) */
 @Composable
-private fun DateSlash() {
+private fun DateUnit(text: String) {
     Text(
-        "/",
-        color = AppTheme.TextTertiary,
-        fontSize = 14.sp,
-        modifier = Modifier.padding(horizontal = 6.dp),
+        text,
+        color = AppTheme.TextSecondary,
+        fontSize = 13.sp,
+        modifier = Modifier.padding(horizontal = 4.dp),
     )
 }
 
