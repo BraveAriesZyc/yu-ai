@@ -112,6 +112,7 @@ internal fun MinePage(
                         iconTint = Color(0xFFFF9A56),
                         iconBg = Color(0xFFFFF1E8),
                         title = "纪念日提醒",
+                        onClick = { openAnniversaryList(pager) }, // M5:接纪念日独立页(原死菜单项)
                     )
                     AppMenuDivider()
                     AppMenuRow(
@@ -182,6 +183,18 @@ private fun openWishTimeline(pager: Pager) {
     try {
         pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
             .openPage("wishTimeline", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/**
+ * openAnniversaryList — 路由打开纪念日页(新 Activity 压栈,closePage/系统返回即回)
+ * 事件回调里模块已就绪(didInit 之后),acquireModule 安全(openWishTimeline 同款)
+ */
+private fun openAnniversaryList(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("anniversaryList", JSONObject())
     } catch (_: Exception) {
     }
 }

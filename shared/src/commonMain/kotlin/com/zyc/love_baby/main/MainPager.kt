@@ -38,6 +38,7 @@ import com.zyc.love_baby.network.ApiConfig
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.AuthApi
 import com.zyc.love_baby.network.UserApi
+import com.zyc.love_baby.state.AnniversaryStore
 import com.zyc.love_baby.state.ChatPushStore
 import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CoupleBindState
@@ -315,7 +316,7 @@ internal fun MainPageImpl(pager: BasePager) {
             userScrollEnabled = !overlayActive,
         ) { index ->
             when (index) {
-                0 -> HomePage(onNavigate = goTo)
+                0 -> HomePage(pager, onNavigate = goTo)
                 1 -> TodoPage(pager)
                 2 -> MoodPage(pager, onGoChat = goChat, onOpenManage = openMoodManage, listScrollEnabled = !overlayActive)
                 3 -> ChatPage(
@@ -419,6 +420,7 @@ internal fun MainPageImpl(pager: BasePager) {
             } else {
                 CoupleStore.reset()
                 TodoStore.reset()
+                AnniversaryStore.reset()
                 ChatStore.reset()
                 MoodStore.reset()
             }
@@ -433,6 +435,7 @@ internal fun MainPageImpl(pager: BasePager) {
             if (CoupleStore.bindState == CoupleBindState.UNBOUND) {
                 ChatStore.reset()
                 TodoStore.reset()
+                AnniversaryStore.reset()
                 MoodStore.reset()
                 // 统计随关系清场归零(首页「在一起(天)」回 "--",我的页三项回 0)
                 StatsStore.reset()
@@ -446,6 +449,11 @@ internal fun MainPageImpl(pager: BasePager) {
                 CoupleStore.refresh(pager)
                 // 统计同步新(发消息/待办/心情后回前台即可见最新计数)
                 StatsStore.refresh(pager)
+                // 纪念日整表补拉(M5):首页第 4 列消费 AnniversaryStore,回前台即可见对端增删;
+                // 未绑定时服务端回 1_003_004_003,loadList 失败静默保留旧值(解绑清场已清空,无残留)
+                if (CoupleStore.bindState == CoupleBindState.BOUND) {
+                    AnniversaryStore.loadList(pager)
+                }
             }
         }
 
