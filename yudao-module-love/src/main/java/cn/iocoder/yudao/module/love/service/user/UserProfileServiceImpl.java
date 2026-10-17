@@ -20,11 +20,13 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 
 import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.UNAUTHORIZED;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.AUTH_LOGIN_USER_DISABLED;
+import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.USER_PROFILE_BIRTHDAY_INVALID;
 
 /**
  * 用户资料 Service 实现类
@@ -62,13 +64,29 @@ public class UserProfileServiceImpl implements UserProfileService {
     public void updateUser(AppUserProfileUpdateReqVO reqVO) {
         // §6.5 停用账号收口
         LoveUserDO user = getValidatedCurrentUser();
-        // 昵称/头像均为可选提交，仅更新非空字段（updateById 默认忽略 null 字段，天然部分更新）
-        if (reqVO.getNickname() == null && reqVO.getAvatar() == null) {
+        // 各字段均为可选提交，仅更新非 null 字段（updateById 默认忽略 null 字段，天然部分更新；
+        // signature 空串会原样写入以支持端上清空——忽略的是 null 而非空串）
+        if (reqVO.getNickname() == null && reqVO.getAvatar() == null
+                && reqVO.getSex() == null && reqVO.getBirthday() == null
+                && reqVO.getSignature() == null) {
             return;
+        }
+        // birthday 双层校验第二层：@Pattern 已挡格式，此处 LocalDate.parse 挡日历合法性
+        //（如 2026-02-30），错误语义比全局反序列化失败更准（AnniversaryServiceImpl 同款）
+        LocalDate birthday = null;
+        if (reqVO.getBirthday() != null) {
+            try {
+                birthday = LocalDate.parse(reqVO.getBirthday());
+            } catch (DateTimeParseException e) {
+                throw exception(USER_PROFILE_BIRTHDAY_INVALID);
+            }
         }
         loveUserMapper.updateById(new LoveUserDO().setId(user.getId())
                 .setNickname(reqVO.getNickname())
-                .setAvatar(reqVO.getAvatar()));
+                .setAvatar(reqVO.getAvatar())
+                .setSex(reqVO.getSex())
+                .setBirthday(birthday)
+                .setSignature(reqVO.getSignature()));
     }
 
     @Override

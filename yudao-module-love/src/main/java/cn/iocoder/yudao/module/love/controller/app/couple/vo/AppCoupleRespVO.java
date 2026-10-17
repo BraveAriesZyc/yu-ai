@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Schema(description = "用户 App - 我的情侣关系 Response VO，bind 成功与 couple/get 统一使用")
@@ -48,6 +49,15 @@ public class AppCoupleRespVO {
 
         @Schema(description = "伴侣头像", example = "https://www.iocoder.cn/1.png")
         private String avatar;
+
+        @Schema(description = "伴侣性别（0 女 / 1 男，null 未设置）", example = "0")
+        private Integer sex;
+
+        @Schema(description = "伴侣生日")
+        private LocalDate birthday;
+
+        @Schema(description = "伴侣个性签名（空串即无签名）", example = "喜欢看电影")
+        private String signature;
 
     }
 

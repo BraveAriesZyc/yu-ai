@@ -622,3 +622,35 @@ CREATE TABLE IF NOT EXISTS `love_moment_like`  (
   UNIQUE KEY `uk_moment_user`(`moment_id` ASC, `user_id` ASC) USING BTREE,
   INDEX `idx_moment_id`(`moment_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '相册瞬间点赞表（情侣业务，M15）';
+
+-- ---------------------------------------------------------------------------
+-- M16 用户详细资料（2026-10-18）：love_user 加 sex / birthday / signature 三列。
+-- M15 段同款可重放模板（information_schema + PREPARE，重放安全）；
+-- sex 语义 0=女 1=男（自建语义，与 yudao 系统字典 0=男/1=女 相反，web 端本地 MAP 同步）
+-- ---------------------------------------------------------------------------
+SET @m16_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_user' AND COLUMN_NAME = 'sex');
+SET @m16_ddl := IF(@m16_col = 0,
+    'ALTER TABLE `love_user` ADD COLUMN `sex` tinyint NULL COMMENT ''性别 0-女 1-男 NULL-未设置（与系统字典语义相反）''',
+    'SELECT 1');
+PREPARE m16_stmt FROM @m16_ddl;
+EXECUTE m16_stmt;
+DEALLOCATE PREPARE m16_stmt;
+
+SET @m16_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_user' AND COLUMN_NAME = 'birthday');
+SET @m16_ddl := IF(@m16_col = 0,
+    'ALTER TABLE `love_user` ADD COLUMN `birthday` date NULL COMMENT ''生日''',
+    'SELECT 1');
+PREPARE m16_stmt FROM @m16_ddl;
+EXECUTE m16_stmt;
+DEALLOCATE PREPARE m16_stmt;
+
+SET @m16_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_user' AND COLUMN_NAME = 'signature');
+SET @m16_ddl := IF(@m16_col = 0,
+    'ALTER TABLE `love_user` ADD COLUMN `signature` varchar(100) NULL COMMENT ''个性签名''',
+    'SELECT 1');
+PREPARE m16_stmt FROM @m16_ddl;
+EXECUTE m16_stmt;
+DEALLOCATE PREPARE m16_stmt;

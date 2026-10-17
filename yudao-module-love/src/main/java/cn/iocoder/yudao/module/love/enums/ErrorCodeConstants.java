@@ -112,4 +112,8 @@ public interface ErrorCodeConstants {
      */
     ErrorCode WISH_DELETE_FORBIDDEN = new ErrorCode(1_003_009_001, "只能删除自己创建的心愿");
 
+    // ========== 用户资料（1_003_010）==========
+
+    ErrorCode USER_PROFILE_BIRTHDAY_INVALID = new ErrorCode(1_003_010_000, "生日格式非法");
+
 }

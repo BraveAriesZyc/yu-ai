@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.love.controller.admin.user.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Schema(description = "管理后台 - C 端用户 Response VO")
@@ -20,6 +21,15 @@ public class LoveUserRespVO {
 
     @Schema(description = "用户头像", example = "https://www.iocoder.cn/1.png")
     private String avatar;
+
+    @Schema(description = "性别（0 女 / 1 男，null 未设置——与系统字典语义相反）", example = "0")
+    private Integer sex;
+
+    @Schema(description = "生日")
+    private LocalDate birthday;
+
+    @Schema(description = "个性签名")
+    private String signature;
 
     @Schema(description = "帐号状态，参见 CommonStatusEnum 枚举类（0 启用 / 1 停用）",
             requiredMode = Schema.RequiredMode.REQUIRED, example = "0")

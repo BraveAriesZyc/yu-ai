@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -82,5 +83,23 @@ public class LoveUserDO extends BaseDO {
      * 解绑重绑新 couple 的消息 id 必大于旧游标，语义自然（D-11 口径）
      */
     private Long chatReadCursor;
+    /**
+     * 性别
+     *
+     * 0 女 / 1 男 / NULL 未设置（love 自建语义，与 yudao 系统用户字典 0=男/1=女 相反，勿混用）
+     */
+    private Integer sex;
+    /**
+     * 生日
+     *
+     * DATE 列自动映射 LocalDate（LoveAnniversaryDO.annivDate 同款）；端上据此算年龄与星座
+     */
+    private LocalDate birthday;
+    /**
+     * 个性签名
+     *
+     * 空串即「无签名」（app 端清空语义：显式提交空串落 ''，updateById 忽略的是 null 非空串）
+     */
+    private String signature;
 
 }

@@ -300,6 +300,9 @@ public class CoupleServiceImpl implements CoupleService {
                 .id(partner != null ? partner.getId() : null)
                 .nickname(partner != null ? partner.getNickname() : null)
                 .avatar(partner != null ? partner.getAvatar() : null)
+                .sex(partner != null ? partner.getSex() : null)
+                .birthday(partner != null ? partner.getBirthday() : null)
+                .signature(partner != null ? partner.getSignature() : null)
                 .build();
         return AppCoupleRespVO.builder()
                 .id(couple.getId())
