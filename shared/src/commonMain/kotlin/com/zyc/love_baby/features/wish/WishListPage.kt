@@ -158,6 +158,18 @@ internal fun WishListPage(pager: Pager) {
     }
     val myId = SessionStore.userId
 
+    // 键盘弹起自动滚到底(2026-10-18 真机反馈「键盘顶起输入条和清单叠一起没边距」):键盘
+    // 盖住下半屏后,当前视口的清单尾项直接紧贴输入条顶缘,无呼吸观感=叠一起;滚到底让尾部
+    // Spacer 的 20dp 呼吸落在输入条正上方(点输入框=准备添加,看尾部活跃清单语义自洽)。
+    // 收起不滚(保持阅读位置);delay 一拍等键盘动画与 Spacer 随 keyboardHeight 长高后的
+    // 布局落地,过早 scrollToItem 会撞旧布局再被布局推移吞掉
+    LaunchedEffect(keyboardHeight) {
+        if (keyboardHeight <= 0f) return@LaunchedEffect
+        delay(150)
+        val count = listState.layoutInfo.totalItemsCount
+        if (count > 1) listState.scrollToItem(count - 1)
+    }
+
     // D-19f 分层排序:进行中在前(保持服务端序 = id 升序),已完成沉底按 doneTime 倒序
     // (doneTime=0 兜底排最后)
     val display = wishes.filter { !it.done } + wishes.filter { it.done }.sortedByDescending { it.doneTime }
@@ -370,14 +382,16 @@ internal fun WishListPage(pager: Pager) {
                         onDelete = { deleteTarget = wish },
                     )
                 }
-                // 尾部 Spacer:给悬浮添加条让位(TodoPage 同款闭键常数 150 = 输入条上缘 86+44 再 +20
-                // 呼吸;键盘弹起同步长高,滚底的新条目完整落在键盘/输入条上方)
+                // 尾部 Spacer:给悬浮添加条让位(独立页自持几何,2026-10-18 修——原照抄 TodoPage
+                // 的 86/150 底栏让位常数,本页是 @Page 二级页无浮岛底栏,收起时输入条悬空离底
+                // 一大截;现收起 = 条 bottom 12+条高 44+呼吸 20=76;键盘弹起同步长高 =
+                // 键盘高+navBar+12+44+呼吸 20=76,滚底的尾项完整落在键盘/输入条上方)
                 item {
                     Spacer(
                         modifier = Modifier.height(
                             max(
-                                150.dp + navBarSafePaddingDp(),
-                                keyboardHeight.dp + navBarSafePaddingDp() + 70.dp,
+                                76.dp + navBarSafePaddingDp(),
+                                keyboardHeight.dp + navBarSafePaddingDp() + 76.dp,
                             ),
                         ),
                     )
@@ -408,14 +422,16 @@ internal fun WishListPage(pager: Pager) {
             )
         }
 
-        // 底部添加条(悬浮浮岛;软键盘避让 2026-10-16 TodoPage 定稿几何:键盘 height 不含导航栏
-        // 区域,须叠加 navBarSafePaddingDp 补齐;弹起 bottom = 键盘高+navBar+12,收起恢复浮岛常数)
+        // 底部添加条(悬浮浮岛;2026-10-18 修独立页几何——原照抄 TodoPage 的 86dp 收起让位,
+        // 那是给 MainPager 浮岛底栏留的,本页为 @Page 二级页无底栏,收起应贴底只留呼吸 12dp
+        // +系统导航栏安全区;键盘避让公式保留 TodoPage 定稿:键盘 height 不含导航栏区域,
+        // 须叠加 navBarSafePaddingDp 补齐,弹起 bottom = 键盘高+navBar+12)
         Row(
             modifier = Modifier.align(Alignment.BottomCenter)
                 .padding(horizontal = AppTheme.PageHPadding)
                 .padding(
                     bottom = max(
-                        86.dp + navBarSafePaddingDp(),
+                        12.dp + navBarSafePaddingDp(),
                         keyboardHeight.dp + navBarSafePaddingDp() + 12.dp,
                     ),
                 )
