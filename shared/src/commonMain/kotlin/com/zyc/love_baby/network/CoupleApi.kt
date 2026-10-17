@@ -21,6 +21,7 @@ internal object CoupleApi {
     private const val PATH_CREATE_INVITE = "/love/couple/create-invite"
     private const val PATH_BIND = "/love/couple/bind"
     private const val PATH_GET = "/love/couple/get"
+    private const val PATH_ONLINE = "/love/couple/online"
     private const val PATH_UNBIND = "/love/couple/unbind"
 
     suspend fun createInvite(pager: Pager): ApiResult =
@@ -40,4 +41,13 @@ internal object CoupleApi {
 
     suspend fun unbind(pager: Pager): ApiResult =
         HttpClient.request(pager, PATH_UNBIND, isPost = true)
+
+    /**
+     * 伴侣在线状态(M13,仅聊天页停留期间 5s 轮询):回包 data 为对象 {"partnerOnline":bool}。
+     * ⚠ 对象形态契约——服务端禁改回 CommonResult<Boolean> 标量(toOk 只分派对象/数组,标量落空
+     * 对象,M11 unread 同款);未绑定 1_003_004_003 走普通 BizError 通道由调用方静默
+     * (successBizCodes 放行是 couple/get 的状态信号专用,不外扩)
+     */
+    suspend fun getOnline(pager: Pager): ApiResult =
+        HttpClient.request(pager, PATH_ONLINE, isPost = false)
 }

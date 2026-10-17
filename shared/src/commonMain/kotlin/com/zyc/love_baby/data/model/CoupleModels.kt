@@ -121,6 +121,26 @@ internal data class CoupleInfo(
     }
 }
 
+/**
+ * 伴侣在线状态(couple/online 响应,M13,D-18):true = 对方 WS 内存会话表有任一在线连接;
+ * false = 离线(或 websocket 关闭/未桥接端恒 false 的渐进降级)。⚠ 对象形态契约——服务端
+ * 禁改回 CommonResult<Boolean> 标量(端上 HttpClient toOk 标量落空对象,M11 unread 同款)
+ */
+internal data class CoupleOnlineInfo(
+    val partnerOnline: Boolean,
+) {
+    companion object {
+        /**
+         * 缺 partnerOnline 键判无效回包返回 null(调用方保留现值);false 合法(离线)必须
+         * 区分于缺字段——has 守卫在前,optBoolean 缺省值只兜 null/类型意外
+         */
+        fun from(data: JSONObject?): CoupleOnlineInfo? {
+            if (data == null || !data.has("partnerOnline")) return null
+            return CoupleOnlineInfo(partnerOnline = data.optBoolean("partnerOnline", false))
+        }
+    }
+}
+
 /** 个人信息(user/get 响应;§5.2 M-6:MEMBER 上下文 buildUserInfo 返回空 Map,昵称/头像一律由此接口回查) */
 internal data class UserProfile(
     val userId: String,

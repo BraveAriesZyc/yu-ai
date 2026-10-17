@@ -954,6 +954,9 @@ internal object ChatStore {
         unreadCount = 0
         markedCursor = ""
         chatVisible = false // 停留本页解绑→重绑场景由 ChatPage bindState effect 重断言(A4)
+        partnerTyping = false // M13:typing 是纯瞬态位,登出/解绑即清(seq 不动,过期协程自灭无害)
+        typingSeq = 0
+        lastTypingSentAt = 0L
     }
 
     /** MessageInfo → ChatMsg:isMine 以 senderId 比对当前会话;kind=2 走快照字段,kind=3 图片
@@ -1107,6 +1110,54 @@ internal object ChatStore {
     private fun markLocalRecalled(messageId: String) {
         messages = messages.map { if (it.id == messageId) it.copy(recalled = true) else it }
     }
+
+    // ---------- M13 正在输入 ----------
+
+    /** 对方「正在输入」过期窗(D-18 端上唯一收口):无停止信号,须大于上报节流 3s,连续输入不闪断 */
+    const val TYPING_EXPIRE_MS = 4_000L
+
+    /** 我方输入上报节流(D-18 节流在端上,服务端不做限流):3s < 过期窗 4s,连续打字状态不闪断 */
+    private const val TYPING_SEND_INTERVAL_MS = 3_000L
+
+    /** 对方是否正在输入(WS love-typing 信号置位;4s 过期由 ChatPage typingSeq 协程收口) */
+    var partnerTyping by mutableStateOf(false)
+        private set
+
+    /**
+     * typing 信号单调序号(ChatPage 过期协程的 LaunchedEffect key):新信号 seq++ 重挂过期协程,
+     * 旧 delay 被取消(协程取消语义天然去竞态);[clearPartnerTyping] 只清位不动 seq 不重触发
+     */
+    var typingSeq by mutableIntStateOf(0)
+        private set
+
+    /** 我方上次上报时刻(3s 节流位,noteTyping 内部维护) */
+    private var lastTypingSentAt = 0L
+
+    /** WS 正在输入信号入口(ChatPushStore 调,M13):置位 + seq++,重复信号幂等(位恒 true) */
+    fun applyPartnerTyping() {
+        partnerTyping = true
+        typingSeq++
+    }
+
+    /** 过期收口(ChatPage 过期协程调):只清位不动 seq;期间新信号已重挂协程,本协程已取消不会误清 */
+    fun clearPartnerTyping() {
+        partnerTyping = false
+    }
+
+    /**
+     * 我方输入上报(ChatPage onValueChange 调,M13):登录+BOUND+停留本页才发,3s 节流;
+     * fire-and-forget 失败静默——瞬态信号不值得重试,下次击键 3s 后自然再报(不落库无存储放大)
+     */
+    fun noteTyping(pager: Pager) {
+        if (!SessionStore.isLoggedIn || CoupleStore.bindState != CoupleBindState.BOUND) return
+        if (!chatVisible) return
+        val now = nowEpochMs()
+        if (now - lastTypingSentAt < TYPING_SEND_INTERVAL_MS) return
+        lastTypingSentAt = now
+        pager.lifecycleScope.launch {
+            MessageApi.typing(pager)
+        }
+    }
 }
 
 // ---------- ChatPushStore:WS 触发器(D-16,§5.2 WS 通道) ----------
@@ -1131,6 +1182,10 @@ internal object ChatPushStore {
     /** 撤回信号类型(M12,MessageServiceImpl.MESSAGE_TYPE_LOVE_RECALL 同串):携 messageId,
      *  端上本地置墓碑不重拉(增量拉拉不到老消息变更,纠偏兜底 = 切 Tab resync) */
     private const val TYPE_LOVE_RECALL = "love-message-recall"
+
+    /** 正在输入信号类型(M13,MessageServiceImpl.MESSAGE_TYPE_LOVE_TYPING 同串):纯瞬态信号,
+     *  content 单键占位不消费;无「停止输入」信号,端上 4s 过期唯一收口(D-18) */
+    private const val TYPE_LOVE_TYPING = "love-typing"
 
     /** 连接态:普通 var 非快照状态——不驱动 UI,只做幂等判重(主线程读写见头注释) */
     private const val STATE_DISCONNECTED = 0
@@ -1196,6 +1251,12 @@ internal object ChatPushStore {
                         pager.lifecycleScope.launch {
                             ChatStore.applyRecall(messageId)
                         }
+                    }
+                } else if (type == TYPE_LOVE_TYPING) {
+                    // M13 正在输入纯信号:content 单键占位不消费;置位 + seq++ 由 ChatPage 过期
+                    // 协程 4s 收口(D-18 无停止信号);非停留聊天页时置位无害(副标题仅聊天页可见)
+                    pager.lifecycleScope.launch {
+                        ChatStore.applyPartnerTyping()
                     }
                 }
             }

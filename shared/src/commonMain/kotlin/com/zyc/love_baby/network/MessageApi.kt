@@ -40,6 +40,7 @@ internal object MessageApi {
     private const val PATH_UNREAD = "/love/message/unread"
     private const val PATH_READ = "/love/message/read"
     private const val PATH_RECALL = "/love/message/recall"
+    private const val PATH_TYPING = "/love/message/typing"
 
     /**
      * 增量拉取:data 为数组(ApiResult.Ok.dataArray),服务端恒升序返回。
@@ -97,4 +98,12 @@ internal object MessageApi {
      */
     suspend fun recall(pager: Pager, messageId: String): ApiResult =
         HttpClient.request(pager, PATH_RECALL, isPost = true, body = MessageRecallReq(messageId).toJson())
+
+    /**
+     * 上报「正在输入」信号(M13,D-18):**无请求体**(HttpClient 缺省发空对象,create-invite/unbind
+     * 先例),服务端不落库、经 WS 中继给对方在线连接,对方离线静默 no-op。回包标量 true 经 toOk 归
+     * 空对象,调用方只判 Ok 不读 data;节流在 ChatStore.noteTyping(3s),本层原样透传
+     */
+    suspend fun typing(pager: Pager): ApiResult =
+        HttpClient.request(pager, PATH_TYPING, isPost = true)
 }

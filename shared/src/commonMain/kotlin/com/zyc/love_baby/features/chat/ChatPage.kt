@@ -88,6 +88,7 @@ import com.zyc.love_baby.state.nowEpochMs
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.math.abs
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -313,6 +314,15 @@ fun ChatPage(
     val myInitial = myNickname.trim().take(1).ifEmpty { "我" }
     val partnerAvatar = CoupleStore.couple?.partnerAvatar.orEmpty()
 
+    // M13 头部动态副标题(D-5 优先级:正在输入… > 在线 > 默认):纯字符串替换,AppHeaderTitle
+    // 零改动;partnerOnline null(未知/离页重置/未桥接端降级)回落默认;typing 位由 WS 信号驱动、
+    // 4s 过期收口(下方 effect)
+    val headerSubtitle = when {
+        ChatStore.partnerTyping -> "正在输入…"
+        CoupleStore.partnerOnline == true -> "在线"
+        else -> "和${partnerName}的悄悄话"
+    }
+
     // 首拉(§7.4):首组合空游标 → 最近一页正序覆盖;loadInitial 幂等(initialLoaded 标志)。
     // key 从 Unit 改为 userId:常驻堆叠页跨登出/换号不重组合,Unit key 会残留上一会话的失败标志,
     // userId 变化即重判(拉取协议本身不变);失败置 loadFailed 显式错误态,成功 messages 非空自动消失
@@ -339,6 +349,30 @@ fun ChatPage(
             onRecallTargetChange("") // M12 撤回确认浮层同随离页收口(回写 MainPager)
         }
         ChatStore.setChatVisible(pager, pageVisible) // M11:进出页上报,置 true 即主动 sync 一次(与补拉尾钩子双保险,D6)
+    }
+    // M13 伴侣在线轮询(仅停留本页,D-2):进页先打一枪再 5s 周期;离页/未登录/解绑 guard 失败即
+    // 清 partnerOnline(副标题回默认,防陈旧「在线」);key 带 bindState,重绑翻 BOUND 即时重启。
+    // 轮询失败静默保留现值(CoupleStore.refreshOnline 内部降级),下个周期自愈;不并入 MainPager
+    // 的 5s 消息轮询——在线态只在聊天页有消费方,自持生命周期离页即停
+    LaunchedEffect(pageVisible, CoupleStore.bindState) {
+        if (!pageVisible || SessionStore.userId.isEmpty() ||
+            CoupleStore.bindState != CoupleBindState.BOUND
+        ) {
+            CoupleStore.clearPartnerOnline()
+            return@LaunchedEffect
+        }
+        while (true) {
+            CoupleStore.refreshOnline(pager)
+            delay(CoupleStore.PRESENCE_POLL_INTERVAL_MS)
+        }
+    }
+    // M13 typing 过期收口(D-4/D-18 无停止信号,端上 4s 唯一截止):typingSeq 每收到新信号 ++,
+    // LaunchedEffect 以其为 key 重启,旧 delay(4000) 被取消——连续输入不断续期,停手 4s 静默落回
+    // (4s > 上报节流 3s 不闪断);seq==0(从未收到/reset 复位)不挂计时
+    LaunchedEffect(ChatStore.typingSeq) {
+        if (ChatStore.typingSeq == 0) return@LaunchedEffect
+        delay(ChatStore.TYPING_EXPIRE_MS)
+        ChatStore.clearPartnerTyping()
     }
     // 下拉刷新(§7.4):官方 pullToRefreshItem(须为 LazyColumn 首个 item),刷新走 loadIncrement;
     // Store 层在飞串行等待(F13),指示器到真正拉完才收起;成功即消除失败态
@@ -446,7 +480,7 @@ fun ChatPage(
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                AppHeaderTitle("悄悄话", "和${partnerName}的悄悄话")
+                AppHeaderTitle("悄悄话", headerSubtitle)
             }
 
             // 消息列表(§2)
@@ -769,7 +803,12 @@ fun ChatPage(
                 ) {
                     TextField(
                         value = inputText,
-                        onValueChange = { inputText = it.take(INPUT_MAX_LENGTH) },
+                        onValueChange = {
+                            inputText = it.take(INPUT_MAX_LENGTH)
+                            // M13 输入上报(无停止信号,3s 节流在 Store):有输入才报(清空不算输入中),
+                            // fire-and-forget 失败静默
+                            if (it.isNotEmpty()) ChatStore.noteTyping(pager)
+                        },
                         placeholder = "说点什么甜甜的…",
                         autoFocus = false,
                         placeholderColor = AppTheme.TextTertiary,

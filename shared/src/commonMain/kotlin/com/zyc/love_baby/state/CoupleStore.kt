@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import com.tencent.kuikly.core.module.SharedPreferencesModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.data.model.CoupleInfo
+import com.zyc.love_baby.data.model.CoupleOnlineInfo
 import com.zyc.love_baby.data.model.InviteInfo
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.CoupleApi
@@ -62,6 +63,10 @@ internal object CoupleStore {
     private const val HINT_BOUND = "bound"
     private const val HINT_UNBOUND = "unbound"
 
+    /** 伴侣在线轮询间隔(M13):仅聊天页停留期间跑(ChatPage 自持 presence effect),
+     *  5s 与聊天消息轮询同节奏;无 lastSeen(轮询语义,D-18),陈旧窗 ≤5s 可接受 */
+    const val PRESENCE_POLL_INTERVAL_MS = 5_000L
+
     /**
      * 回前台信号(F8,§7.4):MainPager.pageDidAppear(排除冷启动首次出现)自增。
      * MainPageImpl 两个消费点:LaunchedEffect 立即 refresh 校准一次;轮询 LaunchedEffect 同 key
@@ -89,6 +94,14 @@ internal object CoupleStore {
 
     /** 伴侣与绑定信息(BOUND 时非空;MinePage 情侣空间卡消费) */
     var couple: CoupleInfo? by mutableStateOf(null)
+        private set
+
+    /**
+     * 伴侣在线状态(M13):null = 未知(未轮询/离页重置/未桥接端)→ UI 回默认副标题;
+     * true/false = 最近一次轮询真值。仅聊天页停留期间 5s 轮询(ChatPage 自持 effect),
+     * 离页即 [clearPartnerOnline] 重置防陈旧「在线」;判定口径 = 服务端 WS 内存会话表(D-18)
+     */
+    var partnerOnline: Boolean? by mutableStateOf(null)
         private set
 
     /** 最近一次 refresh 是否失败(供「校准中」卡片给出重试入口;成功即翻回 false) */
@@ -207,11 +220,30 @@ internal object CoupleStore {
         return result
     }
 
+    /**
+     * 拉取伴侣在线状态(M13):登录+BOUND 才发(省必败请求,并避开解绑竞态打 401 刷新通道);
+     * 失败静默保留现值(只读降级 §11,下个轮询周期自愈);回包缺 partnerOnline 键视为无效
+     * 保留现值([CoupleOnlineInfo.from] null 契约——false 合法(离线)必须区分于缺字段)
+     */
+    suspend fun refreshOnline(pager: Pager) {
+        if (!SessionStore.isLoggedIn || bindState != CoupleBindState.BOUND) return
+        val result = CoupleApi.getOnline(pager)
+        if (result is ApiResult.Ok) {
+            CoupleOnlineInfo.from(result.data)?.let { partnerOnline = it.partnerOnline }
+        }
+    }
+
+    /** 离开聊天页重置(M13):在线态只在停留期间轮询保鲜,离页即置未知,副标题回默认 */
+    fun clearPartnerOnline() {
+        partnerOnline = null
+    }
+
     /** 登出/会话失效清内存绑定态(MainPager 接线调用);不持久化故无 prefs 要清(§7.3) */
     fun reset() {
         bindState = CoupleBindState.UNKNOWN
         invite = null
         couple = null
+        partnerOnline = null
         refreshFailed = false
     }
 
