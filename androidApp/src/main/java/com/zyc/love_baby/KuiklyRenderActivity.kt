@@ -127,23 +127,34 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         }
     }
 
-    /** 持久化主题 id(KRSharedPreferencesModule 同文件同 key,createPageData/window 背景共用一次读) */
-    private fun persistedThemeId(): String =
+    /**
+     * 启动期原生 prefs(KRSharedPreferencesModule 存储文件,shared 各 Store 持久化同源):
+     * window 背景 / createPageData 三路注入共用一份实例(框架按文件缓存,读取零成本)
+     */
+    private val bootPrefs by lazy {
         getSharedPreferences("KRSharedPreferencesModule", Context.MODE_PRIVATE)
-            .getString(THEME_KEY, "") ?: ""
+    }
+
+    /** 持久化主题 id(bootPrefs 同文件同 key,window 背景与 createPageData 共用一次读) */
+    private fun persistedThemeId(): String = bootPrefs.getString(THEME_KEY, "") ?: ""
 
     private fun createPageData(): Map<String, Any> {
         val param = argsToMap()
         param["appId"] = 1
-        // 首帧前传主题:与 KRSharedPreferencesModule 同文件同 key(其存储文件名即模块名),
-        // 页面 willInit 读 pageData 直接定主题,避免启动先渲染默认主题再全局重组一遍
+        // 首帧前原生 prefs 一次读、三路注入(同文件同 key,与 shared 各 Store 持久化 key 双源一致):
+        // ① 主题(ThemeStore):页面 willInit 读 pageData 直接定主题,避免启动先渲染默认主题再全局重组一遍;
+        // ② 会话(SessionStore):注入完整 session JSON(accessToken/refreshToken/userId/expiresTime/
+        //    clientId,§7.2),GatePanel 组合期经 initFromPageData 判定放行,消除冷启动 Gate 闪帧;
+        // ③ 绑定提示(CoupleStore):已绑定冷启动 willInit 乐观恢复直接翻 BOUND 进主功能,
+        //    不闪 BindingPanel「校准中」卡(2026-10-17 真机反馈)
         param[THEME_KEY] = persistedThemeId()
-        // 首帧前传会话:同文件同 key(与 shared state/SessionStore.PREF_KEY 一致)注入完整 session JSON
-        // (accessToken/refreshToken/userId/expiresTime/clientId,§7.2)。GatePanel 组合期经
-        // SessionStore.initFromPageData 判定:未过期放行 / 过期但 refreshToken 可用也放行
-        // (首请求 401 触发单飞刷新)/ 都没有才 Gate,消除冷启动 Gate 闪帧
-        param[SESSION_KEY] = getSharedPreferences("KRSharedPreferencesModule", Context.MODE_PRIVATE)
-            .getString(SESSION_KEY, "") ?: ""
+        val sessionJson = bootPrefs.getString(SESSION_KEY, "") ?: ""
+        param[SESSION_KEY] = sessionJson
+        // 会话非空才传 hint:登出后 prefs 里的 hint 是登出前残留,空会话配 bound 提示会让
+        // 未登录首帧误判;shared 侧 initFromPageData 未登录守卫与此双保险
+        if (sessionJson.isNotEmpty()) {
+            param[BIND_HINT_KEY] = bootPrefs.getString(BIND_HINT_KEY, "") ?: ""
+        }
         return param
     }
 
@@ -196,6 +207,9 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
 
         /** 会话持久化 key,与 shared state/SessionStore.PREF_KEY 保持一致 */
         private const val SESSION_KEY = "love_app_session"
+
+        /** 绑定态提示持久化 key,与 shared state/CoupleStore.BIND_HINT_KEY 同串双源,勿单改一边 */
+        private const val BIND_HINT_KEY = "couple_bind_hint"
 
         init {
             initKuiklyAdapter()

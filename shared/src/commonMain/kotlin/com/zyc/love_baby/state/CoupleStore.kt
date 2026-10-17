@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.tencent.kuikly.core.module.SharedPreferencesModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.data.model.CoupleInfo
 import com.zyc.love_baby.data.model.InviteInfo
@@ -23,7 +24,10 @@ import kotlin.time.ExperimentalTime
  * 功能:
  *  - 绑定三态:UNKNOWN(未校准,如冷启动/刚登录)/ UNBOUND(未绑定,展示引导)/ BOUND(已绑定,进主功能)
  *  - 邀请码缓存 invite(create-invite 结果,过期惰性判定 isInviteExpired)与伴侣信息 couple
- *  - ⚠ 不持久化 couple 态到 prefs:以服务端为准,避免解绑后本地态「复活」;每次冷启动/登录 refresh 校准
+ *  - ⚠ couple 明细(couple/invite)不持久化到 prefs:以服务端为准,避免解绑后本地态「复活」;
+ *    每次冷启动/登录 refresh 校准。但 bindState 落一份「绑定提示」(persistHint)供宿主 willInit
+ *    乐观恢复——已绑定用户冷启动直进主功能不闪 BindingPanel(2026-10-17 真机反馈),hint 对不上
+ *    时 refresh 校准自愈翻 UNBOUND
  *  - 解绑(D-11):服务端物理删除 couple 行,双方端各自在下次 couple/get(自身解绑即时,对方靠轮询)回未绑定
  */
 internal enum class CoupleBindState {
@@ -52,6 +56,11 @@ internal object CoupleStore {
      * 任一次成功即回常规自适应间隔;回前台(MainPager.pageDidAppear)会重启轮询循环,立即恢复
      */
     val POLL_BACKOFF_STEPS_MS = longArrayOf(60_000L, 120_000L, 300_000L)
+
+    /** 绑定态提示持久化 key(宿主 KuiklyRenderActivity BIND_HINT_KEY 同串双源,勿单改一边) */
+    private const val BIND_HINT_KEY = "couple_bind_hint"
+    private const val HINT_BOUND = "bound"
+    private const val HINT_UNBOUND = "unbound"
 
     /**
      * 回前台信号(F8,§7.4):MainPager.pageDidAppear(排除冷启动首次出现)自增。
@@ -93,6 +102,39 @@ internal object CoupleStore {
         get() = invite?.let { it.expireTime > 0 && it.expireTime <= nowEpochMs() } == true
 
     /**
+     * 首帧前乐观恢复绑定态(MainPager willInit 调用,SessionStore.initFromPageData 同款时序):
+     * 宿主 KuiklyRenderActivity 从 prefs 读「绑定提示」经 pageData 注入——bound 直接翻 BOUND,
+     * 已绑定用户冷启动首帧即主功能(不闪 BindingPanel 校准中卡);unbound 翻 UNBOUND(直落引导层);
+     * 无提示(新装/未桥接端)维持 UNKNOWN 走既有校准中卡。只恢复不校准:couple/invite 明细仍为空,
+     * refresh(服务端唯一事实源)拉回后补齐;乐观 BOUND 对不上(如另一端已解绑)→ refresh 翻
+     * UNBOUND → MainPager 既有清场 effect 自愈。未登录直接 return(hint 可能是登出前残留)
+     */
+    fun initFromPageData(pager: Pager) {
+        if (!SessionStore.isLoggedIn) return
+        try {
+            when (pager.pageData.params.optString(BIND_HINT_KEY)) {
+                HINT_BOUND -> bindState = CoupleBindState.BOUND
+                HINT_UNBOUND -> bindState = CoupleBindState.UNBOUND
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * 落绑定态提示(prefs):refresh/bind/unbind 的每个确定结论处调用——绑定成功记 bound,
+     * 确认未绑定/解绑记 unbound;refresh 失败不动 hint(现态仍可信,下次成功再校)。
+     * getModule 失败静默吞(hint 是体验优化非功能正确性,写失败只退回「校准中」一帧)
+     */
+    private fun persistHint(pager: Pager, bound: Boolean) {
+        try {
+            pager.getModule<SharedPreferencesModule>(SharedPreferencesModule.MODULE_NAME)?.let { sp ->
+                sp.setItem(BIND_HINT_KEY, if (bound) HINT_BOUND else HINT_UNBOUND)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
      * 拉取绑定状态校准三态(§7.4 couple/get 触发点:Gate 消失后/BindingGuide 消失后/回前台轮询共用)。
      * NOT_BOUND 已被 CoupleApi 按数据放行为空 data 的 Ok(状态信号非错误);此处 Ok 且解析不出
      * 伴侣信息 = 未绑定。失败不翻状态(网络失败保留现态可重试,§7.4),只置 refreshFailed
@@ -106,9 +148,11 @@ internal object CoupleStore {
                 if (info == null) {
                     couple = null
                     bindState = CoupleBindState.UNBOUND
+                    persistHint(pager, bound = false)
                 } else {
                     couple = info
                     bindState = CoupleBindState.BOUND
+                    persistHint(pager, bound = true)
                 }
             }
             else -> refreshFailed = true
@@ -141,6 +185,7 @@ internal object CoupleStore {
             } else {
                 refresh(pager)
             }
+            persistHint(pager, bound = true) // 服务端 bind Ok 即已绑定,记提示供下次冷启动乐观恢复
         }
         return result
     }
@@ -157,6 +202,7 @@ internal object CoupleStore {
             couple = null
             invite = null
             bindState = CoupleBindState.UNBOUND
+            persistHint(pager, bound = false) // 解绑记 unbound:下次冷启动直落引导层不闪校准中
         }
         return result
     }

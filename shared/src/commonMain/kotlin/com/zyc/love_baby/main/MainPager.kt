@@ -68,8 +68,9 @@ import kotlin.coroutines.suspendCoroutine
  *      MainPageImpl 立即 refresh 校准一次 + 轮询循环重启(连败暂停/退避中的轮询立即恢复,§7.4);
  *      聊天角标已随 M3 移除本地假回复而恒空(推送角标留待 §12.4 接入时恢复)
  * 功能:
- *  - willInit 首帧前双初始化:ThemeStore.initFromPageData(主题)+ SessionStore.initFromPageData(会话),
- *    均只读 pageData 不走模块,无时序问题;didInit 的 restore 仅作无参数端的兜底
+ *  - willInit 首帧前三初始化:ThemeStore.initFromPageData(主题)+ SessionStore.initFromPageData(会话)
+ *    + CoupleStore.initFromPageData(绑定态乐观恢复),均只读 pageData 不走模块,无时序问题;
+ *    didInit 的 restore 仅作无参数端的兜底
  *  - 五 Tab 容器 = HorizontalPager(beyondViewportPageCount=4 五页全驻留),支持左右滑切换;
  *    页面状态在全局 Store 中,点切/滑动均不丢
  *  - 切 Tab 收键盘(P1,2026-10-16):targetPage 翻转即 LocalFocusManager.clearFocus() 清页面
@@ -99,6 +100,11 @@ internal class MainPager : BasePager() {
         // isLoggedIn 即为 true,Gate 根本不进入组合(§7.6①);不放 GatePanel 组合期 remember ——
         // 组合期间写快照状态依赖同帧再组合的失效合并,是未验证假设(ThemeStore 同款先例,零风险等价)
         SessionStore.initFromPageData(this)
+        // 绑定态乐观恢复(M2,2026-10-17 真机反馈「每次启动都闪一次绑定页」):宿主经 pageData 注入
+        // 绑定提示,bound 直接翻 BOUND——已绑定用户冷启动首帧即主功能,BindingPanel 不进组合;
+        // 只恢复不校准,couple/invite 明细仍空,由下方 LaunchedEffect 的 refresh 补齐;乐观 BOUND
+        // 对不上(如另一端已解绑)refresh 翻 UNBOUND 走既有清场 effect 自愈
+        CoupleStore.initFromPageData(this)
         setContent {
             MainPageImpl(this)
         }
@@ -455,14 +461,18 @@ internal fun MainPageImpl(pager: BasePager) {
 
         // 绑定门(M2,§7.3 三态状态机,接线只增):已登录且绑定态未知/未绑定时整树条件渲染 BindingPanel
         // 盖住五 Tab(不动 Pager/底栏);绑定成功翻 CoupleStore.bindState 整树随之卸载,
-        // 解绑/换号后重新出现。与 Gate 互斥(Gate 在前,两者条件互斥不会同时组合)
+        // 解绑/换号后重新出现。与 Gate 互斥(Gate 在前,两者条件互斥不会同时组合)。
+        // 冷启动已绑定用户由 willInit 的 initFromPageData 乐观恢复直接 BOUND,不进此门
+        // (2026-10-17 真机反馈「启动闪绑定页」);无提示(新装/未桥接端)才落校准中卡
         if (SessionStore.isLoggedIn && CoupleStore.bindState != CoupleBindState.BOUND) {
             BindingPanel(pager)
         }
 
         // 绑定态校准(M2,§7.4 couple/get 拉取触发点):登录态翻转时拉一次——Gate 消失后(登录成功/冷启动
-        // 已登录)校准三态;登出/会话失效清内存态(四个 Store 全清,防换号残留脏数据)。首次组合即执行
-        // (冷启动已登录场景首帧 UNKNOWN 由 BindingPanel 的校准中卡片承接,拉完自动切换,不闪主功能)
+        // 已登录)校准三态;登出/会话失效清内存态(四个 Store 全清,防换号残留脏数据)。首次组合即执行:
+        // 有提示的冷启动(乐观 BOUND/UNBOUND)拉完校准结论;无提示(新装/未桥接端)首帧 UNKNOWN
+        // 由 BindingPanel 的校准中卡片承接。校准是事实源:乐观 BOUND 对不上(另一端已解绑)翻
+        // UNBOUND 走下方清场 effect 自愈
         LaunchedEffect(SessionStore.isLoggedIn) {
             if (SessionStore.isLoggedIn) {
                 CoupleStore.refresh(pager)
