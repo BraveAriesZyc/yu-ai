@@ -453,3 +453,45 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 SELECT @parentId := LAST_INSERT_ID();
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('打卡查询', 'love:checkin:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('打卡删除', 'love:checkin:delete', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+
+-- ============================================================================
+-- M9 段：相册瞬间表 + 菜单/按钮权限（INTEGRATION-DESIGN.md §12.4 预留落位 / §5.2 moment 组）
+-- 本段追加于 M8 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- love_moment 继承 BaseDO 走【逻辑删除】（deleted 列 + DO 侧 @TableLogic），与 love_checkin 同路线；
+-- 媒资复用 infra 文件服务（POST /app-api/infra/file/upload，M4 已通），本表只存 image_url 字符串
+-- 不建存储（§12.4 落位表口径）；图片本体不级联删（D-12 残留策略同款哲学）。
+-- 不建 uk（同人可发多条），逻辑删后不存在「删行占 uk 位」问题，重新发布恒走 insert 新行。
+-- 删除权限 = 仅上传者本人（1_003_008_001 用户维度校验，防误删伴侣的瞬间）；admin 兜底可删任何。
+-- 无 uk / 无补发历史时间 / 无 update 端点（删了重发，D-17 口径）；列表游标分页 id 倒序（M9）。
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS `love_moment`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '瞬间编号',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（couple 共享，列表按此过滤；解绑重绑后旧瞬间留历史值）',
+  `user_id` bigint NOT NULL COMMENT '发布用户编号（仅上传者本人可删）',
+  `image_url` varchar(512) NOT NULL COMMENT '图片完整 URL（infra 文件服务上传返回，@PermitAll 匿名可读）',
+  `text` varchar(64) NOT NULL DEFAULT '' COMMENT '配文（可选，≤64 字，空串 = 无配文）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_couple_id`(`couple_id` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '相册瞬间表（情侣业务）';
+
+-- ----------------------------
+-- 菜单/按钮权限 SQL（M9，「情侣业务」目录下第八个管理页）
+-- 挂接：目录 id 按 type+name 回查（同 M3.5/M5/M8 段理由，不依赖前段 LAST_INSERT_ID）；
+-- 幂等：按钮（按 permission）→ 管理菜单（按 component_name）先行 DELETE，先子后父（M-3 同款）。
+-- ----------------------------
+DELETE FROM `system_menu` WHERE `permission` IN ('love:moment:query', 'love:moment:delete');
+DELETE FROM `system_menu` WHERE `component_name` = 'LoveMoment';
+
+SELECT @loveDirectoryId := `id` FROM `system_menu` WHERE `type` = 1 AND `name` = '情侣业务' AND `deleted` = b'0' LIMIT 1;
+
+-- 管理菜单八：相册瞬间（component_name 唯一 = LoveMoment，M5/M8 实况同款无 Menu 后缀）
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('相册瞬间', '', 2, 8, @loveDirectoryId, 'moment', 'ep:picture', 'love/moment/index', 'LoveMoment', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+SELECT @parentId := LAST_INSERT_ID();
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('瞬间查询', 'love:moment:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('瞬间删除', 'love:moment:delete', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');

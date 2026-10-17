@@ -9,6 +9,7 @@ import cn.iocoder.yudao.framework.common.exception.ErrorCode;
  * 待办 1-003-001-xxx；心情选项 1-003-002-xxx（M3.5 激活，record 覆盖写仍不打错）；
  * 消息 1-003-003-xxx；情侣 1-003-004-xxx；账号/鉴权 1-003-005-xxx；纪念日 1-003-006-xxx（M5）；
  * 打卡 1-003-007-xxx（M8）。
+ * 相册瞬间 1-003-008-xxx（M9）。
  *
  * 短信验证码本身的错误（未发送、已过期、不正确等）由 system 的 SmsCodeApi 抛其自有错误码，不在本段定义。
  */
@@ -80,5 +81,16 @@ public interface ErrorCodeConstants {
      * （LoveAdminAnniversaryServiceImpl 同款口径），app 侧无按 id 写端点用不到它
      */
     ErrorCode CHECKIN_NOT_EXISTS = new ErrorCode(1_003_007_000, "打卡记录不存在");
+
+    // ========== 相册瞬间 模块 1-003-008-xxx（M9 追加） ==========
+    /**
+     * 删除瞬间按物理 id 判空（app 侧 + admin 侧共用）：app delete 先 selectById 判空再校验归属
+     */
+    ErrorCode MOMENT_NOT_EXISTS = new ErrorCode(1_003_008_000, "瞬间不存在");
+    /**
+     * M9 冻结决策：删除权限 = 仅上传者本人（用户维度校验，非 couple 维度）——
+     * 伴侣不能删对方的瞬间（防误删），admin 兜底可删任何（LoveAdminMomentServiceImpl 不校验此码）
+     */
+    ErrorCode MOMENT_DELETE_FORBIDDEN = new ErrorCode(1_003_008_001, "只能删除自己发布的瞬间");
 
 }
