@@ -175,14 +175,21 @@ internal fun ProfileEditOverlay(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.Center),
                 )
+                // 双热区:外层 38dp 透明热区(26dp 视觉圆是全仓最小独立可点控件,真机误触率高),
+                // 内层 26dp 视觉圆载底色(Divider 令牌,与 ChatPage 贴纸胶囊同源)
                 Box(
                     modifier = Modifier.align(Alignment.CenterEnd)
-                        .size(26.dp)
-                        .background(Color(0xFFF0F1F5), RoundedCornerShape(13.dp))
+                        .size(38.dp)
                         .clickable { if (!saving) dismiss() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    AppIcon(AppIconType.Close, AppTheme.TextSecondary, Modifier.size(11.dp))
+                    Box(
+                        modifier = Modifier.size(26.dp)
+                            .background(AppTheme.Divider, RoundedCornerShape(13.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AppIcon(AppIconType.Close, AppTheme.TextSecondary, Modifier.size(11.dp))
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -250,7 +257,12 @@ internal fun ProfileEditOverlay(
                 modifier = Modifier.fillMaxWidth()
                     .height(48.dp)
                     .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
-                    .clickable { showBirthdayPicker = true }
+                    // 点击先收键盘再开滚轮(AnniversaryPage 日期行同款):键盘开着时滚轮底部
+                    // 面板会被纯遮挡的键盘盖住(窗口不 resize,轮16 锤实模型)
+                    .clickable {
+                        focusManager.clearFocus()
+                        showBirthdayPicker = true
+                    }
                     .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -271,7 +283,8 @@ internal fun ProfileEditOverlay(
                 placeholder = "一句话介绍自己",
             )
             Spacer(modifier = Modifier.height(16.dp))
-            BindPrimaryButton(text = if (saving) "保存中…" else "保 存", submitting = saving) { save() }
+            // submitting 文案由 BindPrimaryButton 自管(内置「请稍候…」,调用方传值会被覆盖)
+            BindPrimaryButton(text = "保 存", submitting = saving) { save() }
         }
         // 生日滚轮子浮层:挂编辑浮层灰幕 Box 内最后(后组合者在上,覆盖编辑卡);
         // 自带全屏遮罩点击 dismiss,初值空缺省 2000-01-01
@@ -292,6 +305,10 @@ internal fun ProfileEditOverlay(
     }
 }
 
+/** SexCard 未选底(0xFFF5F6FA 同色渐变):文件级常量避免每次重组新建 Brush 实例——重组 diff
+ *  /掉帧根因(AppTheme.kt 注释明载);选中分支 brandBrush 本就是 lazy 缓存稳定实例 */
+private val SexCardIdleBrush = Brush.linearGradient(listOf(Color(0xFFF5F6FA), Color(0xFFF5F6FA)))
+
 /**
  * SexCard — 性别选择双卡之一(美化轮,替代原小胶囊):半宽 68dp 定高卡,竖排 性别图标+文字。
  * 选中 brandBrush 渐变白字白图标(白字主操作铁律:禁 brandEnd 浅端单色)+右上白圆 Check 角标;
@@ -308,11 +325,10 @@ private fun SexCard(
 ) {
     val selectedBrush = ThemeStore.current.brandBrush
     // color/brush 重载禁混用(铁律):三元两分支必须同型——未选纯色转同色 linearGradient 走 brush 重载
-    val idleBrush = Brush.linearGradient(listOf(Color(0xFFF5F6FA), Color(0xFFF5F6FA)))
     Box(
         modifier = modifier
             .height(68.dp)
-            .background(if (selected) selectedBrush else idleBrush, RoundedCornerShape(14.dp))
+            .background(if (selected) selectedBrush else SexCardIdleBrush, RoundedCornerShape(14.dp))
             .clickable { onClick() },
     ) {
         Column(

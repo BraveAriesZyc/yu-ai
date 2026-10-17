@@ -337,7 +337,8 @@ internal fun ProfilePage(pager: Pager, isPartner: Boolean) {
             uploading = avatarUploading,
             onDismiss = { showEditOverlay = false },
             onSaved = { newNickname, newSex, newBirthday, newSignature ->
-                profile = profile?.copy(
+                // profile 为 null(getUser 失败进页)时兜底构造,防服务端已落库本地却不回填
+                profile = (profile ?: UserProfile(SessionStore.userId, "", newNickname, "")).copy(
                     nickname = newNickname,
                     sex = newSex,
                     birthday = newBirthday,
