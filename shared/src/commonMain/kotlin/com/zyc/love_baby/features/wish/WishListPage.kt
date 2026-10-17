@@ -88,6 +88,10 @@ private const val WISH_INPUT_MAX_LENGTH = 64
 // 本地服务端往返几十 ms,不设下限则「刷新中…」一闪而过,用户无法确认刷新是否发生
 private const val REFRESH_MIN_VISIBLE_MS = 600L
 
+// 历史区折叠预览条数(2026-10-18 重构):已完成默认只显最近 N 条,其余收进「展开更早的 X 条」
+// ——历史不喧宾夺主,进页视口直达待点亮区才是行动项
+private const val WISH_DONE_PREVIEW_COUNT = 3
+
 /**
  * WishListPage — 恋爱清单页(@Page 注册名 "wishListPage"):共享心愿清单 + 勾选完成自动发庆祝消息(M14)
  * 用法:我的页「恋爱清单」菜单 RouterModule.openPage 打开;返回键 closePage。
@@ -102,10 +106,11 @@ private const val REFRESH_MIN_VISIBLE_MS = 600L
  *      确认浮层 → 乐观移除失败原位回滚;下拉刷新(官方 pullToRefreshItem 须为首个 item,
  *      MomentPage/ChatPage 先例);添加条 POST 成功才清输入
  * 功能:
- *  - couple 共享清单(双方互见;点亮=对方):服务端 create_time asc, id asc 全量 → 端上分层排序
- *    (D-19f,2026-10-18 用户裁决翻转):已完成块置顶按 doneTime 倒序当历史区,进行中队列居
- *    列表尾(服务端序同 id 升序)——最新心愿恒在输入条正上方,键盘推升/添加成功走「滚到底」
- *    即露出最新(微信同构;原「进行中在前/已完成沉底」时列表尾是已完成块,顶起露不出最新项)
+ *  - couple 共享清单(双方互见;点亮=对方):服务端 create_time asc, id asc 全量 → 端上两语义
+ *    分区(2026-10-18 重构,D-19f 定稿):「已点亮」历史区置顶按 doneTime 倒序+默认折叠只显
+ *    最近 3 条(展开钮全量);「待点亮」活跃队列居列表尾(服务端序 id 升序)——最新心愿恒在
+ *    输入条正上方,键盘推升/添加成功走「滚到底」即露出最新(微信同构);进页首拉后自动定位
+ *    到活跃区组头(行动项先行,历史往上翻才见)
  *  - 勾选完成:done=true 服务端 CAS 恰发一条「我们一起完成了「title」🎉」到悄悄话(端上零新增
  *    消息逻辑,勾选者本端该消息靠切聊天 Tab 增量拉自愈);重复勾选幂等(回包真值不变)
  *  - 时间展示:行副文案与详情弹框均显「创建于 …」/「…完成于 …」(友好日+时刻,GMT+8);
@@ -190,13 +195,22 @@ internal fun WishListPage(pager: Pager) {
         listState.animateScrollToItem(info.totalItemsCount - 1)
     }
 
-    // D-19f 分层排序(2026-10-18 用户裁决翻转,原「进行中在前/已完成沉底」):已完成块置顶按
-    // doneTime 倒序(desc=刚完成的紧贴活跃区,整条时间线自上而下单调递增:最早完成→最近完成
-    // →最早许愿→最新许愿),进行中队列居列表尾保持服务端序(id 升序=最老在上最新在下)。
-    // 动机=键盘推升/添加成功都走「滚到底」:最新心愿必须恒在列表最后内容位(输入条正上方),
-    // 沉底时列表尾是已完成块,顶起露出的不是最新项(真机反馈)。doneTime=0 兜底排块内最前
-    val display = wishes.filter { it.done }.sortedByDescending { it.doneTime } + wishes.filter { !it.done }
-    val doneCount = wishes.count { it.done }
+    // D-19f 分层(2026-10-18 重构定稿):两语义分区——「已点亮」历史区置顶按 doneTime 倒序
+    // (desc=刚完成的紧贴活跃区,时间线自上而下单调:最早完成→最近完成→最早许愿→最新许愿),
+    // 默认折叠只显最近 3 条(历史不喧宾夺主,展开钮全量);「待点亮」活跃队列居列表尾保持
+    // 服务端序(id 升序=最老在上最新在下)。最新心愿恒=列表最后内容位(输入条正上方),
+    // 键盘推升/添加成功走「滚到底」才成立(真机反馈「顶起来应显示最新的」);
+    // 进页首拉后自动定位到活跃区组头(历史往上翻才见,微信进页见最新同款)
+    val doneList = wishes.filter { it.done }.sortedByDescending { it.doneTime }
+    val activeList = wishes.filter { !it.done }
+    val doneCount = doneList.size
+    var doneExpanded by remember { mutableStateOf(false) }
+    val visibleDone = if (doneExpanded || doneList.size <= WISH_DONE_PREVIEW_COUNT) {
+        doneList
+    } else {
+        doneList.take(WISH_DONE_PREVIEW_COUNT)
+    }
+    val showDoneToggle = doneList.size > WISH_DONE_PREVIEW_COUNT
 
     // 拉全量:进页首拉 / 下拉刷新 / 失败重试共用;成功清空重填,失败置 loadFailed。
     // 回 ok 供下拉刷新分支做最短驻留与失败 toast;loadFailed 仅在列表为空时才置——
@@ -276,10 +290,22 @@ internal fun WishListPage(pager: Pager) {
         }
     }
 
-    // 独立页每次打开都是新 Pager 组合,LaunchedEffect(Unit) 即每次进入都重拉(MomentPage 同款)
+    // 独立页每次打开都是新 Pager 组合,LaunchedEffect(Unit) 即每次进入都重拉(MomentPage 同款)。
+    // 首拉成功后自动定位到「待点亮」组头(2026-10-18 重构):历史区置顶但进页应见行动项而非
+    // 一屏灰卡,微信进页见最新同款;index 协程内读 wishes 重算(组合期 activeHeaderIndex 是
+    // 首拉前的陈旧空值),doneExpanded 初始恒折叠故 preview 数用常量;活跃空/拉取失败不滚
+    // (视口自然在顶看历史/失败态)
     LaunchedEffect(Unit) {
-        fetchFirst()
+        val ok = fetchFirst()
         loading = false
+        if (ok && wishes.count { !it.done } > 0) {
+            val doneSize = wishes.count { it.done }
+            val headerIndex =
+                1 + if (doneSize == 0) 0 else 1 + minOf(doneSize, WISH_DONE_PREVIEW_COUNT) +
+                    if (doneSize > WISH_DONE_PREVIEW_COUNT) 1 else 0
+            listState.awaitMeasured(headerIndex + 1)
+            listState.scrollToItem(headerIndex)
+        }
     }
 
     // 可见期 5s 静默轮询(2026-10-17 用户反馈「一边勾选另一边不同步」):独立 @Page 组合在即
@@ -314,15 +340,18 @@ internal fun WishListPage(pager: Pager) {
                 Spacer(modifier = Modifier.width(10.dp))
                 AppHeaderTitle("恋爱清单", "把想一起做的事,一个个点亮")
                 Spacer(modifier = Modifier.weight(1f))
-                AppTag(
-                    "$doneCount/${wishes.size} 已完成",
-                    bgColor = Color.White.copy(alpha = 0.25f),
-                    textColor = Color.White,
-                    fontSize = 11.sp,
-                    corner = 12.dp,
-                    hPadding = 10.dp,
-                    vPadding = 4.dp,
-                )
+                // 空表不显「0/0 已完成」(2026-10-18 重构:空态显计数是无意义噪音)
+                if (wishes.isNotEmpty()) {
+                    AppTag(
+                        "$doneCount/${wishes.size} 已完成",
+                        bgColor = Color.White.copy(alpha = 0.25f),
+                        textColor = Color.White,
+                        fontSize = 11.sp,
+                        corner = 12.dp,
+                        hPadding = 10.dp,
+                        vPadding = 4.dp,
+                    )
+                }
             }
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth()
@@ -389,29 +418,85 @@ internal fun WishListPage(pager: Pager) {
                     loadFailed -> item {
                         TimelineLoadFailed(onRetry = { refresh() })
                     }
-                    display.isEmpty() -> item {
+                    wishes.isEmpty() -> item {
                         WishEmptyHint(modifier = Modifier.fillMaxWidth().padding(top = 48.dp))
                     }
                 }
-                items(
-                    display,
-                    key = { it.id }, // 服务端 id 全域唯一;回包替换/乐观回滚均按 id 定位(槽位复用防错位)
-                    contentType = { if (it.done) "wish-done" else "wish" },
-                ) { wish ->
-                    WishRow(
-                        wish = wish,
-                        myId = myId,
-                        // 开弹框先失焦收键盘(2026-10-18 真机反馈:键盘开着点清单项,详情框出来了
-                        // 键盘没收,弹框与键盘叠着;ChatPage/MomentPage 浮层收口同款写法)
-                        onOpen = {
-                            focusManager.clearFocus()
-                            detailTarget = wish
-                        },
-                        onDelete = {
-                            focusManager.clearFocus()
-                            deleteTarget = wish
-                        },
-                    )
+                // 「已点亮」历史区(2026-10-18 重构):组头 + 折叠的最近记录 + 展开钮。
+                // 分区头给历史/待办明确分界(原混排无分界,灰卡与亮卡直接连排分不清区块)
+                if (wishes.isNotEmpty() && doneList.isNotEmpty()) {
+                    item(key = "done-header", contentType = "wish-group-header") {
+                        WishGroupHeader("已点亮", doneList.size, AppTheme.TextTertiary)
+                    }
+                    items(
+                        visibleDone,
+                        key = { it.id }, // 服务端 id 全域唯一;回包替换/乐观回滚均按 id 定位(槽位复用防错位)
+                        contentType = { "wish-done" },
+                    ) { wish ->
+                        WishRow(
+                            wish = wish,
+                            myId = myId,
+                            onOpen = {
+                                focusManager.clearFocus()
+                                detailTarget = wish
+                            },
+                            onDelete = {
+                                focusManager.clearFocus()
+                                deleteTarget = wish
+                            },
+                        )
+                    }
+                    if (showDoneToggle) {
+                        item(key = "done-toggle", contentType = "wish-done-toggle") {
+                            Box(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable { doneExpanded = !doneExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    if (doneExpanded) "收起历史" else "展开更早的 ${doneList.size - WISH_DONE_PREVIEW_COUNT} 条",
+                                    color = AppTheme.TextTertiary,
+                                    fontSize = 12.sp,
+                                )
+                            }
+                        }
+                    }
+                }
+                // 「待点亮」活跃区:组头 + 队列(最老在上最新在下,输入条正上方=最新)。
+                // 活跃空而历史非空:轻提示一行(全空走上面大空态,不重复)
+                if (wishes.isNotEmpty() && activeList.isNotEmpty()) {
+                    item(key = "active-header", contentType = "wish-group-header") {
+                        WishGroupHeader("待点亮", activeList.size, ThemeStore.current.brandStart)
+                    }
+                    items(
+                        activeList,
+                        key = { it.id },
+                        contentType = { "wish" },
+                    ) { wish ->
+                        WishRow(
+                            wish = wish,
+                            myId = myId,
+                            // 开弹框先失焦收键盘(2026-10-18 真机反馈:键盘开着点清单项,详情框出来了
+                            // 键盘没收,弹框与键盘叠着;ChatPage/MomentPage 浮层收口同款写法)
+                            onOpen = {
+                                focusManager.clearFocus()
+                                detailTarget = wish
+                            },
+                            onDelete = {
+                                focusManager.clearFocus()
+                                deleteTarget = wish
+                            },
+                        )
+                    }
+                } else if (wishes.isNotEmpty() && doneList.isNotEmpty()) {
+                    item(key = "active-empty", contentType = "wish-active-empty") {
+                        Text(
+                            "还没有待点亮的心愿,许一个吧",
+                            color = AppTheme.TextTertiary,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = AppTheme.PageHPadding),
+                        )
+                    }
                 }
                 // 尾部 Spacer:给悬浮添加条让位(独立页自持几何,2026-10-18 修——原照抄 TodoPage
                 // 的 86/150 底栏让位常数,本页是 @Page 二级页无浮岛底栏,收起时输入条悬空离底
@@ -471,11 +556,12 @@ internal fun WishListPage(pager: Pager) {
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
-            // 添加按钮(POST 成功才清输入:失败保留文案可重试,TodoPage 先例)。新心愿落活跃块尾
-            // = 列表最后内容位(D-19f 翻转后),滚动走「滚到底」:scrollToItem(Spacer 下标)顶对齐
-            // 请求超出滚动上限被 clamp 到底 → 新项底缘贴输入条上方 20dp(微信发消息同款瞬间贴底);
-            // awaitMeasured 等 measure 落地再滚(铁律13:过早 scrollToItem 撞 stale totalItemsCount
-            // 越界守卫被静默吞;item 序 0=刷新头,1..wishes.size=内容,wishes.size+1=Spacer)
+            // 添加按钮(POST 成功才清输入:失败保留文案可重试,TodoPage 先例)。新心愿落活跃区尾
+            // = 列表最后内容位(D-19f 定稿),滚动走「滚到底」:顶对齐末项(Spacer)请求超出滚动
+            // 上限被 clamp 到底 → 新项底缘贴输入条上方 20dp(微信发消息同款瞬间贴底)。
+            // 末项下标运行时取 totalItemsCount-1——折叠/展开历史区使 item 序不再可静态算;
+            // prevTotal+1 只作 awaitMeasured 信号(添加净增 1 项,铁律13:过早 scrollToItem 撞
+            // stale totalItemsCount 越界守卫被静默吞)
             AppIconButton(
                 AppIconType.Plus,
                 onClick = {
@@ -487,10 +573,11 @@ internal fun WishListPage(pager: Pager) {
                             adding = false
                             if (result is ApiResult.Ok) {
                                 inputText = ""
+                                val prevTotal = listState.layoutInfo.totalItemsCount
                                 WishInfo.from(result.data)?.let { fresh ->
                                     wishes.add(fresh)
-                                    listState.awaitMeasured(wishes.size + 2)
-                                    listState.scrollToItem(wishes.size + 1)
+                                    listState.awaitMeasured(prevTotal + 1)
+                                    listState.scrollToItem(listState.layoutInfo.totalItemsCount - 1)
                                 }
                             } else {
                                 toastCoupleResult(pager, result)
@@ -524,6 +611,24 @@ internal fun WishListPage(pager: Pager) {
                 onClose = { detailTarget = null },
             )
         }
+    }
+}
+
+/**
+ * 分区组头(2026-10-18 重构):色点 + 区名 + 计数,给历史区/活跃区明确分界。
+ * dotColor 语义:待点亮=brandStart(亮,进行中),已点亮=TextTertiary(灰,完成)
+ */
+@Composable
+private fun WishGroupHeader(label: String, count: Int, dotColor: Color) {
+    Row(
+        modifier = Modifier.padding(horizontal = AppTheme.PageHPadding),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.size(6.dp).background(dotColor, RoundedCornerShape(3.dp)))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(label, color = AppTheme.TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.width(6.dp))
+        Text("$count", color = AppTheme.TextTertiary, fontSize = 11.sp)
     }
 }
 
