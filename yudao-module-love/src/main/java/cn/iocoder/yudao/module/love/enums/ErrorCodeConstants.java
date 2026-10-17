@@ -7,7 +7,8 @@ import cn.iocoder.yudao.framework.common.exception.ErrorCode;
  *
  * love 模块独立使用 1-003-000-000 段（infra = 1-001，system = 1-002），子段划分：
  * 待办 1-003-001-xxx；心情选项 1-003-002-xxx（M3.5 激活，record 覆盖写仍不打错）；
- * 消息 1-003-003-xxx；情侣 1-003-004-xxx；账号/鉴权 1-003-005-xxx；纪念日 1-003-006-xxx（M5）。
+ * 消息 1-003-003-xxx；情侣 1-003-004-xxx；账号/鉴权 1-003-005-xxx；纪念日 1-003-006-xxx（M5）；
+ * 打卡 1-003-007-xxx（M8）。
  *
  * 短信验证码本身的错误（未发送、已过期、不正确等）由 system 的 SmsCodeApi 抛其自有错误码，不在本段定义。
  */
@@ -70,5 +71,14 @@ public interface ErrorCodeConstants {
      * annivDate 入参为 String + @Pattern 挡格式，此处挡「正则通过但日历非法」（如 2026-02-30）
      */
     ErrorCode ANNIVERSARY_DATE_INVALID = new ErrorCode(1_003_006_002, "日期格式非法");
+
+    // ========== 每日打卡 模块 1-003-007-xxx（M8 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。check 无独立错误码——
+     * uk_user_date 冲突走幂等返回不打错（MoodServiceImpl 覆盖写先例），未绑定复用
+     * {@link #COUPLE_NOT_EXISTS}（1_003_004_003）；本码仅供 admin 按物理 id 删除时判空
+     * （LoveAdminAnniversaryServiceImpl 同款口径），app 侧无按 id 写端点用不到它
+     */
+    ErrorCode CHECKIN_NOT_EXISTS = new ErrorCode(1_003_007_000, "打卡记录不存在");
 
 }

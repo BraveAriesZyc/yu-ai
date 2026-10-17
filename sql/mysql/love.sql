@@ -412,3 +412,44 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 SELECT @parentId := LAST_INSERT_ID();
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('纪念日查询', 'love:anniversary:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('纪念日删除', 'love:anniversary:delete', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+
+-- ============================================================================
+-- M8 段：每日打卡表 + 菜单/按钮权限（INTEGRATION-DESIGN.md §12.4 预留落位 / §5.2 checkin 组）
+-- 本段追加于 M5 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- love_checkin 继承 BaseDO 走【逻辑删除】（deleted 列 + DO 侧 @TableLogic），与 love_anniversary 同路线；
+-- 解绑/重绑后数据保留，couple_id 留历史值，当日再打卡刷新到当前 couple（MoodServiceImpl 同款口径）。
+-- uk_user_date(user_id, checkin_date) 一人一天一条（照 love_mood_record 的 uk_user_date 先例）：
+-- 逻辑删除行仍占 uk 位，重打走复活回退（CheckinMapper.reviveDeletedByUserIdAndDate 原生 UPDATE）；
+-- 无补打/无内容/无撤销端点（撤销仅 admin delete）；共同连续 streak 等聚合在 service 内存计算（M8）。
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS `love_checkin`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '打卡编号',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（couple 共享，列表/月历/汇总按此过滤）',
+  `user_id` bigint NOT NULL COMMENT '打卡用户编号（uk_user_date 一人一天一条，双人各自记录）',
+  `checkin_date` date NOT NULL COMMENT '打卡日期（服务端当天，无补打）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_date`(`user_id` ASC, `checkin_date` ASC) USING BTREE,
+  INDEX `idx_couple_date`(`couple_id` ASC, `checkin_date` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '每日打卡表（情侣业务）';
+
+-- ----------------------------
+-- 菜单/按钮权限 SQL（M8，「情侣业务」目录下第七个管理页）
+-- 挂接：目录 id 按 type+name 回查（同 M3.5/M5 段理由，不依赖前段 LAST_INSERT_ID）；
+-- 幂等：按钮（按 permission）→ 管理菜单（按 component_name）先行 DELETE，先子后父（M-3 同款）。
+-- ----------------------------
+DELETE FROM `system_menu` WHERE `permission` IN ('love:checkin:query', 'love:checkin:delete');
+DELETE FROM `system_menu` WHERE `component_name` = 'LoveCheckin';
+
+SELECT @loveDirectoryId := `id` FROM `system_menu` WHERE `type` = 1 AND `name` = '情侣业务' AND `deleted` = b'0' LIMIT 1;
+
+-- 管理菜单七：每日打卡（component_name 唯一 = LoveCheckin，M5 实况同款无 Menu 后缀）
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('每日打卡', '', 2, 7, @loveDirectoryId, 'checkin', 'ep:alarm-clock', 'love/checkin/index', 'LoveCheckin', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+SELECT @parentId := LAST_INSERT_ID();
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('打卡查询', 'love:checkin:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('打卡删除', 'love:checkin:delete', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
