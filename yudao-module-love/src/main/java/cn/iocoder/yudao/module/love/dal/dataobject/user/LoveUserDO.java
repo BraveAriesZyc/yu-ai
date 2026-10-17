@@ -75,5 +75,12 @@ public class LoveUserDO extends BaseDO {
      * 最后登录时间
      */
     private LocalDateTime lastLoginTime;
+    /**
+     * 聊天已读游标（M11 未读红点）
+     *
+     * 已读到的最大 love_message.id（0 = 未读过）；全局消息 id 只增不减，
+     * 解绑重绑新 couple 的消息 id 必大于旧游标，语义自然（D-11 口径）
+     */
+    private Long chatReadCursor;
 
 }

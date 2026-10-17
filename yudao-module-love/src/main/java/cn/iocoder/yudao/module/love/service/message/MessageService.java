@@ -1,6 +1,8 @@
 package cn.iocoder.yudao.module.love.service.message;
 
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
@@ -64,5 +66,21 @@ public interface MessageService {
      * @return 落库后的完整消息 VO（含 id，语义同 {@link #sendMessage}）
      */
     AppMessageRespVO sendImage(AppMessageSendImageReqVO reqVO);
+
+    /**
+     * 聊天未读数（M11 红点口径）：couple 内 id &gt; 我方 chat_read_cursor 且非本人发送，
+     * kind 1/2/3 全计，admin 逻辑删自动不计；未绑定返回 unread=0（stats 先例，只读旁路不报错）
+     *
+     * @return 未读数 VO（对象形态——端上 HttpClient toOk 标量落空对象，禁改回标量回包）
+     */
+    AppMessageUnreadRespVO getUnreadCount();
+
+    /**
+     * 标记聊天已读（M11）：GREATEST 只进不退推进我方游标，并发/迟到标记不回退；
+     * 未绑定 1_003_004_003（发送端点同口径）；不校验消息归属（自伤无动机，从简）
+     *
+     * @param reqVO 已读到的最大消息 id
+     */
+    void markRead(AppMessageReadReqVO reqVO);
 
 }

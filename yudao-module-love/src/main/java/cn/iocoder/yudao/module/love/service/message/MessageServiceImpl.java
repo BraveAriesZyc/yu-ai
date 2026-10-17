@@ -6,8 +6,10 @@ import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.websocket.core.sender.WebSocketMessageSender;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
 import cn.iocoder.yudao.module.love.dal.dataobject.couple.LoveCoupleDO;
@@ -131,6 +133,42 @@ public class MessageServiceImpl implements MessageService {
             throw exception(BAD_REQUEST);
         }
         return insertAndBuildRespVO(LoveMessageDO.KIND_IMAGE, imageUrl, null, null, null);
+    }
+
+    @Override
+    public AppMessageUnreadRespVO getUnreadCount() {
+        Long currentUserId = getCurrentUserId();
+        // §6.5 停用账号收口
+        getValidatedCurrentUser(currentUserId);
+        AppMessageUnreadRespVO resp = new AppMessageUnreadRespVO();
+        // 未绑定返回全 0 而非报错（UserProfileServiceImpl.getStats L84-87 先例）——
+        // 红点查询是只读旁路，未绑定不构成错误态；禁改回 CommonResult<Long> 标量回包
+        // （端上 HttpClient toOk 只分派对象/数组，标量落空对象，M11 冻结决策）
+        LoveCoupleDO couple = loveCoupleMapper.selectByUserId(currentUserId);
+        if (couple == null) {
+            resp.setUnread(0L);
+            return resp;
+        }
+        LoveUserDO user = loveUserMapper.selectById(currentUserId);
+        long cursor = user != null && user.getChatReadCursor() != null ? user.getChatReadCursor() : 0L;
+        resp.setUnread(messageMapper.selectCountUnread(couple.getId(), cursor, currentUserId));
+        return resp;
+    }
+
+    @Override
+    public void markRead(AppMessageReadReqVO reqVO) {
+        Long currentUserId = getCurrentUserId();
+        // §6.5 停用账号收口
+        getValidatedCurrentUser(currentUserId);
+        // 未绑定报 1_003_004_003（与 list/send 组同口径；unread 静默回 0、read 报错的非对称，
+        // 与 stats 静默 0 / unbind 报错两先例各自对齐）
+        LoveCoupleDO couple = loveCoupleMapper.selectByUserId(currentUserId);
+        if (couple == null) {
+            throw exception(COUPLE_NOT_EXISTS);
+        }
+        // 不查库校验消息归属：游标只推进自己行的已读位，谎报大 id 仅压制自己的红点（自伤无动机），
+        // GREATEST 已防回退；从简（M11 冻结决策，风险清单 R3 留档）
+        loveUserMapper.updateChatReadCursorForward(currentUserId, reqVO.getLastMessageId());
     }
 
     /**

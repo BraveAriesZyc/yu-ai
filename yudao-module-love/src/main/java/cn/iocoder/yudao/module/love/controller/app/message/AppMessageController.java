@@ -1,10 +1,12 @@
 package cn.iocoder.yudao.module.love.controller.app.message;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
 import cn.iocoder.yudao.module.love.service.message.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,6 +30,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
  * 当前用户由 service 层经 SecurityFrameworkUtils 反查；无客户端传 id 的入口（列表按自己 couple、
  * 发送方恒当前用户、接收方恒 couple 对方），天然防 IDOR。
  * 端上 lastId 游标只增不减（D-12）：admin 删除已拉取消息在端上残留，显式接受。
+ * 读游标（M11）按当前登录人行推进（POST /read 不接受客户端传 userId），无 IDOR 入口。
  */
 @Tag(name = "用户 App - 悄悄话/心愿消息")
 @RestController
@@ -80,6 +83,25 @@ public class AppMessageController {
                     + "发送方/接收方/audit_status/回包语义同 send（WS 推送自动继承）；错误码零新增：imageUrl 空 → 400，未绑定 → 1_003_004_003")
     public CommonResult<AppMessageRespVO> sendImage(@RequestBody @Valid AppMessageSendImageReqVO reqVO) {
         return success(messageService.sendImage(reqVO));
+    }
+
+    @GetMapping("/unread")
+    @Operation(summary = "聊天未读数（红点口径）",
+            description = "couple 内 id 大于我方 chat_read_cursor 且 sender_id ≠ 自己的消息数（kind 1/2/3 全计，"
+                    + "admin 逻辑删自动不计）；未绑定返回 unread=0（stats 先例）；回包为对象形态——端上 HttpClient "
+                    + "toOk 标量落空对象，禁改回 CommonResult<Long>（M11 冻结决策）")
+    public CommonResult<AppMessageUnreadRespVO> getUnread() {
+        return success(messageService.getUnreadCount());
+    }
+
+    @PostMapping("/read")
+    @Operation(summary = "标记聊天已读",
+            description = "GREATEST(chat_read_cursor, lastMessageId) 只进不退推进我方游标（并发/迟到标记不回退）；"
+                    + "不校验消息归属（游标只推进自己行，谎报仅自伤）；错误码零新增：未绑定 → 1_003_004_003，"
+                    + "参数空/非正 → 全局 400")
+    public CommonResult<Boolean> markRead(@RequestBody @Valid AppMessageReadReqVO reqVO) {
+        messageService.markRead(reqVO);
+        return success(true);
     }
 
 }

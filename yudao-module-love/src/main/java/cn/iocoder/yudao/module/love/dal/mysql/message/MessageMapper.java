@@ -86,4 +86,21 @@ public interface MessageMapper extends BaseMapperX<LoveMessageDO> {
                 .eq(LoveMessageDO::getKind, LoveMessageDO.KIND_WISH));
     }
 
+    /**
+     * 未读计数（M11 红点口径，GET /love/message/unread）：couple 内 id 大于我方已读游标且
+     * 非本人发送的行数。三口径：kind 不过滤（文本/心愿/图片全计）；sender_id &lt;&gt; 自己
+     * （本人发送不产生我方未读）；@TableLogic 自动附加 deleted = 0（admin 逻辑删不计）。
+     * 走 idx_couple_time(couple_id, id) 前缀扫，couple 内量级毫秒级
+     *
+     * @param coupleId         情侣关系编号
+     * @param afterMessageId   我方已读游标（love_user.chat_read_cursor，0 = 未读过全计）
+     * @param excludeSenderId  排除的发送方（当前用户）
+     */
+    default Long selectCountUnread(Long coupleId, Long afterMessageId, Long excludeSenderId) {
+        return selectCount(new LambdaQueryWrapper<LoveMessageDO>()
+                .eq(LoveMessageDO::getCoupleId, coupleId)
+                .gt(LoveMessageDO::getId, afterMessageId)
+                .ne(LoveMessageDO::getSenderId, excludeSenderId));
+    }
+
 }

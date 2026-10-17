@@ -505,3 +505,15 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 ALTER TABLE `love_message`
     MODIFY COLUMN `kind` tinyint NOT NULL COMMENT '消息类型（1文本悄悄话 2心愿消息 3图片消息）',
     MODIFY COLUMN `content` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文本内容，或心愿文案快照，或图片完整 URL（kind=3，infra 文件服务上传返回）';
+
+-- ----------------------------
+-- M11 段：聊天未读红点已读游标（INTEGRATION-DESIGN.md §5.2 message 组）
+-- love_user 加已读游标列：user 同时至多在一个 couple（uk_user_a/uk_user_b 终审），游标为
+-- 全局消息 id 只增不减——解绑重绑新 couple_id 的消息 id 必大于旧游标，语义自然，无需清零；
+-- 未读口径 = couple 内 id > chat_read_cursor 且 sender_id <> 自己（admin 逻辑删不计，MP @TableLogic）。
+-- 执行注意：ADD COLUMN 非幂等（MySQL 无 IF NOT EXISTS），本段为一次性迁移段——重放报
+--    duplicate column（1060）属预期，跳过本段 ALTER 即可（M3.5 段执行注意同款先例）；
+--    上线顺序必须 SQL 先于新代码（新代码 DO 映射依赖本列）。
+-- ----------------------------
+ALTER TABLE `love_user`
+    ADD COLUMN `chat_read_cursor` bigint NOT NULL DEFAULT 0 COMMENT '聊天已读游标（已读到的最大 love_message.id；0=未读过。全局消息 id 只增不减，解绑重绑新 couple 的消息 id 必大于旧游标）';
