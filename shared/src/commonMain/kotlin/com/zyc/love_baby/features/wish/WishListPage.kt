@@ -86,15 +86,18 @@ private const val WISH_INPUT_MAX_LENGTH = 64
  * 依赖:WishApi/WishInfo(页内自持不进 AppState,D-19g——页销毁即弃,登出/解绑零 reset 接线);
  *      AppCheckbox(勾选);chat.chatDayLabelFriendly(完成时间文案);mood.TimelineLoading/LoadFailed;
  *      couple 组 toast;RouterModule(返回)
- * 事件:返回钮 closePage;勾选 → done(单口双向,成功用回包真值原位替换本地行 D-19h,失败 toast);
- *      删除(仅 wish.userId == 自己显示)→ 确认浮层 → 乐观移除失败原位回滚;下拉刷新(官方
- *      pullToRefreshItem 须为首个 item,MomentPage/ChatPage 先例);添加条 POST 成功才清输入
+ * 事件:返回钮 closePage;勾选(仅对方能勾——发布者不能点亮自己许的心愿,2026-10-17 真机反馈
+ *      修订 D-19;整卡点击与勾选框均可触发,TodoPage 同款嵌套 clickable 内层消费不双触发)→
+ *      done(单口双向,成功用回包真值原位替换本地行 D-19h,失败 toast);删除(仅 wish.userId ==
+ *      自己显示)→ 确认浮层 → 乐观移除失败原位回滚;下拉刷新(官方 pullToRefreshItem 须为首个
+ *      item,MomentPage/ChatPage 先例);添加条 POST 成功才清输入
  * 功能:
- *  - couple 共享清单(双方互见互改):服务端 create_time asc, id asc 全量 → 端上分层排序
+ *  - couple 共享清单(双方互见;勾选=对方点亮):服务端 create_time asc, id asc 全量 → 端上分层排序
  *    (D-19f):进行中在前(服务端序同 id 升序),已完成沉底按 doneTime 倒序
  *  - 勾选完成:done=true 服务端 CAS 恰发一条「我们一起完成了「title」🎉」到悄悄话(端上零新增
  *    消息逻辑,勾选者本端该消息靠切聊天 Tab 增量拉自愈);重复勾选幂等(回包真值不变)
- *  - 已完成行副文案 = 勾选者(我/TA)· 友好时间;删除仅创建者可见(1_003_009_001 服务端兜底)
+ *  - 已完成行副文案 = 勾选者(我/TA)· 友好时间;自己许的未完成行副文案「等TA点亮」;
+ *    删除仅创建者可见(1_003_009_001 服务端兜底)
  *  - 底部悬浮添加条照 TodoPage 逐常量(键盘避让 max 公式/take+maxLength 双保险/POST 成功才清输入/
  *    新行 awaitMeasured 滚可见);删除确认浮层挂着时列表 userScrollEnabled=false(F6)
  */
@@ -169,7 +172,7 @@ internal fun WishListPage(pager: Pager) {
     }
 
     // 勾选/取消(D-19h):成功用回包真值原位替换本地行(乐观翻转缺 doneBy/doneTime,必须回填
-    // 服务端真值);失败 toast 本地不动(无乐观翻转即无回滚)
+    // 服务端真值);失败 toast 本地不动(无乐观翻转即无回滚);入口仅对方的行(权限在 WishRow 收口)
     fun toggle(wish: WishInfo) {
         if (toggling) return
         toggling = true
@@ -405,7 +408,11 @@ internal fun WishListPage(pager: Pager) {
     }
 }
 
-/** 心愿行:勾选框 + 标题(done 灰)+ 已完成副文案(我/TA · 时间)+ 删除钮(仅创建者可见) */
+/**
+ * 心愿行卡片:CardBg 圆角卡 + 整卡可点(仅对方的行,TodoPage 同款;嵌套 clickable 内层消费
+ * 不双触发)。勾选权限 D-19 修订(2026-10-17 真机反馈):发布者不能点亮自己许的心愿(自己许,
+ * TA来完成)——卡与勾选框对发布者均不响应,未完成行副文案给「等TA点亮」解释
+ */
 @Composable
 private fun WishRow(
     wish: WishInfo,
@@ -413,13 +420,19 @@ private fun WishRow(
     onToggle: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val canToggle = wish.userId != myId
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = AppTheme.PageHPadding, vertical = 4.dp),
+        modifier = Modifier.padding(horizontal = AppTheme.PageHPadding, vertical = 4.dp)
+            .fillMaxWidth()
+            .background(AppTheme.CardBg, RoundedCornerShape(16.dp))
+            .then(if (canToggle) Modifier.clickable(onClick = onToggle) else Modifier)
+            .padding(horizontal = 14.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // 对方的行:勾选框可点(与整卡同回调,内层消费不双触发);自己的行:null=纯状态指示
         AppCheckbox(
             checked = wish.done,
-            onCheckedChange = onToggle,
+            onCheckedChange = if (canToggle) onToggle else null,
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -439,6 +452,10 @@ private fun WishRow(
                     color = AppTheme.TextSecondary,
                     fontSize = 11.sp,
                 )
+            } else if (!canToggle) {
+                // 自己许的未完成心愿:勾选权限收窄的解释文案(不然点不动像坏了)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text("等TA点亮", color = AppTheme.TextSecondary, fontSize = 11.sp)
             }
         }
         // 删除仅创建者可见(D-19e:伴侣不能删对方的心愿,防误删;服务端 1_003_009_001 兜底)
