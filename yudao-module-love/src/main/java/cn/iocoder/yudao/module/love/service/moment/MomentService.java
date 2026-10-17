@@ -1,12 +1,14 @@
 package cn.iocoder.yudao.module.love.service.moment;
 
 import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentCreateReqVO;
+import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentLikeReqVO;
+import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentLikeRespVO;
 import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentRespVO;
 
 import java.util.List;
 
 /**
- * 相册瞬间 Service 接口（M9）
+ * 相册瞬间 Service 接口（M9；M15 多图 + 点赞扩展）
  *
  * @author 芋道源码
  */
@@ -15,8 +17,8 @@ public interface MomentService {
     /**
      * 发布瞬间
      *
-     * @param reqVO 发布信息（imageUrl 必填，text 可空）
-     * @return 瞬间（含服务端 id/createTime，供端上乐观落态，todo create 先例）
+     * @param reqVO 发布信息（imageUrl 必填；M15 起 imageUrls 可空 ≤9 张，空则归一 [imageUrl]）
+     * @return 瞬间（含服务端 id/createTime/imageUrls/likeCount/liked，供端上乐观落态）
      */
     AppMomentRespVO createMoment(AppMomentCreateReqVO reqVO);
 
@@ -25,7 +27,7 @@ public interface MomentService {
      *
      * @param beforeId 游标：取 id 小于该值的下一页，null/0 = 首页（最新一页）
      * @param limit 每页条数（service 层钳制：默认 30，上限 100）
-     * @return 瞬间列表
+     * @return 瞬间列表（每条含组装后的 imageUrls/likeCount/liked）
      */
     List<AppMomentRespVO> getMomentList(Long beforeId, Integer limit);
 
@@ -36,5 +38,16 @@ public interface MomentService {
      * @return 是否成功（恒 true，失败以业务异常抛出）
      */
     Boolean deleteMoment(Long id);
+
+    /**
+     * 点赞/取消点赞（幂等，M15）
+     *
+     * 瞬间不存在/跨 couple 统一 MOMENT_NOT_EXISTS（防探测口径）；不发悄悄话消息、
+     * 无 WS 信号（D-20c），对端靠 App 可见期静默轮询感知
+     *
+     * @param reqVO 瞬间编号 + 目标状态
+     * @return 操作后服务端真值（likeCount/liked，端上按 id 原位替换 D-20e）
+     */
+    AppMomentLikeRespVO likeMoment(AppMomentLikeReqVO reqVO);
 
 }

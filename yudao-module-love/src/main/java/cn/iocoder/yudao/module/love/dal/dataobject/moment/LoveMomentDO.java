@@ -52,12 +52,21 @@ public class LoveMomentDO extends BaseDO {
      */
     private Long userId;
     /**
-     * 图片完整 URL
+     * 图片完整 URL（首图）
      *
      * infra 文件服务（POST /app-api/infra/file/upload）返回的 URL，@PermitAll 匿名可读，
-     * 端上 <img>/painter 直连；首期单图（一条瞬间一张）
+     * 端上 <img>/painter 直连；M15 起语义收敛为「首图冗余」（恒 = imageUrls 第一个元素），
+     * 保留本列使 admin LoveMomentRespVO / web 管理页零改动（多图瞬间 admin 显示首图）
      */
     private String imageUrl;
+    /**
+     * 多图 URL JSON 数组字符串（M15）
+     *
+     * 如 ["u1","u2"]（≤9 元素）；service 落库前已归一（老版 App 只传 imageUrl → 归一为
+     * [imageUrl]），恒非空；image_url 恒为首图冗余。读取走 service 层 parseImageUrls
+     * （JSON 损坏/空一律兜底 [imageUrl]，与存量单图同一出口），不直接出参
+     */
+    private String imageUrls;
     /**
      * 配文（可选，≤64 字，DEFAULT ''）
      */

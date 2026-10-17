@@ -3,6 +3,8 @@ package cn.iocoder.yudao.module.love.controller.app.moment;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentCreateReqVO;
 import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentDeleteReqVO;
+import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentLikeReqVO;
+import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentLikeRespVO;
 import cn.iocoder.yudao.module.love.controller.app.moment.vo.AppMomentRespVO;
 import cn.iocoder.yudao.module.love.service.moment.MomentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -64,6 +66,16 @@ public class AppMomentController {
                     "行不存在返回 1_003_008_000；逻辑删除，图片本体留 infra_file 不级联删")
     public CommonResult<Boolean> deleteMoment(@Valid @RequestBody AppMomentDeleteReqVO reqVO) {
         return success(momentService.deleteMoment(reqVO.getId()));
+    }
+
+    @PostMapping("/like")
+    @Operation(summary = "点赞/取消点赞瞬间（幂等）",
+            description = "M15：liked=true 点赞 / false 取消；重复操作幂等收敛不打错；" +
+                    "瞬间不存在/跨 couple 统一返回 1_003_008_000（防探测，零新增错误码）；" +
+                    "不发悄悄话消息、无 WS 信号（D-20c），对端靠 App 可见期静默轮询感知；" +
+                    "回包恒操作后真值 {likeCount, liked}，端上按 id 原位替换（D-20e）")
+    public CommonResult<AppMomentLikeRespVO> likeMoment(@Valid @RequestBody AppMomentLikeReqVO reqVO) {
+        return success(momentService.likeMoment(reqVO));
     }
 
 }

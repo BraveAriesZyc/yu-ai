@@ -576,3 +576,49 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 SELECT @parentId := LAST_INSERT_ID();
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('心愿查询', 'love:wish:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('心愿删除', 'love:wish:delete', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+
+-- ============================================================================
+-- M15 段：相册二期 多图 + 点赞（INTEGRATION-DESIGN.md §5.2 moment 组扩展 / D-20 组）
+-- 本段追加于 M14 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- ① love_moment 加 image_urls（TEXT NULL，多图 URL JSON 数组字符串，≤9 元素，D-20a）；
+--    image_url 列保留 = 首图冗余（admin LoveMomentRespVO / web 管理页只读 imageUrl，
+--    管理后台零改动）；存量单图回填 [image_url]，老版 App 只传 imageUrl 由服务端归一兼容。
+-- ② love_moment_like 点赞表（D-20b）：点赞 = INSERT IGNORE 走 uk_moment_user 吸收并发
+--    重复（幂等）；取消点赞 = 【物理 DELETE】（显式 SQL）——uk 与逻辑删除冲突的唯一解
+--    （墓碑行会永久占 uk 位），故本表 deleted 恒 0；删瞬间不级联清赞（D-20h，残留行
+--    永不被查询，D-12 残留策略同款哲学）。
+-- 无新菜单段：admin 侧零改动（无新端点/无新权限），M9 相册菜单沿用。
+-- 执行注意：上线顺序必须 SQL 先于新代码（新代码 DO 映射依赖 image_urls 列）。
+-- ============================================================================
+
+-- 1) 加列（幂等重放：information_schema 判列存在 + PREPARE 动态执行——
+--    M11/M12 段的 ADD COLUMN 为一次性迁移段（重放报 1060 属预期），本段升级为可重放）
+SET @m15_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_moment' AND COLUMN_NAME = 'image_urls');
+SET @m15_ddl := IF(@m15_col = 0,
+    'ALTER TABLE `love_moment` ADD COLUMN `image_urls` text NULL COMMENT ''多图 URL JSON 数组字符串（M15，如 [\"u1\",\"u2\"]，≤9 元素；image_url 列保留为首图冗余，admin 零改动）''',
+    'SELECT 1');
+PREPARE m15_stmt FROM @m15_ddl;
+EXECUTE m15_stmt;
+DEALLOCATE PREPARE m15_stmt;
+
+-- 2) 存量单图回填（幂等：回填后 image_urls 非空，WHERE 不再命中）
+UPDATE `love_moment`
+   SET `image_urls` = JSON_ARRAY(`image_url`)
+ WHERE `image_urls` IS NULL OR `image_urls` = '';
+
+-- 3) 点赞表（unlike 物理删 → deleted 恒 0，uk 无墓碑占位；couple 恒 2 人，双方均可赞任意瞬间）
+CREATE TABLE IF NOT EXISTS `love_moment_like`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '点赞编号',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（归属第二道闸，service 已校验；解绑重绑后留历史值）',
+  `moment_id` bigint NOT NULL COMMENT '瞬间编号（love_moment.id，不设外键；删瞬间不级联清赞，残留行无害——D-12 残留策略同款哲学）',
+  `user_id` bigint NOT NULL COMMENT '点赞用户编号（couple 恒 2 人，双方均可点赞任意瞬间）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除（继承 BaseDO 惯例；本表 unlike 物理删，恒 0）',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_moment_user`(`moment_id` ASC, `user_id` ASC) USING BTREE,
+  INDEX `idx_moment_id`(`moment_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '相册瞬间点赞表（情侣业务，M15）';
