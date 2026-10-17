@@ -1,4 +1,4 @@
-package com.zyc.love_baby.features.anniversary
+package com.zyc.love_baby.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,13 +29,9 @@ import com.tencent.kuikly.compose.ui.platform.LocalDensity
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
-import com.zyc.love_baby.components.AppTheme
-import com.zyc.love_baby.components.ThemeStore
-import com.zyc.love_baby.components.navBarSafePaddingDp
-import com.zyc.love_baby.state.daysInMonthYear
 import kotlin.math.roundToInt
 
-/** 年份可选范围(纪念日场景:恋爱纪念/生日,1970 起够用;终点给未来 30+ 年余量) */
+/** 年份可选范围(恋爱纪念/生日场景,1970 起够用;终点给未来 30+ 年余量) */
 private const val PICKER_MIN_YEAR = 1970
 private const val PICKER_MAX_YEAR = 2060
 
@@ -44,13 +40,25 @@ private val WHEEL_ITEM_HEIGHT = 40.dp
 private const val WHEEL_VISIBLE_COUNT = 5
 
 /**
- * AnnivDatePicker — 底部滚轮式日期选择器(AnniversaryAddOverlay 日期行点击弹出)
- * 用法:AnnivDatePickerOverlay(initialYear, initialMonth, initialDay, onConfirm(y,m,d), onDismiss)
- *      挂在调用方根 Box 最后(自带全屏遮罩),确认回吐 1 基年月日(日期合法性由本组件保证:
- *      日列随年月联动收窄,selection 不会落在不存在的日子上)
+ * 当月天数(公历算术,闰年规则完整)。与 state.daysInMonthYear 同构——components 层
+ * 不依赖 state(分层方向:state/features 依赖 components),纯函数各持一份,注释互引防漂移
+ */
+private fun daysInMonthOf(year: Int, month: Int): Int = when (month) {
+    1, 3, 5, 7, 8, 10, 12 -> 31
+    4, 6, 9, 11 -> 30
+    2 -> if ((year % 4 == 0 && year % 100 != 0) || year % 400 == 0) 29 else 28
+    else -> 30
+}
+
+/**
+ * AppDatePickerOverlay — 底部滚轮式日期选择器(全屏遮罩 + 底部白卡三列滚轮,M17 自
+ * features.anniversary.AnnivDatePickerOverlay 迁入通用化:M5 纪念日页与 M16 资料编辑浮层
+ * 已两域在用,components 层归位)
+ * 用法:AppDatePickerOverlay(initialYear, initialMonth, initialDay, onConfirm(y,m,d), onDismiss)
+ *      挂在调用方根 Box 最后(自带全屏遮罩,后组合者在上),确认回吐 1 基年月日(日期合法性由
+ *      本组件保证:日列随年月联动收窄,selection 不会落在不存在的日子上)
  * 依赖:Kuikly compose LazyColumn(滚轮列)+ LazyListState.isScrollInProgress(停止探测)+
- *      scrollToItem(半格校正);AppState.daysInMonthYear(日数联动);ThemeStore 品牌色;
- *      navBarSafePaddingDp(面板底部安全距离)
+ *      scrollToItem(半格校正);ThemeStore 品牌色;navBarSafePaddingDp(面板底部安全距离)
  * 事件:取消/遮罩点击 onDismiss;确定 onConfirm(selYear, selMonth, effDay);
  *      滚轮拖动停止(settle)才回调选中值,拖动中不改父级选中
  * 功能:
@@ -66,7 +74,7 @@ private const val WHEEL_VISIBLE_COUNT = 5
 
 /** 滚轮单列:items 展示行,selectedIndex 受控选中(联动钳制用),settle 后回吐数据 index */
 @Composable
-private fun AnnivWheelColumn(
+private fun DatePickerWheelColumn(
     items: List<String>,
     selectedIndex: Int,
     modifier: Modifier = Modifier,
@@ -176,7 +184,7 @@ private fun AnnivWheelColumn(
  * 「1月31日 → 2月」钳成 2 月最后一天,市面 picker 同语义
  */
 @Composable
-internal fun AnnivDatePickerOverlay(
+fun AppDatePickerOverlay(
     initialYear: Int,
     initialMonth: Int,
     initialDay: Int,
@@ -189,7 +197,7 @@ internal fun AnnivDatePickerOverlay(
     var selYear by remember { mutableStateOf(initialYear.coerceIn(PICKER_MIN_YEAR, PICKER_MAX_YEAR)) }
     var selMonth by remember { mutableStateOf(initialMonth.coerceIn(1, 12)) }
     var selDay by remember { mutableStateOf(initialDay.coerceIn(1, 31)) }
-    val maxDay = daysInMonthYear(selYear, selMonth)
+    val maxDay = daysInMonthOf(selYear, selMonth)
     // 钳制后生效日(重组中不写 state,确定/回传统一用 effDay)
     val effDay = minOf(selDay, maxDay)
     val days = remember(maxDay) { (1..maxDay).map { "${it}日" } }
@@ -235,17 +243,17 @@ internal fun AnnivDatePickerOverlay(
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AnnivWheelColumn(
+                DatePickerWheelColumn(
                     items = years,
                     selectedIndex = selYear - PICKER_MIN_YEAR,
                     modifier = Modifier.weight(1f),
                 ) { selYear = PICKER_MIN_YEAR + it }
-                AnnivWheelColumn(
+                DatePickerWheelColumn(
                     items = months,
                     selectedIndex = selMonth - 1,
                     modifier = Modifier.weight(1f),
                 ) { selMonth = it + 1 }
-                AnnivWheelColumn(
+                DatePickerWheelColumn(
                     items = days,
                     selectedIndex = effDay - 1,
                     modifier = Modifier.weight(1f),

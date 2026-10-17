@@ -36,7 +36,7 @@ import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
-import com.zyc.love_baby.features.anniversary.AnnivDatePickerOverlay
+import com.zyc.love_baby.components.AppDatePickerOverlay
 import com.zyc.love_baby.features.couple.BindInputField
 import com.zyc.love_baby.features.couple.BindPrimaryButton
 import com.zyc.love_baby.features.couple.NICKNAME_MAX_LENGTH
@@ -62,7 +62,7 @@ import kotlin.coroutines.suspendCoroutine
  *      scope 调,浮层关闭不取消上传);成功回填经 onSaved(昵称/性别/生日/签名)与
  *      onAvatarSaved(URL) 双回调
  * 依赖:features.couple.BindInputField/BindPrimaryButton/toastCouple/toastCoupleResult;
- *      features.anniversary.AnnivDatePickerOverlay(生产在用的三列滚轮日期选择器,
+ *      components.AppDatePickerOverlay(生产在用的三列滚轮日期选择器,
  *      挂本浮层灰幕 Box 内最后=后组合者在上,覆盖编辑卡);
  *      base.FileModule(未桥接端 getModule=null 降级);network.UserApi/ApiConfig
  * 事件:遮罩点击/保存成功 dismiss(保存中拦);生日行点击开滚轮,确定回写 draft
@@ -252,7 +252,7 @@ internal fun ProfileEditOverlay(
             Text("生日", color = AppTheme.TextSecondary, fontSize = 12.sp)
             Spacer(modifier = Modifier.height(8.dp))
             // 生日行:只读点击行(视觉对齐 BindInputField 灰底 48dp),点击弹三列滚轮——
-            // M16 真机反馈弃 yyyy 文本输入,复用纪念日页生产在用的 AnnivDatePickerOverlay
+            // M16 真机反馈弃 yyyy 文本输入,复用纪念日页生产在用、已抽到 components 的 AppDatePickerOverlay
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .height(48.dp)
@@ -290,7 +290,7 @@ internal fun ProfileEditOverlay(
         // 自带全屏遮罩点击 dismiss,初值空缺省 2000-01-01
         if (showBirthdayPicker) {
             val parts = draftBirthday.trim().split("-")
-            AnnivDatePickerOverlay(
+            AppDatePickerOverlay(
                 initialYear = parts.getOrNull(0)?.toIntOrNull() ?: 2000,
                 initialMonth = parts.getOrNull(1)?.toIntOrNull() ?: 1,
                 initialDay = parts.getOrNull(2)?.toIntOrNull() ?: 1,

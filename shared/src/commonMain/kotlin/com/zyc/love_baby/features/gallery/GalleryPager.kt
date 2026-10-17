@@ -47,6 +47,8 @@ import com.zyc.love_baby.components.AppIconTile
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppMenuDivider
 import com.zyc.love_baby.components.AppMenuGroup
+import com.zyc.love_baby.components.AppFilterChip
+import com.zyc.love_baby.components.AppFilterChipRow
 import com.zyc.love_baby.components.AppMenuRow
 import com.zyc.love_baby.components.AppQuickAction
 import com.zyc.love_baby.components.AppSectionTitle
@@ -111,6 +113,7 @@ internal fun GalleryPage(pager: Pager) {
         item { IconSection() }
         item { CheckSection() }
         item { TagAvatarSection() }
+        item { ChipsSection() }
         item { StatSection(pager) }
         item { MenuSection(pager) }
         item { CardSection() }
@@ -237,8 +240,25 @@ private fun TagAvatarSection() {
 }
 
 @Composable
-private fun StatSection(pager: Pager) {
-    GallerySection(title = "AppStatBar", note = "两种规格 + 可点统计项") {
+private fun ChipsSection() {
+    // 动态选中态 demo:首枚「全部」+ 固定分类,与生产(灵感页分类 chips)同构
+    var selected by remember { mutableStateOf(0) }
+    GallerySection(title = "AppFilterChipRow / AppFilterChip", note = "分类筛选胶囊(M17)") {
+        AppFilterChipRow(
+            labels = listOf("全部", "室内", "户外", "美食", "观影", "手作"),
+            selectedIndex = selected,
+            onSelect = { selected = it },
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppFilterChip("单枚·选中", selected = true, onClick = {})
+            AppFilterChip("单枚·未选", selected = false, onClick = {})
+        }
+    }
+}
+
+@Composable
+private fun StatSection(pager: Pager) {    GallerySection(title = "AppStatBar", note = "两种规格 + 可点统计项") {
         AppStatBar(GalleryMock.stats)
         Spacer(modifier = Modifier.height(10.dp))
         AppStatBar(GalleryMock.stats, valueSize = 18.sp, dividerHeight = 26.dp)

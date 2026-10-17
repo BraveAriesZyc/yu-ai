@@ -142,6 +142,7 @@ fun HomePage(pager: Pager, myNickname: String = "", myAvatar: String = "") {
                         icon = AppIconType.Heart,
                         tileColors = listOf(Color(0xFFFFB27A), Color(0xFFFF7A8C)),
                         modifier = Modifier.weight(1f),
+                        onClick = { openQuotePage(pager) },
                     )
                     AppFeatureCard(
                         title = "约会灵感",
@@ -149,6 +150,7 @@ fun HomePage(pager: Pager, myNickname: String = "", myAvatar: String = "") {
                         icon = AppIconType.Star,
                         tileColors = listOf(theme.brandStart, theme.brandEnd),
                         modifier = Modifier.weight(1f),
+                        onClick = { openInspirationPage(pager) },
                     )
                 }
             }
@@ -245,6 +247,24 @@ private fun openWishListPage(pager: Pager) {
     try {
         pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
             .openPage("wishListPage", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/** 路由打开今日情话独立页(M17;openWishListPage 同款) */
+private fun openQuotePage(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("quotePage", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/** 路由打开约会灵感独立页(M17;openQuotePage 同款) */
+private fun openInspirationPage(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("inspirationPage", JSONObject())
     } catch (_: Exception) {
     }
 }

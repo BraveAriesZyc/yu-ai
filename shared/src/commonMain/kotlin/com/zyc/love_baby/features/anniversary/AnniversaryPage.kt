@@ -40,6 +40,7 @@ import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.components.AppDatePickerOverlay
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
@@ -82,7 +83,7 @@ private val annivEmojiPresets = listOf("❤️", "🎂", "💍", "💌", "🌸",
  *  - AnniversaryRow:38dp emoji 方块(空显 "❤",服务端 DEFAULT '' 口径)+ title + 原样日期 +
  *    「每年/一次性」标签 + 倒数徽标(就是今天高亮品牌色)+ 删除 ✕(TodoRow 同款透明底可点)
  *  - AnniversaryAddOverlay:浮岛式键盘避让(TodoPage 同款共享键盘回调);emoji 预设选一;
- *    日期 = 底部滚轮选择器(AnnivDatePickerOverlay,初始今天;日历合法性由选择器保证,
+ *    日期 = 底部滚轮选择器(AppDatePickerOverlay,初始今天;日历合法性由选择器保证,
  *    提交无格式校验——2026-10-17 用户反馈弃三段手输);提交校验仅标题非空,失败 toast 不关浮层,
  *    成功即收(一次性表单)
  *  - 浮层打开期间 LazyColumn userScrollEnabled=false(浮层触控穿透铁律);浮层最后组合盖 FAB
@@ -289,7 +290,7 @@ private fun AnniversaryRow(item: AnniversaryInfo, todayIndex: Long, onDelete: ()
  * AnniversaryAddOverlay — 新增纪念日浮层(独立页内根级挂载,一次性表单:成功即收)。
  * 键盘避让 = TodoPage 浮岛式:输入行共享同一 keyboardHeightChange 回调(聚焦即上报),
  * 键盘起时卡片整体 padding 顶到键盘上方并切 BottomCenter(收起归零回 Center)。
- * 日期行点击先收键盘再弹 AnnivDatePickerOverlay(挂本根 Box 直下、键盘避让容器之外,
+ * 日期行点击先收键盘再弹 AppDatePickerOverlay(挂本根 Box 直下、键盘避让容器之外,
  * 面板贴屏幕底不被键盘 padding 顶起);提交校验失败 toast 不关浮层
  */
 @Composable
@@ -438,7 +439,7 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
         // 不随输入行的键盘 padding 顶起;遮罩/取消可关,确定回吐选中的年月日)
         if (showDatePicker) {
             val cur = selectedDate.split("-")
-            AnnivDatePickerOverlay(
+            AppDatePickerOverlay(
                 initialYear = cur.getOrNull(0)?.toIntOrNull() ?: initY,
                 initialMonth = cur.getOrNull(1)?.toIntOrNull() ?: initM,
                 initialDay = cur.getOrNull(2)?.toIntOrNull() ?: initD,
