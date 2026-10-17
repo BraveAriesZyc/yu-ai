@@ -64,6 +64,7 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.WishInfo
 import com.zyc.love_baby.features.chat.chatDayLabelFriendly
+import com.zyc.love_baby.features.chat.chatHHmm
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.features.mood.TimelineLoadFailed
@@ -86,18 +87,19 @@ private const val WISH_INPUT_MAX_LENGTH = 64
  * 依赖:WishApi/WishInfo(页内自持不进 AppState,D-19g——页销毁即弃,登出/解绑零 reset 接线);
  *      AppCheckbox(勾选);chat.chatDayLabelFriendly(完成时间文案);mood.TimelineLoading/LoadFailed;
  *      couple 组 toast;RouterModule(返回)
- * 事件:返回钮 closePage;勾选(仅对方能勾——发布者不能点亮自己许的心愿,2026-10-17 真机反馈
- *      修订 D-19;整卡点击与勾选框均可触发,TodoPage 同款嵌套 clickable 内层消费不双触发)→
- *      done(单口双向,成功用回包真值原位替换本地行 D-19h,失败 toast);删除(仅 wish.userId ==
- *      自己显示)→ 确认浮层 → 乐观移除失败原位回滚;下拉刷新(官方 pullToRefreshItem 须为首个
- *      item,MomentPage/ChatPage 先例);添加条 POST 成功才清输入
+ * 事件:返回钮 closePage;点行卡片/勾选框 → 详情弹框(创建/完成时间 + 操作;2026-10-17 交互修订:
+ *      完成与取消完成一律经弹框确认,防误点亮——完成会自动发庆祝消息);弹框 [已完成]/[取消完成]
+ *      仅对方的行显示(发布者不能点亮自己许的心愿,2026-10-17 权限修订 D-19)→ done(单口双向,
+ *      成功用回包真值原位替换本地行 D-19h,失败 toast);删除(仅 wish.userId == 自己显示)→
+ *      确认浮层 → 乐观移除失败原位回滚;下拉刷新(官方 pullToRefreshItem 须为首个 item,
+ *      MomentPage/ChatPage 先例);添加条 POST 成功才清输入
  * 功能:
- *  - couple 共享清单(双方互见;勾选=对方点亮):服务端 create_time asc, id asc 全量 → 端上分层排序
+ *  - couple 共享清单(双方互见;点亮=对方):服务端 create_time asc, id asc 全量 → 端上分层排序
  *    (D-19f):进行中在前(服务端序同 id 升序),已完成沉底按 doneTime 倒序
  *  - 勾选完成:done=true 服务端 CAS 恰发一条「我们一起完成了「title」🎉」到悄悄话(端上零新增
  *    消息逻辑,勾选者本端该消息靠切聊天 Tab 增量拉自愈);重复勾选幂等(回包真值不变)
- *  - 已完成行副文案 = 勾选者(我/TA)· 友好时间;自己许的未完成行副文案「等TA点亮」;
- *    删除仅创建者可见(1_003_009_001 服务端兜底)
+ *  - 时间展示:行副文案与详情弹框均显「创建于 …」/「…完成于 …」(友好日+时刻,GMT+8);
+ *    自己许的未完成行附「等TA点亮」;删除仅创建者可见(1_003_009_001 服务端兜底)
  *  - 底部悬浮添加条照 TodoPage 逐常量(键盘避让 max 公式/take+maxLength 双保险/POST 成功才清输入/
  *    新行 awaitMeasured 滚可见);删除确认浮层挂着时列表 userScrollEnabled=false(F6)
  */
@@ -134,6 +136,8 @@ internal fun WishListPage(pager: Pager) {
     // 删除确认目标(null = 浮层关);deleting = 确认按钮单飞
     var deleteTarget by remember { mutableStateOf<WishInfo?>(null) }
     var deleting by remember { mutableStateOf(false) }
+    // 详情/操作弹框目标(null = 关):行点击进入,完成/取消完成经弹框按钮触发(2026-10-17 交互修订)
+    var detailTarget by remember { mutableStateOf<WishInfo?>(null) }
     // 软键盘高度(dp),0 = 收起;驱动添加条 bottom 与列表尾 Spacer 顶起(TodoPage 同款)
     var keyboardHeight by remember { mutableStateOf(0f) }
     // 页内自持(D-19g):服务端序(create_time asc, id asc),分层排序在组合期重排
@@ -172,7 +176,8 @@ internal fun WishListPage(pager: Pager) {
     }
 
     // 勾选/取消(D-19h):成功用回包真值原位替换本地行(乐观翻转缺 doneBy/doneTime,必须回填
-    // 服务端真值);失败 toast 本地不动(无乐观翻转即无回滚);入口仅对方的行(权限在 WishRow 收口)
+    // 服务端真值);失败 toast 本地不动(无乐观翻转即无回滚);入口仅详情弹框操作按钮
+    // (2026-10-17 交互修订:行点击只开弹框;权限收口=弹框按钮仅对方的行显示)
     fun toggle(wish: WishInfo) {
         if (toggling) return
         toggling = true
@@ -271,9 +276,9 @@ internal fun WishListPage(pager: Pager) {
                     },
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                // 删除确认浮层开着时关列表滚动(F6:遮罩 clickable 不吃拖拽,背景列表原生滚动
-                // 仍收事件,MinePage/MomentPage 同款)
-                userScrollEnabled = deleteTarget == null,
+                // 删除确认/详情弹框开着时关列表滚动(F6:遮罩 clickable 不吃拖拽,背景列表原生
+                // 滚动仍收事件,MinePage/MomentPage 同款)
+                userScrollEnabled = deleteTarget == null && detailTarget == null,
             ) {
                 // 下拉刷新(官方 pullToRefreshItem 须为首个 item,MomentPage 先例)
                 pullToRefreshItem(
@@ -312,7 +317,7 @@ internal fun WishListPage(pager: Pager) {
                     WishRow(
                         wish = wish,
                         myId = myId,
-                        onToggle = { toggle(wish) },
+                        onOpen = { detailTarget = wish },
                         onDelete = { deleteTarget = wish },
                     )
                 }
@@ -337,6 +342,20 @@ internal fun WishListPage(pager: Pager) {
                 deleting = deleting,
                 onConfirm = { confirmDelete() },
                 onDismiss = { if (!deleting) deleteTarget = null },
+            )
+        }
+
+        // 详情/操作弹框(2026-10-17 交互修订:行点击弹出;完成/取消完成在此确认,防误点亮)
+        detailTarget?.let { target ->
+            WishDetailOverlay(
+                wish = target,
+                myId = myId,
+                submitting = toggling,
+                onToggle = {
+                    detailTarget = null
+                    toggle(target)
+                },
+                onClose = { detailTarget = null },
             )
         }
 
@@ -409,15 +428,15 @@ internal fun WishListPage(pager: Pager) {
 }
 
 /**
- * 心愿行卡片:CardBg 圆角卡 + 整卡可点(仅对方的行,TodoPage 同款;嵌套 clickable 内层消费
- * 不双触发)。勾选权限 D-19 修订(2026-10-17 真机反馈):发布者不能点亮自己许的心愿(自己许,
- * TA来完成)——卡与勾选框对发布者均不响应,未完成行副文案给「等TA点亮」解释
+ * 心愿行卡片:CardBg 圆角卡,整卡与勾选框点击均进详情弹框(2026-10-17 交互修订:完成/取消
+ * 一律经弹框确认,防误点亮——完成会自动发庆祝消息;嵌套 clickable 内层消费不双触发);
+ * 副文案按状态显创建/完成时间与「等TA点亮」
  */
 @Composable
 private fun WishRow(
     wish: WishInfo,
     myId: String,
-    onToggle: () -> Unit,
+    onOpen: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val canToggle = wish.userId != myId
@@ -425,14 +444,14 @@ private fun WishRow(
         modifier = Modifier.padding(horizontal = AppTheme.PageHPadding, vertical = 4.dp)
             .fillMaxWidth()
             .background(AppTheme.CardBg, RoundedCornerShape(16.dp))
-            .then(if (canToggle) Modifier.clickable(onClick = onToggle) else Modifier)
+            .clickable(onClick = onOpen)
             .padding(horizontal = 14.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 对方的行:勾选框可点(与整卡同回调,内层消费不双触发);自己的行:null=纯状态指示
+        // 勾选框=状态指示,点击同整卡进弹框(不直接 toggle——操作收口在弹框)
         AppCheckbox(
             checked = wish.done,
-            onCheckedChange = if (canToggle) onToggle else null,
+            onCheckedChange = onOpen,
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -443,19 +462,24 @@ private fun WishRow(
                 fontWeight = FontWeight.Medium,
                 maxLines = 2,
             )
+            // 副文案=时间线:创建时间恒显(服务端必回传,<=0 兜底不造假);完成行加完成人+完成时间;
+            // 自己许的未完成行附「等TA点亮」(权限修订解释,不然点不开操作像坏了)
+            val parts = mutableListOf<String>()
+            if (wish.createTime > 0) parts.add("创建于 ${wishTimeLabel(wish.createTime)}")
             if (wish.done) {
-                Spacer(modifier = Modifier.height(2.dp))
-                // 勾选者文案:doneBy 是服务端真值(回包替换回填,D-19h);doneTime=0 兜底只显人
+                // 完成人文案:doneBy 是服务端真值(回包替换回填,D-19h);doneTime=0 兜底只显人
                 val who = if (wish.doneBy == myId) "我" else "TA"
+                parts.add(if (wish.doneTime > 0) "$who 完成于 ${wishTimeLabel(wish.doneTime)}" else "$who 完成")
+            } else if (!canToggle) {
+                parts.add("等TA点亮")
+            }
+            if (parts.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    if (wish.doneTime > 0) "$who · ${chatDayLabelFriendly(wish.doneTime)}" else "$who 完成",
+                    parts.joinToString(" · "),
                     color = AppTheme.TextSecondary,
                     fontSize = 11.sp,
                 )
-            } else if (!canToggle) {
-                // 自己许的未完成心愿:勾选权限收窄的解释文案(不然点不动像坏了)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text("等TA点亮", color = AppTheme.TextSecondary, fontSize = 11.sp)
             }
         }
         // 删除仅创建者可见(D-19e:伴侣不能删对方的心愿,防误删;服务端 1_003_009_001 兜底)
@@ -466,6 +490,122 @@ private fun WishRow(
                 contentAlignment = Alignment.Center,
             ) {
                 AppIcon(AppIconType.Close, AppTheme.TextTertiary, Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+/** "今天 14:30"/"10月15日 09:12"(友好日+时刻,GMT+8,chatDayLabelFriendly+chatHHmm 组合);<=0 空串 */
+private fun wishTimeLabel(epochMs: Long): String {
+    if (epochMs <= 0) return ""
+    return "${chatDayLabelFriendly(epochMs)} ${chatHHmm(epochMs)}"
+}
+
+/**
+ * WishDetailOverlay — 心愿详情/操作弹框(灰幕 + 居中白卡,DeleteWishOverlay 同款结构):
+ * 显创建人/创建时间与完成人/完成时间;完成与取消完成在此确认(2026-10-17 交互修订,防误点亮——
+ * 完成会自动发庆祝消息);发布者看自己的心愿只有详情无操作按钮(仅对方能勾,D-19 权限修订)。
+ * submitting(=toggling)期间全部按钮拦点击;灰幕点击关闭
+ */
+@Composable
+private fun WishDetailOverlay(
+    wish: WishInfo,
+    myId: String,
+    submitting: Boolean,
+    onToggle: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val canToggle = wish.userId != myId
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable { if (!submitting) onClose() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 36.dp)
+                .fillMaxWidth()
+                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
+                .clickable { }
+                .padding(horizontal = 20.dp, vertical = 22.dp),
+        ) {
+            Text(wish.title, color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(10.dp))
+            // 时间线:创建恒显;完成行加完成人与完成时间(均服务端真值,<=0 兜底不造假)
+            val creator = if (wish.userId == myId) "我" else "TA"
+            Text(
+                if (wish.createTime > 0) "$creator 创建于 ${wishTimeLabel(wish.createTime)}" else "$creator 创建的心愿",
+                color = AppTheme.TextSecondary,
+                fontSize = 13.sp,
+            )
+            if (wish.done) {
+                Spacer(modifier = Modifier.height(4.dp))
+                val who = if (wish.doneBy == myId) "我" else "TA"
+                Text(
+                    if (wish.doneTime > 0) "$who 完成于 ${wishTimeLabel(wish.doneTime)}" else "$who 已完成",
+                    color = AppTheme.TextSecondary,
+                    fontSize = 13.sp,
+                )
+            } else if (!canToggle) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("等TA点亮", color = AppTheme.TextSecondary, fontSize = 13.sp)
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            when {
+                // 对方的未完成心愿:[取消] + [已完成](品牌色主操作)
+                canToggle && !wish.done -> Row {
+                    Box(
+                        modifier = Modifier.weight(1f)
+                            .height(42.dp)
+                            .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
+                            .clickable { if (!submitting) onClose() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("取消", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Box(
+                        modifier = Modifier.weight(1f)
+                            .height(42.dp)
+                            .background(ThemeStore.current.brandEnd, RoundedCornerShape(21.dp))
+                            .clickable { if (!submitting) onToggle() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("已完成", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                // 对方的已完成心愿:[取消完成](不发消息) + [关闭]
+                canToggle && wish.done -> Row {
+                    Box(
+                        modifier = Modifier.weight(1f)
+                            .height(42.dp)
+                            .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
+                            .clickable { if (!submitting) onToggle() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("取消完成", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Box(
+                        modifier = Modifier.weight(1f)
+                            .height(42.dp)
+                            .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
+                            .clickable { if (!submitting) onClose() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("关闭", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+                // 自己的心愿/其余:只读详情,仅[关闭]
+                else -> Box(
+                    modifier = Modifier.fillMaxWidth()
+                        .height(42.dp)
+                        .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
+                        .clickable { if (!submitting) onClose() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("关闭", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }
