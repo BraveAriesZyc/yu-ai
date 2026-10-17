@@ -21,7 +21,6 @@ import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.compose.profiler.RecompositionProfiler
 import com.zyc.love_baby.base.BasePager
-import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.components.AppBottomBar
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
@@ -35,8 +34,8 @@ import com.zyc.love_baby.features.couple.BindingPanel
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.features.mine.LogoutConfirmOverlay
-import com.zyc.love_baby.features.mine.NicknameEditOverlay
-import com.zyc.love_baby.network.ApiConfig
+import com.zyc.love_baby.features.profile.ProfileEditOverlay
+import com.zyc.love_baby.features.profile.uploadAvatarAndUpdate
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.AuthApi
 import com.zyc.love_baby.network.UserApi
@@ -57,8 +56,6 @@ import com.zyc.love_baby.features.todo.TodoPage
 import com.zyc.love_baby.state.SessionStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * MainPager — 应用主页面(@Page 注册名 "main"):底部导航五 Tab 容器
@@ -183,7 +180,7 @@ internal fun MainPageImpl(pager: BasePager) {
     // 浮层状态(F6):MinePage「编辑」「解绑」「退出登录」仅回调上报,浮层在本根 Box 渲染;
     // 心情字典管理浮层(M3.5)同款——MoodPage 选择器「＋」回调上报
     var showUnbindConfirm by remember { mutableStateOf(false) }
-    var showNicknameEdit by remember { mutableStateOf(false) }
+    var showProfileEdit by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showMoodManage by remember { mutableStateOf(false) }
     var unbindSubmitting by remember { mutableStateOf(false) }
@@ -203,7 +200,7 @@ internal fun MainPageImpl(pager: BasePager) {
     // 背景/横滑切页」)——LazyColumn/LazyVerticalGrid/HorizontalPager 均有官方 userScrollEnabled
     // 开关,浮层任一开着即全关,是最干净的阻断通道(遮罩拦截方案在 Kuikly 原生视图层不成立)
     val overlayActive =
-        showUnbindConfirm || showNicknameEdit || showLogoutConfirm || showMoodManage ||
+        showUnbindConfirm || showProfileEdit || showLogoutConfirm || showMoodManage ||
             chatImagePreviewUrl.isNotEmpty() || chatRecallTargetId.isNotEmpty()
     // Tab 跳转统一走 scrollToPage 瞬时直达(底栏点切/首页快捷入口/心情页「去悄悄话」),胶囊由
     // pillPosition(=targetPage 瞬移)驱动零动画帧,见 AppBottomBar.SlidingPill。⚠ 勿改回
@@ -218,7 +215,7 @@ internal fun MainPageImpl(pager: BasePager) {
     val goTo: (Int) -> Unit = remember { { tab: Int -> scope.launch { pagerState.scrollToPage(tab) } } }
     // 各页回调同款 remember(理由同上):翻转帧/浮层开关帧不再级联五页 body 重执行
     val goChat = remember { { goTo(3) } }
-    val openNicknameEdit = remember { { showNicknameEdit = true } }
+    val openProfileEdit = remember { { showProfileEdit = true } }
     val openUnbindConfirm = remember { { showUnbindConfirm = true } }
     val openLogoutConfirm = remember { { showLogoutConfirm = true } }
     val openMoodManage = remember { { showMoodManage = true } }
@@ -268,57 +265,16 @@ internal fun MainPageImpl(pager: BasePager) {
         }
     }
 
-    // 头像上传(F6 收口,文件服务里程碑):浮层头像行点击进此流程,全链路不在浮层内自持——
-    // ① getUser 热身:原生直传不经 HttpClient(无 401 单飞刷新兜底),先发轻请求焐热 token
-    //    (过期则此刻自动刷新);热身失败不拦流程,token 死透时上传自身会失败回 toast
-    // ② FileModule.pickAndUpload 一次性回调(suspendCoroutine 包装,BridgeModule.ssoRequest 先例):
-    //    相册选图→Glide 512px JPEG 压缩→multipart 直传 /infra/file/upload 全在原生(Android KRFileModule);
-    //    未桥接端(iOS/ohos/H5)getModule=null → toast 降级提示(渐进降级,头像行维持首字形态)
-    // ③ 成功:user/update 写穿透 avatar → profile copy 回填(§7.4 成功才落本地,五页驻留同步可见);
-    //    失败 toast 透传 msg,URL 不落任何本地态
+    // 头像上传(F6 收口):全链路(getUser 热身/FileModule.pickAndUpload 直传/user/update
+    // 写穿透)已收口 features.profile.uploadAvatarAndUpdate(合并轮迁出,ProfilePage 域同款
+    // 复用);本函数仅持有页面级防重入 + scope + profile 回填(浮层关闭不取消上传)
     fun submitAvatarUpload() {
         if (avatarUploading) return
         avatarUploading = true
         scope.launch {
-            UserApi.getUser(pager)
-            var failMsg = "上传失败,请重试"
-            val fileUrl = try {
-                val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
-                if (module == null) {
-                    failMsg = "当前端暂不支持上传头像"
-                    null
-                } else {
-                    suspendCoroutine<String?> { cont ->
-                        module.pickAndUpload(
-                            ApiConfig.url(pager, "/infra/file/upload"),
-                            SessionStore.accessToken,
-                        ) { result ->
-                            val code = result?.optInt("code", -1) ?: -1
-                            val data = result?.optString("data").orEmpty()
-                            if (code == 0 && data.isNotEmpty()) {
-                                cont.resume(data)
-                            } else {
-                                result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
-                                cont.resume(null)
-                            }
-                        }
-                    }
-                }
-            } catch (_: Exception) {
-                null
-            }
+            val fileUrl = uploadAvatarAndUpdate(pager)
             avatarUploading = false
-            if (fileUrl.isNullOrEmpty()) {
-                toastCouple(pager, failMsg)
-                return@launch
-            }
-            val result = UserApi.updateUser(pager, avatar = fileUrl)
-            if (result is ApiResult.Ok) {
-                profile = profile?.copy(avatar = fileUrl)
-                toastCouple(pager, "头像已更新")
-            } else {
-                toastCoupleResult(pager, result)
-            }
+            if (fileUrl != null) profile = profile?.copy(avatar = fileUrl)
         }
     }
 
@@ -370,7 +326,7 @@ internal fun MainPageImpl(pager: BasePager) {
                 else -> MinePage(
                     pager = pager,
                     profile = profile,
-                    onEditProfile = openNicknameEdit,
+                    onEditProfile = openProfileEdit,
                     onUnbindClick = openUnbindConfirm,
                     onLogoutClick = openLogoutConfirm,
                     listScrollEnabled = !overlayActive,
@@ -421,17 +377,27 @@ internal fun MainPageImpl(pager: BasePager) {
             )
         }
 
-        // 昵称编辑浮层(M2 §7.7 → F6 根级挂载):user/update 写穿透,成功才回填 profile,
-        // 失败 toast 保留原值(§7.4 失败即回滚语义,不做乐观更新)
-        if (showNicknameEdit) {
-            NicknameEditOverlay(
+        // 资料编辑浮层(F6 根级挂载,合并轮换 ProfileEditOverlay 完整版:头像/昵称/性别/
+        // 生日滚轮/签名一处编辑):user/update 写穿透,成功才回填 profile,失败 toast 保留
+        // 原值(§7.4 失败即回滚语义,不做乐观更新)
+        if (showProfileEdit) {
+            ProfileEditOverlay(
                 pager = pager,
                 currentNickname = profile?.nickname.orEmpty(),
                 currentAvatar = profile?.avatar.orEmpty(),
+                currentSex = profile?.sex,
+                currentBirthday = profile?.birthday.orEmpty(),
+                currentSignature = profile?.signature.orEmpty(),
                 uploading = avatarUploading,
-                onDismiss = { showNicknameEdit = false },
-                onSaved = { next ->
-                    profile = (profile ?: UserProfile(SessionStore.userId, "", next, "")).copy(nickname = next)
+                onDismiss = { showProfileEdit = false },
+                onSaved = { newNickname, newSex, newBirthday, newSignature ->
+                    profile = (profile ?: UserProfile(SessionStore.userId, "", newNickname, "")).copy(
+                        nickname = newNickname,
+                        sex = newSex,
+                        birthday = newBirthday,
+                        signature = newSignature,
+                    )
+                    showProfileEdit = false
                 },
                 onAvatarClick = { submitAvatarUpload() },
             )

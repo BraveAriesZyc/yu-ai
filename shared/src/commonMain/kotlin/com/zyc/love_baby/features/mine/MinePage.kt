@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
@@ -26,7 +25,6 @@ import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
-import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -47,16 +45,9 @@ import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.UserProfile
-import com.zyc.love_baby.features.couple.BindInputField
-import com.zyc.love_baby.features.couple.BindPrimaryButton
 import com.zyc.love_baby.features.couple.BoundPartnerCard
-import com.zyc.love_baby.features.couple.NICKNAME_MAX_LENGTH
-import com.zyc.love_baby.features.couple.toastCouple
-import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
 import com.zyc.love_baby.features.profile.openProfilePage
-import com.zyc.love_baby.network.ApiResult
-import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
 import com.zyc.love_baby.state.StatsStore
@@ -245,137 +236,6 @@ private fun HeaderWithStats(pager: Pager, profile: UserProfile?, onEditClick: ()
                 .offset(y = 22.dp)
                 .padding(horizontal = AppTheme.PageHPadding),
         )
-    }
-}
-
-/**
- * NicknameEditOverlay — 资料编辑浮层(M2 §7.7):user/update 写穿透,成功才回填 onSaved,
- * 失败 toast 保留原值(§7.4 失败即回滚语义,不做乐观更新)。头像区(文件服务里程碑美化):
- * 72dp 大头像(渐变底/远程图)+ 右下「+」更换徽章 + 居中提示文案,整块可点上报 onAvatarClick,
- * 上传中头像蒙半透明黑 + 文案切换且拦点击;上传流程由 MainPager 收口(F6 同款,本浮层不自持)。
- * M3(F6,§7.7)起改 internal 由 MainPager 根 Box 挂载(本页滚动项不吞浮层触摸)
- */
-@Composable
-internal fun NicknameEditOverlay(
-    pager: Pager,
-    currentNickname: String,
-    currentAvatar: String = "",
-    uploading: Boolean = false,
-    onDismiss: () -> Unit,
-    onSaved: (String) -> Unit,
-    onAvatarClick: () -> Unit = {},
-) {
-    var draft by remember { mutableStateOf(currentNickname) }
-    var saving by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    // 关浮层先清焦(同 LoginPanel.submit 焦点转移问题):浮层卸载时持焦输入框被移除,Android
-    // 把窗口焦点转给待办页输入框(五页全驻留),Pager 原生 RecyclerView 滚去露出它 → 主界面乱滚;
-    // 保存路径另有提交即清焦,趁网络窗口先失焦
-    val focusManager = LocalFocusManager.current
-    fun dismiss() {
-        focusManager.clearFocus()
-        onDismiss()
-    }
-
-    fun save() {
-        if (saving) return
-        val next = draft.trim()
-        if (next.isEmpty()) {
-            toastCouple(pager, "昵称不能为空")
-            return
-        }
-        if (next == currentNickname) {
-            dismiss()
-            return
-        }
-        focusManager.clearFocus()
-        saving = true
-        scope.launch {
-            val result = UserApi.updateUser(pager, nickname = next)
-            saving = false
-            if (result is ApiResult.Ok) {
-                onSaved(next)
-                toastCouple(pager, "已保存")
-                dismiss()
-            } else {
-                toastCoupleResult(pager, result)
-            }
-        }
-    }
-
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { if (!saving) dismiss() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 32.dp)
-                .fillMaxWidth()
-                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
-                .clickable { }
-                .padding(horizontal = 20.dp, vertical = 22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text("编辑资料", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(18.dp))
-            // 头像区(文件服务里程碑美化):72dp 大头像 + 右下「+」更换徽章 + 居中提示,
-            // 整块可点上报 onAvatarClick(选图/压缩/直传/写回全在 MainPager 收口);
-            // 上传中蒙半透明黑 + 文案切换 + 拦点击防重复发起
-            Column(
-                modifier = Modifier.clickable { if (!uploading) onAvatarClick() },
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(modifier = Modifier.size(72.dp)) {
-                    AppAvatar(
-                        currentNickname.trim().take(1).ifEmpty { "爱" },
-                        size = 72.dp,
-                        bgBrush = ThemeStore.current.brandBrush,
-                        fontSize = 24.sp,
-                        avatarUrl = currentAvatar,
-                    )
-                    if (uploading) {
-                        // 上传中蒙层:圆内半透明黑,盖住头像暗示「处理中」
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(36.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text("…", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        // 右下「+」更换徽章:白底圆 + 主题色加号(压在头像右下缘,对比来自头像本身)
-                        Box(
-                            modifier = Modifier.align(Alignment.BottomEnd)
-                                .size(24.dp)
-                                .background(AppTheme.CardBg, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                "+",
-                                color = ThemeStore.current.brandStart,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    if (uploading) "头像上传中…" else "点击更换头像",
-                    color = if (uploading) AppTheme.TextTertiary else AppTheme.TextSecondary,
-                    fontSize = 12.sp,
-                )
-            }
-            Spacer(modifier = Modifier.height(18.dp))
-            BindInputField(
-                value = draft,
-                onValueChange = { draft = it.take(NICKNAME_MAX_LENGTH) },
-                placeholder = "昵称",
-            )
-            Spacer(modifier = Modifier.height(18.dp))
-            BindPrimaryButton(text = if (saving) "保存中…" else "保 存", submitting = saving) { save() }
-        }
     }
 }
 
