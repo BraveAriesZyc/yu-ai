@@ -24,8 +24,6 @@ import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.lazy.LazyRow
 import com.tencent.kuikly.compose.foundation.lazy.items
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
-import com.tencent.kuikly.compose.foundation.text.KeyboardOptions
-import com.tencent.kuikly.compose.foundation.text.maxLength
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
@@ -34,9 +32,6 @@ import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
-import com.tencent.kuikly.compose.ui.text.input.KeyboardType
-import com.tencent.kuikly.compose.ui.text.style.TextAlign
-import com.tencent.kuikly.compose.ui.unit.Dp
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
@@ -64,8 +59,8 @@ import com.zyc.love_baby.data.model.AnniversaryInfo
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.state.AnniversaryStore
 import com.zyc.love_baby.state.anniversaryCountdownLabel
+import com.zyc.love_baby.state.civilFromDays
 import com.zyc.love_baby.state.dateKeyOf
-import com.zyc.love_baby.state.daysInMonthYear
 import com.zyc.love_baby.state.sortedAnniversaries
 import kotlinx.coroutines.launch
 
@@ -87,8 +82,9 @@ private val annivEmojiPresets = listOf("❤️", "🎂", "💍", "💌", "🌸",
  *  - AnniversaryRow:38dp emoji 方块(空显 "❤",服务端 DEFAULT '' 口径)+ title + 原样日期 +
  *    「每年/一次性」标签 + 倒数徽标(就是今天高亮品牌色)+ 删除 ✕(TodoRow 同款透明底可点)
  *  - AnniversaryAddOverlay:浮岛式键盘避让(TodoPage 同款共享键盘回调);emoji 预设选一;
- *    日期三段输入不自动跳格(FocusRequester 无失焦 API,退格回跳边界复杂——明示决策,逐格手点);
- *    提交端上校验(标题非空/年 4 位/月日日历合法)失败 toast 不关浮层,成功即收(一次性表单)
+ *    日期 = 底部滚轮选择器(AnnivDatePickerOverlay,初始今天;日历合法性由选择器保证,
+ *    提交无格式校验——2026-10-17 用户反馈弃三段手输);提交校验仅标题非空,失败 toast 不关浮层,
+ *    成功即收(一次性表单)
  *  - 浮层打开期间 LazyColumn userScrollEnabled=false(浮层触控穿透铁律);浮层最后组合盖 FAB
  */
 @Page("anniversaryList", supportInLocal = true)
@@ -200,6 +196,7 @@ internal fun AnniversaryPage(pager: Pager) {
         if (showAdd) {
             AnniversaryAddOverlay(
                 pager = pager,
+                todayIndex = todayIndex,
                 onDismiss = { showAdd = false },
             )
         }
@@ -290,19 +287,21 @@ private fun AnniversaryRow(item: AnniversaryInfo, todayIndex: Long, onDelete: ()
 
 /**
  * AnniversaryAddOverlay — 新增纪念日浮层(独立页内根级挂载,一次性表单:成功即收)。
- * 键盘避让 = TodoPage 浮岛式:四行输入共享同一 keyboardHeightChange 回调(任一聚焦都上报),
+ * 键盘避让 = TodoPage 浮岛式:输入行共享同一 keyboardHeightChange 回调(聚焦即上报),
  * 键盘起时卡片整体 padding 顶到键盘上方并切 BottomCenter(收起归零回 Center)。
- * 日期三段不自动跳格(见页注释);提交校验失败 toast 不关浮层
+ * 日期行点击先收键盘再弹 AnnivDatePickerOverlay(挂本根 Box 直下、键盘避让容器之外,
+ * 面板贴屏幕底不被键盘 padding 顶起);提交校验失败 toast 不关浮层
  */
 @Composable
-private fun AnniversaryAddOverlay(pager: Pager, onDismiss: () -> Unit) {
+private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () -> Unit) {
     val theme = ThemeStore.current
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     var title by remember { mutableStateOf("") }
-    var year by remember { mutableStateOf("") }
-    var month by remember { mutableStateOf("") }
-    var day by remember { mutableStateOf("") }
+    // 日期 = 滚轮选择器产物(dateKeyOf 格式,初始今天):选择器保证日历合法性,提交无格式校验
+    val (initY, initM, initD) = remember { civilFromDays(todayIndex) }
+    var selectedDate by remember { mutableStateOf(dateKeyOf(initY, initM, initD)) }
+    var showDatePicker by remember { mutableStateOf(false) }
     var emoji by remember { mutableStateOf(annivEmojiPresets.first()) }
     var repeatYearly by remember { mutableStateOf(true) }
     var adding by remember { mutableStateOf(false) }
@@ -318,17 +317,10 @@ private fun AnniversaryAddOverlay(pager: Pager, onDismiss: () -> Unit) {
             toastCouple(pager, "先给纪念日起个名字吧")
             return
         }
-        val y = year.toIntOrNull() ?: 0
-        val m = month.toIntOrNull() ?: 0
-        val d = day.toIntOrNull() ?: 0
-        if (y !in 1000..9999 || m !in 1..12 || d !in 1..daysInMonthYear(y, m)) {
-            toastCouple(pager, if (year.length != 4) "年份请输 4 位数字" else "日期不完整或不存在")
-            return
-        }
         adding = true
         scope.launch {
             val result = AnniversaryStore.add(
-                pager, name, dateKeyOf(y, m, d),
+                pager, name, selectedDate,
                 if (repeatYearly) 1 else 2, emoji,
             )
             adding = false
@@ -342,19 +334,20 @@ private fun AnniversaryAddOverlay(pager: Pager, onDismiss: () -> Unit) {
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-            // 键盘起时整体顶到键盘上方(原生 KeyboardParams.height 不含导航栏区域,TodoPage 输入条
-            // 同款几何),收起归零回正中;卡片紧凑,小屏 + 全键盘也放得下
-            .padding(
-                bottom = if (keyboardHeight > 0f) {
-                    keyboardHeight.dp + navBarSafePaddingDp() + 12.dp
-                } else {
-                    0.dp
-                },
-            ),
-        contentAlignment = if (keyboardHeight > 0f) Alignment.BottomCenter else Alignment.Center,
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+                // 键盘起时整体顶到键盘上方(原生 KeyboardParams.height 不含导航栏区域,TodoPage 输入条
+                // 同款几何),收起归零回正中;卡片紧凑,小屏 + 全键盘也放得下
+                .padding(
+                    bottom = if (keyboardHeight > 0f) {
+                        keyboardHeight.dp + navBarSafePaddingDp() + 12.dp
+                    } else {
+                        0.dp
+                    },
+                ),
+            contentAlignment = if (keyboardHeight > 0f) Alignment.BottomCenter else Alignment.Center,
+        ) {
         // 灰幕:收键盘 + 关浮层一体(TodoPage 浮层无灰幕是输入条场景,本浮层键盘由输入行触发)
         Box(
             modifier = Modifier.fillMaxSize()
@@ -403,36 +396,28 @@ private fun AnniversaryAddOverlay(pager: Pager, onDismiss: () -> Unit) {
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
-            // 日期三段(数字键盘;全部 autoFocus=false 防开浮层即弹键盘):
-            // 单位字「年/月/日」常驻后缀 + 示例数字 hint,客户一眼可读(替代隐晦的 yyyy/MM/dd)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AnnivDateField(
-                    value = year,
-                    onValueChange = { year = it.filter(Char::isDigit).take(4) },
-                    hint = "2024",
-                    width = 58.dp,
-                    maxLen = 4,
-                    keyboardHeightChange = onKeyboardHeightChange,
+            // 日期选择行(点击弹底部滚轮选择器):左侧标签 + 右侧已选日期 + 箭头;
+            // 点击先收键盘再开面板(键盘动画与面板出现并行,收完面板完整露出)
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .height(48.dp)
+                    .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
+                    .clickable {
+                        focusManager.clearFocus()
+                        showDatePicker = true
+                    }
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("日期", color = AppTheme.TextSecondary, fontSize = 14.sp)
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    annivDateLabel(selectedDate),
+                    color = AppTheme.TextPrimary,
+                    fontSize = 15.sp,
                 )
-                DateUnit("年")
-                AnnivDateField(
-                    value = month,
-                    onValueChange = { month = it.filter(Char::isDigit).take(2) },
-                    hint = "8",
-                    width = 40.dp,
-                    maxLen = 2,
-                    keyboardHeightChange = onKeyboardHeightChange,
-                )
-                DateUnit("月")
-                AnnivDateField(
-                    value = day,
-                    onValueChange = { day = it.filter(Char::isDigit).take(2) },
-                    hint = "8",
-                    width = 40.dp,
-                    maxLen = 2,
-                    keyboardHeightChange = onKeyboardHeightChange,
-                )
-                DateUnit("日")
+                Spacer(modifier = Modifier.width(6.dp))
+                AppIcon(AppIconType.ChevronRight, Color(0xFFC8CCD8), Modifier.size(16.dp))
             }
             Spacer(modifier = Modifier.height(10.dp))
             // 重复类型胶囊(BindModeChips 同视觉,本域私有不复用 couple 组件)
@@ -446,6 +431,23 @@ private fun AnniversaryAddOverlay(pager: Pager, onDismiss: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(16.dp))
             BindPrimaryButton(text = "添 加", submitting = adding) { submit() }
+        }
+        }
+
+        // 日期滚轮选择器(挂根 Box 直下,在键盘避让容器之外:面板 BottomCenter 贴屏幕底,
+        // 不随输入行的键盘 padding 顶起;遮罩/取消可关,确定回吐选中的年月日)
+        if (showDatePicker) {
+            val cur = selectedDate.split("-")
+            AnnivDatePickerOverlay(
+                initialYear = cur.getOrNull(0)?.toIntOrNull() ?: initY,
+                initialMonth = cur.getOrNull(1)?.toIntOrNull() ?: initM,
+                initialDay = cur.getOrNull(2)?.toIntOrNull() ?: initD,
+                onConfirm = { y, m, d ->
+                    selectedDate = dateKeyOf(y, m, d)
+                    showDatePicker = false
+                },
+                onDismiss = { showDatePicker = false },
+            )
         }
     }
 }
@@ -478,54 +480,13 @@ private fun AnnivInputRow(
     }
 }
 
-/**
- * 日期小段输入(数字键盘;maxLength 原生层拒绝超限输入 + take 截断双保险,BindInputField
- * 无键盘回调参数故本域自建;background 挂在 Box 包装层,TextField 透底)。固定高 44dp 挂
- * 外层 Box + contentAlignment=Center 居中(TextField 自带固定高度会被原生 TOP|START gravity
- * 顶到上缘),数字水平居中走 TextStyle.textAlign(CoreTextField 会映射到原生 textAlign)
- */
-@Composable
-private fun AnnivDateField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    hint: String,
-    width: Dp,
-    maxLen: Int,
-    keyboardHeightChange: (KeyboardParams) -> Unit,
-) {
-    Box(
-        modifier = Modifier.width(width)
-            .height(44.dp)
-            .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center,
-    ) {
-        TextField(
-            modifier = Modifier.fillMaxWidth().maxLength(maxLen),
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = hint,
-            placeholderColor = AppTheme.TextTertiary,
-            autoFocus = false,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            textStyle = TextStyle(
-                color = AppTheme.TextPrimary,
-                fontSize = 15.sp,
-                textAlign = TextAlign.Center,
-            ),
-            keyboardHeightChange = keyboardHeightChange,
-        )
-    }
-}
-
-/** 日期段单位后缀(「年/月/日」常驻可读,替代隐晦的 yyyy/MM/dd;示例数字见各段 hint) */
-@Composable
-private fun DateUnit(text: String) {
-    Text(
-        text,
-        color = AppTheme.TextSecondary,
-        fontSize = 13.sp,
-        modifier = Modifier.padding(horizontal = 4.dp),
-    )
+/** dateKey("yyyy-MM-dd") → 「2024年8月8日」展示串(解析失败原样回显兜底) */
+private fun annivDateLabel(key: String): String {
+    val parts = key.split("-")
+    val year = parts.getOrNull(0) ?: return key
+    val month = parts.getOrNull(1)?.toIntOrNull() ?: return key
+    val day = parts.getOrNull(2)?.toIntOrNull() ?: return key
+    return "${year}年${month}月${day}日"
 }
 
 /** 重复类型选中胶囊(BindModeChip 同视觉;选中换底色不改结构,铁律③) */
