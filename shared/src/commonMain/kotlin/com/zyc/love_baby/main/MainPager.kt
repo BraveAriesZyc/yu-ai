@@ -350,7 +350,7 @@ internal fun MainPageImpl(pager: BasePager) {
             userScrollEnabled = !overlayActive,
         ) { index ->
             when (index) {
-                0 -> HomePage(pager, onNavigate = goTo)
+                0 -> HomePage(pager)
                 1 -> TodoPage(pager)
                 2 -> MoodPage(pager, onGoChat = goChat, onOpenManage = openMoodManage, listScrollEnabled = !overlayActive)
                 3 -> ChatPage(

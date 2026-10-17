@@ -44,7 +44,6 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.features.chat.todayDayIndexGmt8
 import com.zyc.love_baby.state.AnniversaryStore
-import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
@@ -53,15 +52,16 @@ import com.zyc.love_baby.state.TodoStore
 import com.zyc.love_baby.state.nextAnniversaryCountdownDays
 
 /**
- * HomePage — 首页:主题渐变问候头部 + 悬浮待办统计(含纪念日倒数第 4 列)+ 快捷入口 + 恋爱灵感卡片
- * 用法:HomePage(pager, onNavigate = { tabIndex -> ... })(MainPager 传 pager 供拉取/路由)
- * 依赖:ThemeStore(主题)/TodoStore/StatsStore/AnniversaryStore(统计,第 4 列倒数纯函数算);
+ * HomePage — 首页:主题渐变问候头部 + 悬浮待办统计(含纪念日倒数第 4 列)+ 功能快捷入口 + 恋爱灵感卡片
+ * 用法:HomePage(pager)(MainPager 传 pager 供拉取/路由)
+ * 依赖:ThemeStore(主题)/TodoStore/StatsStore/AnniversaryStore/CheckinStore(统计与打卡条);
  *      components 通用组件(AppGradientHeader/AppStatBar/AppQuickAction 等);RouterModule(开独立页)
- * 事件:onNavigate(0..4) 跳转底部导航对应 Tab;纪念日列 onClick 打开独立页
+ * 事件:四快捷入口(纪念日提醒/每日打卡/我们的相册/恋爱清单,2026-10-18 自 MinePage 迁入)
+ *      与纪念日统计列 onClick 均经 RouterModule 打开对应独立页
  * 功能:纯展示型首页;统计实时来自 TodoStore;bindState 驱动纪念日整表首拉(§7.4)
  */
 @Composable
-fun HomePage(pager: Pager, onNavigate: (Int) -> Unit) {
+fun HomePage(pager: Pager) {
     val theme = ThemeStore.current
     // 纪念日首拉(bindState 驱动,TodoPage LaunchedEffect 同款):首页第 4 统计列消费
     // AnniversaryStore,未绑定/登出静默跳过;独立页增删写穿透即时反映,跨端靠回前台/
@@ -88,41 +88,42 @@ fun HomePage(pager: Pager, onNavigate: (Int) -> Unit) {
             }
         }
         item {
-            // 快捷入口
+            // 功能入口(2026-10-18 真机反馈:原「去待办/送心意/去聊天/我的」与底栏五 Tab 纯重复,
+            // 删掉换上原「我的」页四功能——图标/配色/命名与 MinePage 菜单行同源,路由开独立页;
+            // 未绑定不设守卫,独立页内部有未绑定态自处理,与 MinePage 菜单行为一致)
             Column(modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)) {
                 Spacer(modifier = Modifier.height(24.dp))
                 AppSectionTitle("快捷入口")
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     AppQuickAction(
-                        label = "去待办",
+                        label = "纪念日提醒",
+                        iconTint = Color(0xFFFF9A56),
+                        iconBg = Color(0xFFFFF1E8),
+                        icon = AppIconType.Star,
+                        modifier = Modifier.weight(1f),
+                    ) { openAnniversaryList(pager) }
+                    AppQuickAction(
+                        label = "每日打卡",
                         iconTint = Color(0xFF6C7BFF),
                         iconBg = Color(0xFFEDEFFF),
                         icon = AppIconType.Todo,
                         modifier = Modifier.weight(1f),
-                    ) { onNavigate(1) }
+                    ) { openCheckinPage(pager) }
                     AppQuickAction(
-                        label = "送心意",
+                        label = "我们的相册",
                         iconTint = Color(0xFFFF5A8C),
                         iconBg = Color(0xFFFFEAF1),
                         icon = AppIconType.Heart,
                         modifier = Modifier.weight(1f),
-                    ) { onNavigate(2) }
+                    ) { openMomentPage(pager) }
                     AppQuickAction(
-                        label = "去聊天",
-                        iconTint = Color(0xFF34C77B),
-                        iconBg = Color(0xFFE6F8EF),
-                        icon = AppIconType.Chat,
+                        label = "恋爱清单",
+                        iconTint = Color(0xFFF7A44A),
+                        iconBg = Color(0xFFFFF3E6),
+                        icon = AppIconType.Flag,
                         modifier = Modifier.weight(1f),
-                        badge = ChatStore.unreadCount, // M11:未读红点与底栏同源
-                    ) { onNavigate(3) }
-                    AppQuickAction(
-                        label = "我的",
-                        iconTint = Color(0xFFFF9A56),
-                        iconBg = Color(0xFFFFF1E8),
-                        icon = AppIconType.Mine,
-                        modifier = Modifier.weight(1f),
-                    ) { onNavigate(4) }
+                    ) { openWishListPage(pager) }
                 }
             }
         }
@@ -215,6 +216,24 @@ private fun openCheckinPage(pager: Pager) {
     try {
         pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
             .openPage("checkinPage", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/** 路由打开我们的相册独立页(M9;openCheckinPage 同款) */
+private fun openMomentPage(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("momentPage", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/** 路由打开恋爱清单独立页(M14;openMomentPage 同款) */
+private fun openWishListPage(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("wishListPage", JSONObject())
     } catch (_: Exception) {
     }
 }

@@ -106,40 +106,9 @@ internal fun MinePage(
                 }
                 ThemePickerCard(pager)
                 Spacer(modifier = Modifier.height(14.dp))
-                // 设置分组
+                // 设置分组(2026-10-18:原四功能入口——纪念日提醒/每日打卡/我们的相册/恋爱清单
+                // 迁至首页快捷入口区,图标/配色/命名同源;此处仅余设置向菜单)
                 AppMenuGroup(modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)) {
-                    AppMenuRow(
-                        icon = AppIconType.Star,
-                        iconTint = Color(0xFFFF9A56),
-                        iconBg = Color(0xFFFFF1E8),
-                        title = "纪念日提醒",
-                        onClick = { openAnniversaryList(pager) }, // M5:接纪念日独立页(原死菜单项)
-                    )
-                    AppMenuDivider()
-                    AppMenuRow(
-                        icon = AppIconType.Todo,
-                        iconTint = Color(0xFF6C7BFF),
-                        iconBg = Color(0xFFEDEFFF),
-                        title = "每日打卡",
-                        onClick = { openCheckinPage(pager) }, // M8:接打卡独立页(月历 + 共同连续)
-                    )
-                    AppMenuDivider()
-                    AppMenuRow(
-                        icon = AppIconType.Heart,
-                        iconTint = Color(0xFFFF5A8C),
-                        iconBg = Color(0xFFFFEAF1),
-                        title = "我们的相册",
-                        onClick = { openMomentPage(pager) }, // M9:接相册页(双列瞬间墙 + 发布/预览)
-                    )
-                    AppMenuDivider()
-                    AppMenuRow(
-                        icon = AppIconType.Flag,
-                        iconTint = Color(0xFFF7A44A),
-                        iconBg = Color(0xFFFFF3E6),
-                        title = "恋爱清单",
-                        onClick = { openWishListPage(pager) }, // M14:接恋爱清单页(勾选完成自动发庆祝消息)
-                    )
-                    AppMenuDivider()
                     AppMenuRow(
                         icon = AppIconType.Service,
                         iconTint = Color(0xFF34C77B),
@@ -201,51 +170,6 @@ private fun openWishTimeline(pager: Pager) {
     try {
         pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
             .openPage("wishTimeline", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/**
- * openAnniversaryList — 路由打开纪念日页(新 Activity 压栈,closePage/系统返回即回)
- * 事件回调里模块已就绪(didInit 之后),acquireModule 安全(openWishTimeline 同款)
- */
-private fun openAnniversaryList(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("anniversaryList", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/**
- * openCheckinPage — 路由打开每日打卡页(M8;openAnniversaryList 同款新 Activity 压栈)
- */
-private fun openCheckinPage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("checkinPage", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/**
- * openMomentPage — 路由打开我们的相册页(M9;openCheckinPage 同款新 Activity 压栈)
- */
-private fun openMomentPage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("momentPage", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/**
- * openWishListPage — 路由打开恋爱清单页(M14;openMomentPage 同款新 Activity 压栈)
- */
-private fun openWishListPage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("wishListPage", JSONObject())
     } catch (_: Exception) {
     }
 }
