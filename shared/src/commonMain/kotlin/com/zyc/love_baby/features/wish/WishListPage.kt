@@ -161,13 +161,16 @@ internal fun WishListPage(pager: Pager) {
     // 键盘弹起自动滚到底(2026-10-18 真机反馈「键盘顶起输入条和清单叠一起没边距」):键盘
     // 盖住下半屏后,当前视口的清单尾项直接紧贴输入条顶缘,无呼吸观感=叠一起;滚到底让尾部
     // Spacer 的 20dp 呼吸落在输入条正上方(点输入框=准备添加,看尾部活跃清单语义自洽)。
-    // 收起不滚(保持阅读位置);delay 一拍等键盘动画与 Spacer 随 keyboardHeight 长高后的
-    // 布局落地,过早 scrollToItem 会撞旧布局再被布局推移吞掉
+    // 收起不滚(保持阅读位置)。流畅度二修(同日真机反馈「顶起不太流畅」):delay 提到 260ms
+    // 等系统键盘动画(~260ms)走完再滚,跳变不与键盘升顶打架;并用 animateScrollToItem 平滑
+    // 滚底——ChatPage 弃用它的两个前提在此均不成立(陈旧 canScrollForward 闸门=追加后立即
+    // 调才有,此处延迟后 layoutInfo 已新鲜;卡顿实锤在 Pager 域,本页独立页无 Pager);
+    // 已在底部时动画直接结束,失败模式无害
     LaunchedEffect(keyboardHeight) {
         if (keyboardHeight <= 0f) return@LaunchedEffect
-        delay(150)
+        delay(260)
         val count = listState.layoutInfo.totalItemsCount
-        if (count > 1) listState.scrollToItem(count - 1)
+        if (count > 1) listState.animateScrollToItem(count - 1)
     }
 
     // D-19f 分层排序:进行中在前(保持服务端序 = id 升序),已完成沉底按 doneTime 倒序
@@ -640,9 +643,12 @@ private fun WishDetailOverlay(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Box(
+                        // 主操作钮用品牌渐变(2026-10-18 真机反馈「颜色不对」:原单色 brandEnd 是
+                        // 渐变浅端,默认蜜桃主题 FFB199 极浅,白字发白像禁用态;全仓主按钮惯例
+                        // =brandBrush 渐变——AppCards 登录钮/CheckinPage 打卡钮同款)
                         modifier = Modifier.weight(1f)
                             .height(42.dp)
-                            .background(ThemeStore.current.brandEnd, RoundedCornerShape(21.dp))
+                            .background(ThemeStore.current.brandBrush, RoundedCornerShape(21.dp))
                             .clickable { if (!submitting) onToggle() },
                         contentAlignment = Alignment.Center,
                     ) {
