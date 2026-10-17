@@ -56,4 +56,8 @@ public class AppMessageRespVO {
     @Schema(description = "发送时间（epoch 毫秒）", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime createTime;
 
+    @Schema(description = "是否已撤回（M12：true = 墓碑，端上渲染灰条提示；content 仍原样回传，admin 审计可看原文；list/send 系回包统一携带）",
+            requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
+    private Boolean recalled;
+
 }

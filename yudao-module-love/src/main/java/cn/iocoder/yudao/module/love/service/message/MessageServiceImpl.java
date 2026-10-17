@@ -7,6 +7,7 @@ import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.websocket.core.sender.WebSocketMessageSender;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
@@ -22,6 +23,7 @@ import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -32,13 +34,16 @@ import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeC
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.AUTH_LOGIN_USER_DISABLED;
 import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.COUPLE_NOT_EXISTS;
+import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.MESSAGE_NOT_EXISTS;
+import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.MESSAGE_RECALL_EXPIRED;
 
 /**
  * 悄悄话/心愿消息 Service 实现类
  *
- * 以「当前登录用户」为出发点（SecurityFrameworkUtils 反查），不接受客户端传入的 coupleId / userId /
- * messageId：发送方恒为当前用户、接收方恒为 couple 对方、拉取恒按自己 couple 过滤，天然防 IDOR
- * （消息段 1_003_003_000「消息不存在」仅服务 admin 按 id 删除等场景，app 端无按 id 访问入口，§5.2）。
+ * 以「当前登录用户」为出发点（SecurityFrameworkUtils 反查），不接受客户端传入的 coupleId / userId：
+ * 发送方恒为当前用户、接收方恒为 couple 对方、拉取恒按自己 couple 过滤，天然防 IDOR。
+ * M12 起 recall 为唯一按客户端 id 的 app 写入口：service 层 couple 归属 + sender 本人双校验防 IDOR
+ * （不存在/跨 couple/非本人统一按 1_003_003_000「消息不存在」拒绝，不泄露存在性）。
  *
  * @author 芋道源码
  */
@@ -60,6 +65,19 @@ public class MessageServiceImpl implements MessageService {
      * 与客户端 base/WebSocketModule 的判定串保持一致
      */
     private static final String MESSAGE_TYPE_LOVE_NEW = "love-message-new";
+
+    /**
+     * 撤回时间窗（M12，秒）：与端上 ChatPage RECALL_WINDOW_MS=120_000 双源同步（服务端权威，
+     * 端上预判仅省一次必败请求）
+     */
+    private static final long RECALL_WINDOW_SECONDS = 120L;
+
+    /**
+     * WS 撤回信号类型（M12）：撤回不走「纯信号+增量拉」——增量拉按 id &gt; lastId 扫，拉不到
+     * 已拉取老消息的字段变更，故信号携 messageId 由端上本地置墓碑（D-16 的显式破例）；
+     * 信号丢失的兜底 = 端上切 Tab 进聊天页全量 resync 纠偏
+     */
+    private static final String MESSAGE_TYPE_LOVE_RECALL = "love-message-recall";
 
     @Resource
     private LoveUserMapper loveUserMapper;
@@ -169,6 +187,45 @@ public class MessageServiceImpl implements MessageService {
         // 不查库校验消息归属：游标只推进自己行的已读位，谎报大 id 仅压制自己的红点（自伤无动机），
         // GREATEST 已防回退；从简（M11 冻结决策，风险清单 R3 留档）
         loveUserMapper.updateChatReadCursorForward(currentUserId, reqVO.getLastMessageId());
+    }
+
+    /**
+     * 撤回消息（M12）：校验链 = 存在 + couple 归属 + sender 本人（统一 1_003_003_000 防探测）→
+     * 已撤回幂等成功 → 时间窗（服务端时钟权威，1_003_003_001）→ CAS 置位墓碑 → WS 推对方
+     *
+     * recall 是首个按客户端 id 的 app 写入口（见类注释 IDOR 口径）；撤回不删行，content 留档审计
+     */
+    @Override
+    public void recallMessage(AppMessageRecallReqVO reqVO) {
+        Long currentUserId = getCurrentUserId();
+        // §6.5 停用账号收口
+        getValidatedCurrentUser(currentUserId);
+        LoveCoupleDO couple = getValidatedCouple(currentUserId);
+        // 三重校验统一按「消息不存在」拒绝：不泄露他 couple / 他人消息的存在性（防探测，§11 IDOR 口径）
+        LoveMessageDO message = messageMapper.selectById(reqVO.getMessageId());
+        if (message == null || !Objects.equals(message.getCoupleId(), couple.getId())
+                || !Objects.equals(message.getSenderId(), currentUserId)) {
+            throw exception(MESSAGE_NOT_EXISTS);
+        }
+        // 已撤回幂等成功：重复点按 / 双端同发均不报错（checkin 覆盖写先例口径）
+        if (Boolean.TRUE.equals(message.getRecalled())) {
+            return;
+        }
+        // 时间窗权威校验（服务端时钟，不受端上本地时钟影响）；createTime 由 insertFill 落库时填充，
+        // selectById 读回的即 DB 真值
+        if (message.getCreateTime() == null
+                || message.getCreateTime().isBefore(LocalDateTime.now().minusSeconds(RECALL_WINDOW_SECONDS))) {
+            throw exception(MESSAGE_RECALL_EXPIRED);
+        }
+        // CAS 置位墓碑：rows==0 = 并发已撤回（或 admin 逻辑删竞态），幂等成功不打错
+        int rows = messageMapper.recallById(message.getId(), currentUserId);
+        // 撤回信号推对方在线连接（insertAndBuildRespVO 同链路）：单键 Map.of 合法；
+        // rows==0 时对方大概率已收到首个信号，不重推
+        if (rows > 0 && webSocketMessageSender != null) {
+            webSocketMessageSender.send(UserTypeEnum.MEMBER.getValue(), message.getReceiverId(),
+                    MESSAGE_TYPE_LOVE_RECALL, JsonUtils.toJsonString(
+                            Map.of("messageId", String.valueOf(message.getId()))));
+        }
     }
 
     /**

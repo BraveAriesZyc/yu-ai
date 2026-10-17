@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.love.controller.app.message;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
@@ -28,7 +29,8 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 /**
  * 悄悄话/心愿消息的 App 端接口：全部需登录（无 @PermitAll，走 anyRequest().authenticated()），
  * 当前用户由 service 层经 SecurityFrameworkUtils 反查；无客户端传 id 的入口（列表按自己 couple、
- * 发送方恒当前用户、接收方恒 couple 对方），天然防 IDOR。
+ * 发送方恒当前用户、接收方恒 couple 对方），天然防 IDOR——M12 起 recall 为唯一例外，service 层
+ * couple 归属 + sender 本人双校验（不存在/跨 couple/非本人统一 1_003_003_000，不泄露存在性）。
  * 端上 lastId 游标只增不减（D-12）：admin 删除已拉取消息在端上残留，显式接受。
  * 读游标（M11）按当前登录人行推进（POST /read 不接受客户端传 userId），无 IDOR 入口。
  */
@@ -101,6 +103,18 @@ public class AppMessageController {
                     + "参数空/非正 → 全局 400")
     public CommonResult<Boolean> markRead(@RequestBody @Valid AppMessageReadReqVO reqVO) {
         messageService.markRead(reqVO);
+        return success(true);
+    }
+
+    @PostMapping("/recall")
+    @Operation(summary = "撤回自己发送的消息（M12）",
+            description = "发送方 2 分钟内可撤回（kind 1/2/3 均可）；服务端权威校验时间窗（超窗 1_003_003_001）；"
+                    + "存在/跨 couple/非本人发送统一 1_003_003_000（防探测不泄露存在性）；已撤回幂等成功；"
+                    + "撤回 = recalled 墓碑置位不删行，content 留档审计；message/list 照常回传已撤回行"
+                    + "（端上渲染灰条），wish-list 排除；成功后向对方在线连接推 love-message-recall 信号（携 messageId）；"
+                    + "错误码：未绑定 → 1_003_004_003，参数空/非正 → 全局 400")
+    public CommonResult<Boolean> recallMessage(@RequestBody @Valid AppMessageRecallReqVO reqVO) {
+        messageService.recallMessage(reqVO);
         return success(true);
     }
 

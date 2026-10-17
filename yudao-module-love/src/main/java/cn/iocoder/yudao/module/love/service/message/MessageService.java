@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.love.service.message;
 
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
@@ -14,7 +15,8 @@ import java.util.List;
  *
  * 端上契约见 INTEGRATION-DESIGN.md §5.2 message 组：增量拉取（lastId 游标只增不减，D-12）、
  * 发送（kind=1 文本 / kind=2 心愿快照 / kind=3 图片 URL）。消息域只有「按自己 couple 收发」，
- * 无客户端传 id，天然防 IDOR。
+ * 无客户端传 id，天然防 IDOR——M12 起 recall 为唯一按客户端 id 的 app 写入口，service 层
+ * couple 归属 + sender 本人双校验防 IDOR（不存在/跨 couple/非本人统一按 1_003_003_000，不泄露存在性）。
  *
  * @author 芋道源码
  */
@@ -82,5 +84,15 @@ public interface MessageService {
      * @param reqVO 已读到的最大消息 id
      */
     void markRead(AppMessageReadReqVO reqVO);
+
+    /**
+     * 撤回消息（M12）：发送方 2 分钟内可撤回自己发的消息（kind 1/2/3 均可）。
+     * 校验链：存在 + couple 归属 + sender 本人（统一 1_003_003_000 防探测）→ 已撤回幂等成功 →
+     * 时间窗（服务端时钟权威，1_003_003_001）→ CAS 置位墓碑。撤回不删行，content 留档审计；
+     * 成功后向对方在线连接推 love-message-recall 信号（携 messageId）
+     *
+     * @param reqVO 待撤回消息 id
+     */
+    void recallMessage(AppMessageRecallReqVO reqVO);
 
 }

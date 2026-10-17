@@ -35,12 +35,17 @@ public interface ErrorCodeConstants {
      */
     ErrorCode MOOD_OPTION_DEFAULT_NOT_EXISTS = new ErrorCode(1_003_002_004, "心情默认选项不存在");
 
-    // ========== 消息 模块 1-003-003-000（M3 追加） ==========
+    // ========== 消息 模块 1-003-003-xxx（M3 追加，M12 起两码） ==========
     /**
-     * 消息组唯一错误码：admin 按物理 id 删除时记录不存在，以及跨 couple 按 id 访问统一按
-     * 「不存在」拒绝（不暴露他 couple 消息的存在性，IDOR 用例见 §11）
+     * admin 按物理 id 删除时记录不存在，以及跨 couple / 非本人按 id 访问统一按
+     * 「不存在」拒绝（不暴露他 couple 消息的存在性，IDOR 用例见 §11；M12 recall 校验链同口径）
      */
     ErrorCode MESSAGE_NOT_EXISTS = new ErrorCode(1_003_003_000, "消息不存在");
+    /**
+     * 撤回时间窗已过（M12）：发送方超 2 分钟撤回。服务端权威校验（服务端时钟），
+     * 端上 createTime 预判仅省一次必败请求，两处窗口常数须同步 120s
+     */
+    ErrorCode MESSAGE_RECALL_EXPIRED = new ErrorCode(1_003_003_001, "消息发送已超过 2 分钟，无法撤回");
 
     // ========== 情侣 模块 1-003-004-000 ==========
     ErrorCode COUPLE_INVITE_CODE_INVALID = new ErrorCode(1_003_004_000, "邀请码无效");

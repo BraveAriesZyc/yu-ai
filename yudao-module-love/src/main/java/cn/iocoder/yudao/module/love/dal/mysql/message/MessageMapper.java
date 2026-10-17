@@ -4,6 +4,8 @@ import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.module.love.dal.dataobject.message.LoveMessageDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -69,6 +71,8 @@ public interface MessageMapper extends BaseMapperX<LoveMessageDO> {
         return selectList(new LambdaQueryWrapper<LoveMessageDO>()
                 .eq(LoveMessageDO::getCoupleId, coupleId)
                 .eq(LoveMessageDO::getKind, LoveMessageDO.KIND_WISH)
+                // 已撤回心愿不出时间线（M12：墓碑只在聊天流呈现，与聊天内灰条口径一致）
+                .eq(LoveMessageDO::getRecalled, false)
                 .orderByDesc(LoveMessageDO::getId)
                 // 与仓内 QueryWrapperX.limitN 同款惯例：last("LIMIT n")；limit 由 service 钳制后传入
                 .last("LIMIT " + limit));
@@ -100,7 +104,26 @@ public interface MessageMapper extends BaseMapperX<LoveMessageDO> {
         return selectCount(new LambdaQueryWrapper<LoveMessageDO>()
                 .eq(LoveMessageDO::getCoupleId, coupleId)
                 .gt(LoveMessageDO::getId, afterMessageId)
-                .ne(LoveMessageDO::getSenderId, excludeSenderId));
+                .ne(LoveMessageDO::getSenderId, excludeSenderId)
+                // 对方撤回一条我未读的消息，红点应减（M12）
+                .eq(LoveMessageDO::getRecalled, false));
     }
+
+    /**
+     * 撤回消息（M12 POST /love/message/recall）：recalled 墓碑置位，不删行不改 content
+     *
+     * 注解 SQL 不经 MP 注入逻辑：显式 WHERE deleted = 0（@TableLogic 不作用于注解 SQL）、
+     * 显式 update_time = NOW()（MP 自动填充同不作用；LoveUserMapper.updateChatReadCursorForward 先例）；
+     * sender_id 条件 = 归属第二道闸（service 已校验，防并发窗口内的归属漂移）；
+     * recalled = b'0' 条件 = CAS：并发双撤回/重复请求仅一方影响行数 1，rows == 0 由 service 按幂等处理
+     * （可能为并发已撤回或 admin 逻辑删竞态，两者端上语义一致：消息不可见）
+     *
+     * @param id        消息编号（service 层已校验存在 + couple 归属 + sender 本人）
+     * @param senderId  当前用户（必须与行 sender_id 一致才置位）
+     * @return 影响行数（0 = 幂等：已撤回或 admin 逻辑删竞态）
+     */
+    @Update("UPDATE love_message SET recalled = b'1', update_time = NOW() "
+            + "WHERE id = #{id} AND sender_id = #{senderId} AND deleted = 0 AND recalled = b'0'")
+    int recallById(@Param("id") Long id, @Param("senderId") Long senderId);
 
 }

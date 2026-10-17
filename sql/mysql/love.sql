@@ -147,6 +147,7 @@ CREATE TABLE `love_mood_record`  (
 --    服务端不校验 wish 归属（无 wish 实体，文案字典留端上），两设备还原靠快照字段（§5.2）；
 -- 4. audit_status 首期恒写 1（通过）兜底，事前审核二期接入（§12.3）；
 -- 5. 首期无用户侧撤回/删除（D-12），admin 删除已拉取消息在端上残留（lastId 只增不减，显式接受）。
+--    （M12 修订：发送方 2 分钟内可撤回自己发的消息，撤回=recalled 墓碑列标记不删行，见文末 M12 段）
 -- ----------------------------
 DROP TABLE IF EXISTS `love_message`;
 CREATE TABLE `love_message`  (
@@ -517,3 +518,15 @@ ALTER TABLE `love_message`
 -- ----------------------------
 ALTER TABLE `love_user`
     ADD COLUMN `chat_read_cursor` bigint NOT NULL DEFAULT 0 COMMENT '聊天已读游标（已读到的最大 love_message.id；0=未读过。全局消息 id 只增不减，解绑重绑新 couple 的消息 id 必大于旧游标）';
+
+-- ----------------------------
+-- M12 段：聊天消息撤回（INTEGRATION-DESIGN.md §5.2 message 组 / D-12 修订）
+-- love_message 加撤回墓碑列：撤回=标记不删行——content 原文保留（admin 审计可看原文），
+-- 与 admin 逻辑删（deleted）双列独立；message/list 回包照常含已撤回行（端上按 recalled 渲染
+-- 灰条提示），wish-list 排除已撤回行（心愿时间线不呈现墓碑）。
+-- 执行注意：ADD COLUMN 非幂等（MySQL 无 IF NOT EXISTS），本段为一次性迁移段——重放报
+--    duplicate column（1060）属预期，跳过本段 ALTER 即可（M11 段执行注意同款先例）；
+--    上线顺序必须 SQL 先于新代码（新代码 DO 映射依赖本列）。
+-- ----------------------------
+ALTER TABLE `love_message`
+    ADD COLUMN `recalled` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否已撤回（M12 墓碑标记：撤回不删行，content 原文留档审计；与 deleted 逻辑删独立）';

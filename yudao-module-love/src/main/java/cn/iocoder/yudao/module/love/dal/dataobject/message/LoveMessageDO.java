@@ -16,7 +16,8 @@ import lombok.EqualsAndHashCode;
  *    空参 lastId 首屏取最近一页（id 倒序取 limit 条后由 service 正序返回）；
  * 2. kind=2 心愿消息为【快照式】：content/wish_key/color/icon 四字段整体入列，
  *    服务端不校验 wish 归属（无 wish 实体，文案字典留端上），两设备还原靠快照字段（§5.2）；
- * 3. 首期无用户侧撤回/删除（D-12），admin 删除已拉取消息在端上残留（lastId 只增不减，显式接受）；
+ * 3. 首期无用户侧删除；M12 起发送方 2 分钟内可撤回自己发的消息（撤回 = recalled 墓碑列标记
+ *    不删行，见 {@link #recalled}），admin 删除已拉取消息在端上残留（lastId 只增不减，显式接受）；
  * 4. audit_status 首期恒写 {@link #AUDIT_STATUS_APPROVED} 兜底，事前审核二期接入（§12.3）。
  *
  * 依赖：继承 BaseDO 走【逻辑删除】（deleted + @TableLogic），与 love_couple 的物理删除路线相反；
@@ -122,5 +123,12 @@ public class LoveMessageDO extends BaseDO {
      * 首期恒写 {@link #AUDIT_STATUS_APPROVED} 兜底（§4 / §12.3）
      */
     private Integer auditStatus;
+    /**
+     * 是否已撤回（M12 墓碑标记）
+     *
+     * 撤回不删行：content 原文保留（admin 审计可看原文），与 deleted 逻辑删独立双列；
+     * message/list 照常回传（端上按此渲染灰条提示），wish-list 排除
+     */
+    private Boolean recalled;
 
 }
