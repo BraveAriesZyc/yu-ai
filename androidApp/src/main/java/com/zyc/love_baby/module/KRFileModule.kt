@@ -23,7 +23,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * 头像上传一条龙原生实现(文件服务里程碑):ACTION_PICK 选图(KRPickImageActivity 透明桥收
- * onActivityResult)→ Glide 512px JPEG 压缩(自动 EXIF 矫正,头像场景省流量避开 16MB 服务端限制)
+ * onActivityResult)→ Glide 压缩(centerInside 等比缩到 maxEdge 内,自动 EXIF 矫正;maxEdge
+ * 由 common 侧传入,缺省 512 头像场景,相册场景传 1080——M9)JPEG 80 出图避开 16MB 服务端限制
  * → okhttp multipart 直传 /app-api/infra/file/upload(MEMBER token)→ 解析 yudao CommonResult
  * 回调给 common 侧(base/FileModule 声明,一次性回调 keepCallbackAlive=false)。
  * 仅上传动作——URL 写回(user/update)由 common 侧收口,原生不碰业务接口。
@@ -67,6 +68,8 @@ class KRFileModule : KuiklyRenderBaseModule() {
             callback?.invoke(mapOf("code" to -1, "msg" to "参数缺失"))
             return
         }
+        // 压缩上限可传(M9 相册场景传 1080 供大图预览;缺省 512 保持头像场景兼容)
+        val maxEdge = paramJSON.optInt("maxEdge", DEFAULT_MAX_EDGE)
         val activity = activity
         if (activity == null || activity.isFinishing) {
             callback?.invoke(mapOf("code" to -1, "msg" to "宿主不可用"))
@@ -80,6 +83,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         resultCallback = callback
         pendingUploadUrl = url
         pendingToken = token
+        pendingMaxEdge = maxEdge
         // 透明桥 Activity 收选图结果,结果经类级静态入口转发回本实例(生命周期解耦:
         // 桥 Activity 只认 companion 的 onPickResult,不持模块引用)。
         // ⚠ 必须 catch:桥 Activity 声明缺失等配置错误在此抛 ActivityNotFoundException,
@@ -107,13 +111,13 @@ class KRFileModule : KuiklyRenderBaseModule() {
             finishFlight(callback, CODE_ERROR, "上下文不可用")
             return
         }
-        // Glide 压缩:centerInside 等比缩到 512px 内,EXIF 旋转自动矫正(相册竖拍图常见坑);
+        // Glide 压缩:centerInside 等比缩到 maxEdge 内(EXIF 旋转自动矫正,相册竖拍图常见坑);
         // 压完进 upload,链路仍持 callback 引用
         Glide.with(context)
             .asBitmap()
             .load(uri)
             .centerInside()
-            .override(AVATAR_MAX_EDGE)
+            .override(pendingMaxEdge)
             .into(object : CustomTarget<Bitmap>() {
                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                     val bytes = ByteArrayOutputStream().use { out ->
@@ -199,6 +203,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         resultCallback = null
         pendingUploadUrl = null
         pendingToken = null
+        pendingMaxEdge = DEFAULT_MAX_EDGE
         val result = LinkedHashMap<String, Any>()
         result["code"] = code
         if (!data.isNullOrEmpty()) {
@@ -214,6 +219,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         resultCallback = null
         pendingUploadUrl = null
         pendingToken = null
+        pendingMaxEdge = DEFAULT_MAX_EDGE
         if (current === this) {
             current = null
         }
@@ -226,7 +232,8 @@ class KRFileModule : KuiklyRenderBaseModule() {
         private const val METHOD_PICK_UPLOAD = "pickAndUpload"
         private const val CODE_CANCEL = 1
         private const val CODE_ERROR = -1
-        private const val AVATAR_MAX_EDGE = 512
+        /** 压缩边长缺省(头像场景;common 侧不传 maxEdge 时走此值,512px 对 3x 屏头像圆环充裕) */
+        private const val DEFAULT_MAX_EDGE = 512
         private const val JPEG_QUALITY = 80
 
         /** 当前活跃模块实例(桥 Activity 静态入口转发目标;init 登记、onDestroy 注销) */
@@ -239,6 +246,10 @@ class KRFileModule : KuiklyRenderBaseModule() {
 
         @Volatile
         var pendingToken: String? = null
+
+        /** 发起时写入(缺省 DEFAULT_MAX_EDGE)、收口清空的压缩参数(相册场景 1080) */
+        @Volatile
+        var pendingMaxEdge: Int = DEFAULT_MAX_EDGE
 
         /** 桥 Activity 回传入口(uri=null=取消/无相册):转发给活跃实例,无实例则静默丢弃 */
         fun onPickResult(uri: Uri?) {

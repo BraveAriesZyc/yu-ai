@@ -128,6 +128,7 @@ internal fun MinePage(
                         iconTint = Color(0xFFFF5A8C),
                         iconBg = Color(0xFFFFEAF1),
                         title = "我们的相册",
+                        onClick = { openMomentPage(pager) }, // M9:接相册页(双列瞬间墙 + 发布/预览)
                     )
                     AppMenuDivider()
                     AppMenuRow(
@@ -214,6 +215,17 @@ private fun openCheckinPage(pager: Pager) {
     try {
         pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
             .openPage("checkinPage", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/**
+ * openMomentPage — 路由打开我们的相册页(M9;openCheckinPage 同款新 Activity 压栈)
+ */
+private fun openMomentPage(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("momentPage", JSONObject())
     } catch (_: Exception) {
     }
 }

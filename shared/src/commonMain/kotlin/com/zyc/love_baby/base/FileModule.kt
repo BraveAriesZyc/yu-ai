@@ -11,9 +11,10 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
  * 用法:MainPager 头像上传协程经 pager.getModule<FileModule>(MODULE_NAME) 取用;
  *  token 取 SessionStore.accessToken(发起前先经 UserApi.getUser 热身,401 单飞刷新保证 token 新鲜——
  *  原生直传不经 HttpClient,刷新机制覆盖不到)
- * 入参:pickAndUpload(url, token, onResult)——url 为完整上传端点(ApiConfig.url(pager, "/infra/file/upload")),
- *  token 由原生拼 Authorization: Bearer;原生内部完成「相册选图(ACTION_PICK 免权限)→ Glide 512px JPEG
- *  压缩(自动 EXIF 矫正)→ multipart 直传」一条龙
+ * 入参:pickAndUpload(url, token, maxEdge, onResult)——url 为完整上传端点(ApiConfig.url(pager, "/infra/file/upload")),
+ *  token 由原生拼 Authorization: Bearer;maxEdge 为压缩边长上限(缺省 512 头像场景;相册场景传 1080
+ *  供大图预览清晰,M9);原生内部完成「相册选图(ACTION_PICK 免权限)→ Glide centerInside 压缩
+ *  (自动 EXIF 矫正)→ multipart 直传」一条龙
  * 事件:onResult 一次性回调(keepCallbackAlive=false),回参 {"code": 0, "data": "<文件URL>", "msg": ""}——
  *  code=0 成功 data 即服务端 URL(yudao AppFileController 契约);非 0 失败(取消/IO/HTTP 非 0/解析),
  *  msg 为用户可读文案
@@ -27,11 +28,12 @@ internal class FileModule : Module() {
         return MODULE_NAME
     }
 
-    /** 选图+压缩+上传一条龙(一次性回调):回参契约见头注释「事件」段 */
-    fun pickAndUpload(url: String, token: String, onResult: CallbackFn) {
+    /** 选图+压缩+上传一条龙(一次性回调):回参契约见头注释「事件」段;maxEdge 缺省 512(头像兼容) */
+    fun pickAndUpload(url: String, token: String, maxEdge: Int = 512, onResult: CallbackFn) {
         val methodArgs = JSONObject()
         methodArgs.put("url", url)
         methodArgs.put("token", token)
+        methodArgs.put("maxEdge", maxEdge)
         toNative(false, METHOD_PICK_UPLOAD, methodArgs.toString(), onResult)
     }
 
