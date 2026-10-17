@@ -301,11 +301,13 @@ fun ChatPage(
             return@LaunchedEffect
         }
         loadFailed = ChatStore.loadInitial(pager) !is ApiResult.Ok
+        ChatStore.setChatVisible(pager, pageVisible) // M11:翻 BOUND 后重断言可见态(reset 清 false 而 pageVisible 未变的停留场景)
     }
     // M10 切 Tab 关全屏大图浮层(pageVisible=false 即离页):全屏黑浮层跨 Tab 驻留不可见且拦手势;
     // 预览条(非全屏)保留——上传协程属常驻组合的 rememberCoroutineScope,切 Tab 不中断,回来即绪
     LaunchedEffect(pageVisible) {
         if (!pageVisible) imagePreviewUrl = ""
+        ChatStore.setChatVisible(pager, pageVisible) // M11:进出页上报,置 true 即主动 sync 一次(与补拉尾钩子双保险,D6)
     }
     // M10 浮层开合上报 MainPager(横滑切 Tab 必须随浮层关:遮罩只吃 tap 不吃拖拽,不接线则
     // 预览开着横滑会切 Tab、黑浮层驻留聊天 Tab 不可见,F6)

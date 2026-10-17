@@ -54,6 +54,12 @@ internal data class MessageSendImageReq(val imageUrl: String) {
         .put("imageUrl", imageUrl)
 }
 
+/** 标记已读(message/read,M11):lastMessageId = 已读到的最大消息 id(服务端 GREATEST 只进不退;String 传 §5.1) */
+internal data class MessageReadReq(val lastMessageId: String) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("lastMessageId", lastMessageId)
+}
+
 // ---------- 响应模型 ----------
 
 /**

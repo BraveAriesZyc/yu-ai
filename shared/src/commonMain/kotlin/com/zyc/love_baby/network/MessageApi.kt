@@ -1,6 +1,7 @@
 package com.zyc.love_baby.network
 
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.data.model.MessageReadReq
 import com.zyc.love_baby.data.model.MessageSendImageReq
 import com.zyc.love_baby.data.model.MessageSendReq
 import com.zyc.love_baby.data.model.MessageSendWishesReq
@@ -35,6 +36,8 @@ internal object MessageApi {
     private const val PATH_SEND = "/love/message/send"
     private const val PATH_SEND_WISHES = "/love/message/send-wishes"
     private const val PATH_SEND_IMAGE = "/love/message/send-image"
+    private const val PATH_UNREAD = "/love/message/unread"
+    private const val PATH_READ = "/love/message/read"
 
     /**
      * 增量拉取:data 为数组(ApiResult.Ok.dataArray),服务端恒升序返回。
@@ -74,4 +77,15 @@ internal object MessageApi {
     /** 发图片消息(kind=3,content 列存 URL,M10):回包为落库后的单个消息 VO(供乐观替换与 lastId 推进) */
     suspend fun sendImage(pager: Pager, imageUrl: String): ApiResult =
         HttpClient.request(pager, PATH_SEND_IMAGE, isPost = true, body = MessageSendImageReq(imageUrl).toJson())
+
+    /**
+     * 聊天未读数(红点口径,M11):回包 data 为对象 {"unread":n}。
+     * ⚠ 对象形态契约——服务端禁改回 CommonResult<Long> 标量(toOk 只分派对象/数组,标量落空对象)
+     */
+    suspend fun unread(pager: Pager): ApiResult =
+        HttpClient.request(pager, PATH_UNREAD, isPost = false)
+
+    /** 标记已读(M11):服务端 GREATEST 只进不退;回包标量 true 经 toOk 归空对象,调用方只判 Ok 不读 data */
+    suspend fun markRead(pager: Pager, lastMessageId: String): ApiResult =
+        HttpClient.request(pager, PATH_READ, isPost = true, body = MessageReadReq(lastMessageId).toJson())
 }

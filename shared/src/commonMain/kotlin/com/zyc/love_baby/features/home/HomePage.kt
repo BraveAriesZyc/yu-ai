@@ -44,6 +44,7 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.features.chat.todayDayIndexGmt8
 import com.zyc.love_baby.state.AnniversaryStore
+import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
@@ -113,6 +114,7 @@ fun HomePage(pager: Pager, onNavigate: (Int) -> Unit) {
                         iconBg = Color(0xFFE6F8EF),
                         icon = AppIconType.Chat,
                         modifier = Modifier.weight(1f),
+                        badge = ChatStore.unreadCount, // M11:未读红点与底栏同源
                     ) { onNavigate(3) }
                     AppQuickAction(
                         label = "我的",

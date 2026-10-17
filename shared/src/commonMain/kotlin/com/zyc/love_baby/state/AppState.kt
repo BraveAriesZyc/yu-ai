@@ -810,6 +810,16 @@ internal object ChatStore {
     var lastId by mutableStateOf("")
         private set
 
+    /** 未读红点数(M11,服务端口径:couple 内 id>我方 chat_read_cursor 且非本人;仅 refreshUnread/markRead 维护) */
+    var unreadCount by mutableIntStateOf(0)
+        private set
+
+    /** 聊天页可见态(ChatPage effect 上报,M11):true=停留本页,pull 落态走 markRead;false=走 refreshUnread */
+    private var chatVisible = false
+
+    /** 本端已成功标记的游标(M11 markRead guard:未越过即不发 POST,防 5s 轮询重发;失败不推进=下轮重试自愈) */
+    private var markedCursor = ""
+
     /**
      * 在飞拉取互斥(F13):首组合(页面 LaunchedEffect)/切 Tab(MainPager)/下拉刷新/停留轮询可能
      * 并发触发 pull,串行排队「等待后各拉各的」而非命中在飞即空返回——空返回会让下拉刷新指示器
@@ -846,28 +856,37 @@ internal object ChatStore {
      */
     suspend fun loadIncrement(pager: Pager): ApiResult = pull(pager, overwrite = !initialLoaded)
 
-    private suspend fun pull(pager: Pager, overwrite: Boolean): ApiResult = pullMutex.withLock {
-        val result = MessageApi.list(pager, if (overwrite) "" else lastId)
-        if (result is ApiResult.Ok) {
-            val infos = MessageInfo.listFrom(result.dataArray)
-            if (overwrite) {
-                // 首屏覆盖(F6):按 id 对账合并而非整表替换——覆盖拉在飞时本端 send/sendWishes 可能
-                // 已 POST 落库并先入列(其服务端 id 必大于本页快照最大 id),整表替换会把它们驱逐,
-                // 而 lastId 已随覆盖推进、该区间永不重拉,消息凭空消失直至冷启动;保留 id 更大的
-                // 本端消息接在快照尾部(升序不破),下一轮增量会再拉到同 id 消息并去重
-                val serverMsgs = infos.map { toMsg(it) }
-                val maxServerId =
-                    infos.maxOfOrNull { it.id.toLongOrNull() ?: Long.MIN_VALUE } ?: Long.MIN_VALUE
-                val localNewer = messages.filter { (it.id.toLongOrNull() ?: Long.MIN_VALUE) > maxServerId }
-                messages = serverMsgs + localNewer
-            } else {
-                // 增量走归位合并:本端 send 不推游标后,回包含自己已入列条目(dedupe 掉)与对方并发迟到
-                // 的低 id 条目——后者须按 id 数值序插回正确位置,尾插会让时序错乱
-                appendDedupe(infos.map { toMsg(it) }, orderedMerge = true)
+    private suspend fun pull(pager: Pager, overwrite: Boolean): ApiResult {
+        val result = pullMutex.withLock {
+            val listResult = MessageApi.list(pager, if (overwrite) "" else lastId)
+            if (listResult is ApiResult.Ok) {
+                val infos = MessageInfo.listFrom(listResult.dataArray)
+                if (overwrite) {
+                    // 首屏覆盖(F6):按 id 对账合并而非整表替换——覆盖拉在飞时本端 send/sendWishes 可能
+                    // 已 POST 落库并先入列(其服务端 id 必大于本页快照最大 id),整表替换会把它们驱逐,
+                    // 而 lastId 已随覆盖推进、该区间永不重拉,消息凭空消失直至冷启动;保留 id 更大的
+                    // 本端消息接在快照尾部(升序不破),下一轮增量会再拉到同 id 消息并去重
+                    val serverMsgs = infos.map { toMsg(it) }
+                    val maxServerId =
+                        infos.maxOfOrNull { it.id.toLongOrNull() ?: Long.MIN_VALUE } ?: Long.MIN_VALUE
+                    val localNewer = messages.filter { (it.id.toLongOrNull() ?: Long.MIN_VALUE) > maxServerId }
+                    messages = serverMsgs + localNewer
+                } else {
+                    // 增量走归位合并:本端 send 不推游标后,回包含自己已入列条目(dedupe 掉)与对方并发迟到
+                    // 的低 id 条目——后者须按 id 数值序插回正确位置,尾插会让时序错乱
+                    appendDedupe(infos.map { toMsg(it) }, orderedMerge = true)
+                }
+                infos.forEach { advanceLastId(it.id) }
             }
-            infos.forEach { advanceLastId(it.id) }
+            listResult
         }
-        result
+        // M11 未读同步钩子(锁外,网络调用不进 pullMutex——HttpClient.silentRefresh 同款裁决):
+        // 覆盖 loadInitial/loadIncrement 全部拉取路径(首拉/切 Tab/下拉/5s 轮询/WS 信号);send 系不经过
+        // 此处(本端发送只增加对方未读,不改我方)。失败静默(只读降级 §11),下个触发点自愈
+        if (result is ApiResult.Ok) {
+            syncReadState(pager)
+        }
+        return result
     }
 
     /**
@@ -927,6 +946,9 @@ internal object ChatStore {
         messages = emptyList()
         lastId = ""
         initialLoaded = false
+        unreadCount = 0
+        markedCursor = ""
+        chatVisible = false // 停留本页解绑→重绑场景由 ChatPage bindState effect 重断言(A4)
     }
 
     /** MessageInfo → ChatMsg:isMine 以 senderId 比对当前会话;kind=2 走快照字段,kind=3 图片
@@ -986,6 +1008,52 @@ internal object ChatStore {
         val next = id.toLongOrNull()
         val ahead = if (cur != null && next != null) next > cur else id > lastId
         if (ahead) lastId = id
+    }
+
+    // ---------- M11 未读红点 ----------
+
+    /**
+     * 进出聊天页上报(ChatPage LaunchedEffect 调,M11):置 true 主动 sync 一次——修「切 Tab 补拉在飞、
+     * 本 effect 先完成导致红点没清」时序(补拉落态尾钩子会再补一刀,双保险 D6,缺一不可)
+     */
+    suspend fun setChatVisible(pager: Pager, visible: Boolean) {
+        if (chatVisible == visible) return
+        chatVisible = visible
+        if (visible) syncReadState(pager)
+    }
+
+    /** 未读同步分派:停留本页标已读(红点清零)、离页刷未读数(红点现值);BOUND 才动(未绑定静默) */
+    private suspend fun syncReadState(pager: Pager) {
+        if (!SessionStore.isLoggedIn || CoupleStore.bindState != CoupleBindState.BOUND) return
+        if (chatVisible) markRead(pager) else refreshUnread(pager)
+    }
+
+    /** POST read:guard lastId 越过 markedCursor 才发(服务端 GREATEST 另兜并发回退);失败静默
+     *  不推进 markedCursor——下轮钩子/回前台重试自愈,驻留错值窗口 ≤ 下个成功触发点 */
+    private suspend fun markRead(pager: Pager) {
+        if (lastId.isEmpty() || !isNewer(lastId, markedCursor)) return
+        val target = lastId
+        val result = MessageApi.markRead(pager, target)
+        if (result is ApiResult.Ok) {
+            markedCursor = target
+            unreadCount = 0
+        }
+    }
+
+    /** GET unread:回读服务端真值(红点唯一事实源);失败静默保留旧值,不 toast(只读降级 §11) */
+    private suspend fun refreshUnread(pager: Pager) {
+        val result = MessageApi.unread(pager)
+        if (result is ApiResult.Ok) {
+            unreadCount = result.data.optInt("unread", 0)
+        }
+    }
+
+    /** 数值序比较 a>b(advanceLastId 同款兜底:非数字字典序;空串 b 视为最旧) */
+    private fun isNewer(a: String, b: String): Boolean {
+        if (b.isEmpty()) return true
+        val ca = a.toLongOrNull()
+        val cb = b.toLongOrNull()
+        return if (ca != null && cb != null) ca > cb else a > b
     }
 }
 

@@ -11,6 +11,7 @@ import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
+import com.tencent.kuikly.compose.foundation.layout.offset
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
@@ -74,7 +75,8 @@ fun AppIconTile(
  * 用法:AppQuickAction("去待办", AppIconType.Todo, tint, bg, Modifier.weight(1f)) { ... }
  * 依赖:AppIconTile/AppTheme
  * 事件:onClick
- * 功能:首页快捷入口;几枚横排时调用方用 Row + weight 均分
+ * 功能:首页快捷入口;几枚横排时调用方用 Row + weight 均分;
+ *       badge>0 时图标右上角红点数字(未读,>99 显 99+;M11 聊天入口用)
  */
 @Composable
 fun AppQuickAction(
@@ -83,6 +85,7 @@ fun AppQuickAction(
     iconTint: Color,
     iconBg: Color,
     modifier: Modifier = Modifier,
+    badge: Int = 0,
     onClick: () -> Unit = {},
 ) {
     Column(
@@ -92,7 +95,28 @@ fun AppQuickAction(
             .padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        AppIconTile(icon, size = 40.dp, bgColor = iconBg, corner = 14.dp, iconTint = iconTint, iconSize = 20.dp, onClick = onClick)
+        Box {
+            AppIconTile(icon, size = 40.dp, bgColor = iconBg, corner = 14.dp, iconTint = iconTint, iconSize = 20.dp, onClick = onClick)
+            if (badge > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-2).dp)
+                        .size(14.dp)
+                        .background(AppTheme.Danger, RoundedCornerShape(7.dp))
+                        // 铁律7:红点是盖在 AppIconTile(带底可点)之上的带背景子视图,不透传点击
+                        // 会吞掉 14dp 区域的点击(AppCheckbox 事故同型),必须挂同一回调
+                        .clickable { onClick() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = if (badge > 99) "99+" else "$badge",
+                        color = Color.White,
+                        fontSize = 8.sp,
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(label, color = AppTheme.TextPrimary, fontSize = 12.sp)
     }

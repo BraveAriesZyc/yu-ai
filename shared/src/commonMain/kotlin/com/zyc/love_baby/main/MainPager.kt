@@ -342,7 +342,7 @@ internal fun MainPageImpl(pager: BasePager) {
         }
 
         // 悬浮底部导航(后组合压在页面上层;底部避让导航栏/手势条安全距离)
-        // 角标:M3 移除本地假回复后无角标源,恒空;推送角标待 §12.4 接入时恢复
+        // 角标(M11):聊天 Tab 未读红点,快照状态驱动(unreadCount 变化仅重组底栏区块)
         Box(
             modifier = Modifier.align(Alignment.BottomCenter)
                 .padding(horizontal = 14.dp)
@@ -351,7 +351,7 @@ internal fun MainPageImpl(pager: BasePager) {
             AppBottomBar(
                 selectedIndex = selectedTab,
                 pillPosition = pillPosition,
-                badges = emptyMap(),
+                badges = mapOf(3 to ChatStore.unreadCount),
                 onSelect = goTo,
             )
         }
@@ -460,6 +460,8 @@ internal fun MainPageImpl(pager: BasePager) {
                 // 未绑定时服务端回 1_003_004_003,loadList 失败静默保留旧值(解绑清场已清空,无残留)
                 if (CoupleStore.bindState == CoupleBindState.BOUND) {
                     AnniversaryStore.loadList(pager)
+                    // 聊天增量补拉(M11 顺手修既有缺口:不在聊天页时回前台从不拉消息;红点随 foreground 校准)
+                    ChatStore.loadIncrement(pager)
                 }
             }
         }
