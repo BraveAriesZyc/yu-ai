@@ -11,6 +11,8 @@ import cn.iocoder.yudao.framework.common.exception.ErrorCode;
  * 打卡 1-003-007-xxx（M8）。
  * 相册瞬间 1-003-008-xxx（M9）。
  * 恋爱清单 1-003-009-xxx（M14）。
+ * 用户资料 1-003-010-xxx（M16）。
+ * 恋爱灵感 1-003-011-xxx（M17，B 端配置 App 只读）。
  *
  * 短信验证码本身的错误（未发送、已过期、不正确等）由 system 的 SmsCodeApi 抛其自有错误码，不在本段定义。
  */
@@ -115,5 +117,14 @@ public interface ErrorCodeConstants {
     // ========== 用户资料（1_003_010）==========
 
     ErrorCode USER_PROFILE_BIRTHDAY_INVALID = new ErrorCode(1_003_010_000, "生日格式非法");
+
+    // ========== 恋爱灵感 模块 1-003-011-xxx（M17 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。灵感是全局共享的运营内容
+     * （无 couple 归属、无按 id 的 app 写端点），app 侧 today / quote-random / list 三端点
+     * 只读零错误路径（池空走兜底文案，不打错）；本码仅供 admin 按物理 id 更新/删除时判空
+     * （LoveAdminMoodOptionDefaultServiceImpl 同款口径）
+     */
+    ErrorCode INSPIRATION_NOT_EXISTS = new ErrorCode(1_003_011_000, "灵感不存在");
 
 }

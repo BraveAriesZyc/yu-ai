@@ -654,3 +654,109 @@ SET @m16_ddl := IF(@m16_col = 0,
 PREPARE m16_stmt FROM @m16_ddl;
 EXECUTE m16_stmt;
 DEALLOCATE PREPARE m16_stmt;
+
+-- ============================================================================
+-- M17 段：恋爱灵感表 + 种子内容 + 菜单/按钮权限（首页「今日情话」「约会灵感」两卡落位）
+-- 本段追加于 M16 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- love_inspiration = 全局共享的运营内容（无 couple_id / user_id 归属，所有情侣共读同一池），
+-- 继承 BaseDO 走【逻辑删除】（deleted 列 + DO 侧 @TableLogic），mood_option_default 同路线；
+-- kind=1 情话（App「今日情话」池，服务端按日轮换 dateKey 取模 + 随机换一句）；
+-- kind=2 约会灵感（App「约会灵感」列表池，全量拉取端上分类筛选）；status=1 停用行两端均不可见。
+-- App 只读零错误路径（池空走端上/服务端兜底文案，不打错）；admin 全量 CRUD（B 端配置对象）。
+-- 无 uk（内容无唯一性约束，重复靠运营自律）；idx_kind 普通索引（两池各自按 kind 查询）。
+-- 上线顺序必须 SQL 先于新代码（新代码 DO 映射依赖本表）。
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `love_inspiration`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '灵感编号',
+  `kind` tinyint NOT NULL COMMENT '类型（1-情话 2-约会灵感）',
+  `title` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '标题（约会灵感用，情话为 NULL）',
+  `content` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '内容（情话正文 / 约会灵感描述）',
+  `category` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '分类（情话: 甜宠/日常/表白；约会灵感: 室内/户外/美食/观影/手作；App 端动态聚合 chips）',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0启用 1停用；停用行不出现在 App）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_kind`(`kind` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '恋爱灵感表（情侣业务，B 端配置，App 只读）';
+
+-- ----------------------------
+-- 种子内容（M17，48 行：情话 24 + 约会灵感 24（室内 5/户外 5/美食 5/观影 5/手作 4）；幂等：已存在同 kind+content+deleted=0 行则跳过，
+-- M3.5 种子 INSERT...SELECT...UNION ALL 模板同款；creator='1'、NOW()、不写显式 id）
+-- ----------------------------
+INSERT INTO `love_inspiration` (`kind`, `title`, `content`, `category`, `status`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT * FROM (
+  -- 情话 kind=1（甜宠 8 / 日常 8 / 表白 8）
+  SELECT 1 AS `kind`, NULL AS `title`, '我今天真的很想你，比昨天多一点，比明天少一点。' AS `content`, '甜宠' AS `category`, 0 AS `status`, '1' AS `creator`, NOW() AS `create_time`, '1' AS `updater`, NOW() AS `update_time`, b'0' AS `deleted`
+  UNION ALL SELECT 1, NULL, '全世界那么多人，为什么偏偏遇见你——因为你是我的例外。', '甜宠', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '你一笑，我就沦陷了，这题对我来说超纲了。', '甜宠', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '别人问我最近过得怎么样，我说挺好的，因为有你。', '甜宠', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '我想把世界上最好的都给你，后来发现世界上最好的就是你。', '甜宠', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '你是我温暖的手套，冰镇的啤酒，带着阳光味道的衬衫。', '甜宠', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '我的偏爱有限，全部留给你刚好用完。', '甜宠', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '遇见你之后，我的口头禅从「随便」变成了「听你的」。', '甜宠', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '今天也要提醒你：有人在偷偷喜欢你，就是我。', '日常', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '一日三餐，四季冷暖，都想和你一起过。', '日常', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '买菜做饭洗碗的时候，就觉得日子因为有你在发光。', '日常', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '不用刻意纪念，和你在一起的每一天都值得记下来。', '日常', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '下班回家的路上想好了今晚吃什么，最后还是决定：想你。', '日常', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '今天也没发生什么大事，就是又喜欢你了一整天。', '日常', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '你在闹，我在笑，这就是我想要的生活。', '日常', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '天气预报说今天有雨，我带了两把伞，一把给你。', '日常', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '我喜欢你，不是一时兴起，而是蓄谋已久。', '表白', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '我见过很多风景，但都不及你朝我走来的样子。', '表白', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '余生请多指教，我打算赖上你了。', '表白', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '情话是我学不会的套路，但喜欢你是我的天赋。', '表白', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '你不用多好，我喜欢就好；我没有多好，你不嫌弃就好。', '表白', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '山野万里，你是我藏在星星里的浪漫。', '表白', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '我最近手头有点紧，想借你的手牵一牵。', '表白', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 1, NULL, '从遇见你开始，我的人生就只有两种状态：想你，和见你。', '表白', 0, '1', NOW(), '1', NOW(), b'0'
+  -- 约会灵感 kind=2（室内 5 / 户外 5 / 美食 5 / 观影 5 / 手作 4）
+  UNION ALL SELECT 2, '一起下厨做一顿饭', '挑一道都想吃的菜，分工一个掌勺一个打下手，摆盘拍照记录成果。', '室内', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '拼图 / 积木挑战', '选一幅 500 片以上的拼图或一套积木，一下午的专注时光，完成后装裱留念。', '室内', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '双人桌游之夜', '翻翻家里落灰的桌游，或去桌游吧玩几局双人对战，输的人负责倒水。', '室内', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '居家电影马拉松', '选一个系列连看两三部，配上爆米花和小零食，窝在沙发里一整天。', '室内', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, 'DIY 陶艺体验', '找一家陶艺工作室，亲手做一个杯子或小摆件，交换成品当纪念。', '室内', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '城市漫游 City Walk', '挑一条没走过的老街区，慢慢走慢慢拍，遇见好看的小店就进去逛逛。', '户外', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '公园野餐日', '带上野餐垫、水果和小音箱，找一片树荫躺一下午，看云发呆。', '户外', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '骑行探店', '租两辆共享单车，沿着河或绿道骑到郊外的咖啡馆，累并快乐着。', '户外', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '看一场日出或日落', '早起去山顶或江边看日出，或者傍晚找视野好的天台看日落，拍下剪影合影。', '户外', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '夜市扫街', '从街头吃到街尾，每人负责选三样，互相投喂打分，评选本日最佳。', '美食', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '火锅 + 双人纪录片', '晚上吃热气腾腾的火锅，回家路上挑一部美食纪录片，边吃边聊。', '美食', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '烘焙半成品日', '去 DIY 烘焙坊做饼干或蛋糕，失败也无所谓，糊了的也是限量款。', '美食', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '便利店晚餐企划', '每人 30 元预算在便利店凑一顿晚餐，坐在窗边吃，给每种食物打分。', '美食', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '私人影院双人厅', '订一间双人点播影院，自己挑片，瘫着看完一部想看很久的电影。', '观影', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '老片重映打卡', '关注本地影院的重映排片，在大银幕重温一部经典，感受岁月的味道。', '观影', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '各选一部互赌评分', '每人各选一部对方没看过的片子，看完互打分，输的人请下一顿。', '观影', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '露天电影 / 音乐节', '关注本地露天放映或小型音乐节活动，带上小毯子去现场，氛围感拉满。', '观影', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '手写交换日记', '买一本好看的笔记本，轮流每周写一篇给对方看，写满一年再回头翻。', '手作', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '纪念相册整理夜', '把手机里的合影挑出来打印，做成一本实体相册，标注日期和当时的故事。', '手作', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '情侣手链 DIY', '去手作店编两条手链或串珠，各戴一条，出门就是显眼包情侣。', '手作', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '给对方做一件小礼物', '折纸、绘画、粘土不限，本周内偷偷准备，周末交换揭晓。', '手作', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '逛一场博物馆 / 展览', '挑一个双方都感兴趣的展，租两台讲解器，逛完在文创店挑一枚冰箱贴。', '户外', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '早午餐 Brunch 之约', '周末睡到自然醒，找一家评价好的 Brunch 店，慢悠悠吃到中午，顺便散步消食。', '美食', 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT 2, '新片首日场', '盯一部两人都想看的上映新片，买首日场 or 首周末场，看完趁热打铁聊剧情。', '观影', 0, '1', NOW(), '1', NOW(), b'0'
+) AS seed
+WHERE NOT EXISTS (
+  SELECT 1 FROM `love_inspiration` d WHERE d.`deleted` = b'0' AND d.`kind` = seed.`kind` AND d.`content` = seed.`content`
+);
+
+-- ----------------------------
+-- 菜单/按钮权限 SQL（M17，「情侣业务」目录下第十个管理页）
+-- 挂接：目录 id 按 type+name 回查（同 M3.5/M5/M8/M9/M14 段理由，不依赖前段 LAST_INSERT_ID）；
+-- 幂等：按钮（按 permission）→ 管理菜单（按 component_name）先行 DELETE，先子后父（M-3 同款）。
+-- ----------------------------
+DELETE FROM `system_menu` WHERE `permission` IN ('love:inspiration:query', 'love:inspiration:create', 'love:inspiration:update', 'love:inspiration:delete');
+DELETE FROM `system_menu` WHERE `component_name` = 'LoveInspiration';
+
+SELECT @loveDirectoryId := `id` FROM `system_menu` WHERE `type` = 1 AND `name` = '情侣业务' AND `deleted` = b'0' LIMIT 1;
+
+-- 管理菜单十：恋爱灵感（component_name 唯一 = LoveInspiration，M5/M8/M9/M14 实况同款无 Menu 后缀）
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('恋爱灵感', '', 2, 10, @loveDirectoryId, 'inspiration', 'ep:magic-stick', 'love/inspiration/index', 'LoveInspiration', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+SELECT @parentId := LAST_INSERT_ID();
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('灵感查询', 'love:inspiration:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('灵感新增', 'love:inspiration:create', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('灵感编辑', 'love:inspiration:update', 3, 3, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('灵感删除', 'love:inspiration:delete', 3, 4, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
