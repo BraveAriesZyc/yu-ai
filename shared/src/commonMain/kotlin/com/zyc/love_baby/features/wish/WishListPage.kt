@@ -40,7 +40,6 @@ import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.input.pointer.PointerEventPass
 import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
 import com.tencent.kuikly.compose.ui.input.pointer.positionChangeIgnoreConsumed
-import com.tencent.kuikly.compose.ui.platform.LocalDensity
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
@@ -109,8 +108,8 @@ private const val WISH_DONE_PREVIEW_COUNT = 3
  *  - couple 共享清单(双方互见;点亮=对方):服务端 create_time asc, id asc 全量 → 端上两语义
  *    分区(2026-10-18 重构,D-19f 定稿):「已点亮」历史区置顶按 doneTime 倒序+默认折叠只显
  *    最近 3 条(展开钮全量);「待点亮」活跃队列居列表尾(服务端序 id 升序)——最新心愿恒在
- *    输入条正上方,键盘推升/添加成功走「滚到底」即露出最新(微信同构);进页首拉后自动定位
- *    到活跃区组头(行动项先行,历史往上翻才见)
+ *    输入条正上方;进页/键盘跟随(仅贴底)/添加成功三处均「snap 滚到底」露出最新(微信同构,
+ *    ChatPage/TodoPage 生产范式:全 snap scrollToItem+awaitMeasured,禁 animateScrollToItem)
  *  - 勾选完成:done=true 服务端 CAS 恰发一条「我们一起完成了「title」🎉」到悄悄话(端上零新增
  *    消息逻辑,勾选者本端该消息靠切聊天 Tab 增量拉自愈);重复勾选幂等(回包真值不变)
  *  - 时间展示:行副文案与详情弹框均显「创建于 …」/「…完成于 …」(友好日+时刻,GMT+8);
@@ -162,37 +161,42 @@ internal fun WishListPage(pager: Pager) {
     val listState = rememberLazyListState()
     val pullState = rememberPullToRefreshState(isRefreshing = refreshing)
     val focusManager = LocalFocusManager.current
+    // 键盘跟随(2026-10-18 真机反馈「顶起来内容直接不见了」重写,ChatPage kbFollow 范式
+    // 464-491 移植):上升沿回调内(此刻 layoutInfo=键盘前最后 measure,重组未跑)捕获
+    // 「键盘弹出前是否贴底」快照——贴底(isNearBottom:!canScrollForward 或末可见项已达
+    // 倒数第二项)才跟随钉底,上翻读历史者键盘弹起不拽(原判据「最后可见项被键盘盖」把
+    // 用户正在读的中部内容整个跳走,即「直接不见了」根因之一);IME 逐帧步进每帧 seq++
+    // 重启消费 effect,后帧取消前帧,最终帧钉终态
+    var kbWasNearBottom by remember { mutableStateOf(false) }
+    var kbFollowSeq by remember { mutableStateOf(0) }
     val onKeyboardHeightChange: (KeyboardParams) -> Unit = remember {
-        { params: KeyboardParams -> keyboardHeight = params.height }
+        { params: KeyboardParams ->
+            if (params.height > keyboardHeight && params.height > 0f) {
+                val info = listState.layoutInfo
+                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+                kbWasNearBottom = !listState.canScrollForward || lastVisible >= info.totalItemsCount - 2
+                kbFollowSeq++
+            }
+            keyboardHeight = params.height
+        }
     }
     val myId = SessionStore.userId
-    // 键盘推升动画用(组合期捕获):density 供 dp→px,navBar 补齐键盘回调不含的导航栏高度
-    val density = LocalDensity.current
-    val navBarDp = navBarSafePaddingDp()
     // 添加条实际高度(onSizeChangedDp 回写,2026-10-18 真机反馈「添加完后输入框高度变了」):
     // TextField maxLines=3 随内容竖向生长(多行 ~76dp),添加成功清空缩回单行(44dp)高度跳变
     // 是微信同款正常行为,但尾 Spacer 原按恒定 44dp 让位——多行时清单尾项被输入条盖住,
     // 几何不自洽;改实际高度驱动让位,任何行数下尾项呼吸完整
     var inputBarHeight by remember { mutableStateOf(44.dp) }
 
-    // 键盘弹起列表按需同步推升(2026-10-18 五轮打磨,微信/QQ 语义「内容不多不顶,盖住才顶」):
-    // ①snap scrollToItem 延时跳变与键盘动画打架 ②delay(260)+animateScrollToItem 键盘先弹完
-    // 清单后推 ③无脑推固定量——内容少时把尾部空白推上来、顶部内容跑掉 ④推固定遮盖量——
-    // 旧序(进行中在前/已完成沉底)下列表尾是已完成块,推完露出的不是最新项(真机反馈:
-    // 「顶起来了清单应该显示最新的」)。⑤正解=分层翻转(已完成置顶当历史区、进行中队列居
-    // 列表尾,见 D-19f 注释)后,最新项=列表最后内容项,推升即「滚到底」:判据保持「最后一个
-    // 可见内容项(排除尾部 Spacer)的底缘是否被键盘顶缘盖住」(盖不住=清单短全在键盘上方,不推);
-    // 被盖才 animateScrollToItem 滚到底(尾 Spacer 公式=键盘让位+条高让位+20 呼吸,到底后最新项
-    // 底缘正好贴输入条上方 20dp,任意已完成数量自洽;已到底 canScrollForward=false 静默不滚),
-    // 与键盘升起并行成一体运动。收起不滚(保持位置,微信同款)
-    LaunchedEffect(keyboardHeight) {
-        if (keyboardHeight <= 0f) return@LaunchedEffect
-        val info = listState.layoutInfo
-        val coverPx = with(density) { (keyboardHeight.dp + navBarDp).toPx() }
-        val coverEdge = info.viewportEndOffset - coverPx // 键盘顶缘在视口内的 y(Kuikly 无 viewportMainAxisExtent,viewportEndOffset 同坐标系)
-        val lastContent = info.visibleItemsInfo.lastOrNull { it.index < info.totalItemsCount - 1 }
-        if (lastContent == null || lastContent.offset + lastContent.size <= coverEdge) return@LaunchedEffect
-        listState.animateScrollToItem(info.totalItemsCount - 1)
+    // 键盘跟随消费:贴底才 snap 钉底到尾 Spacer(ChatPage 464-473 同款全 snap 禁 animate——
+    // animateScrollToItem 是逐环 tween+teleport+收尾 snap,Kuikly 桥接渲染的原生
+    // contentOffset 同步层对复杂动画路径追不平,真机「滚完一片空白」;snap 版
+    // scrollToItem 的 forceRemeasure 用键盘后约束重测,尾 Spacer 新高(键盘让位 400dp)
+    // 生效+measure 回填(LazyListMeasure.kt:232-255 顶对齐靠后项回拉前序项)=底对齐=
+    // 最新项贴输入条上方呼吸位,TodoPage 同款高垫滚底真机验证可靠。列表短/非贴底不滚;
+    // 收起不滚(键盘前贴底者 clamp 自持贴底,ChatPage 459-463 同款)
+    LaunchedEffect(kbFollowSeq) {
+        if (!kbWasNearBottom || keyboardHeight <= 0f) return@LaunchedEffect
+        listState.scrollToItem(listState.layoutInfo.totalItemsCount - 1)
     }
 
     // D-19f 分层(2026-10-18 重构定稿):两语义分区——「已点亮」历史区置顶按 doneTime 倒序
@@ -200,7 +204,7 @@ internal fun WishListPage(pager: Pager) {
     // 默认折叠只显最近 3 条(历史不喧宾夺主,展开钮全量);「待点亮」活跃队列居列表尾保持
     // 服务端序(id 升序=最老在上最新在下)。最新心愿恒=列表最后内容位(输入条正上方),
     // 键盘推升/添加成功走「滚到底」才成立(真机反馈「顶起来应显示最新的」);
-    // 进页首拉后自动定位到活跃区组头(历史往上翻才见,微信进页见最新同款)
+    // 进页首拉后自动滚到底(轮16 真机反馈「进入页面也没有到最底部」,ChatPage 进页见最新同款)
     val doneList = wishes.filter { it.done }.sortedByDescending { it.doneTime }
     val activeList = wishes.filter { !it.done }
     val doneCount = doneList.size
@@ -291,20 +295,47 @@ internal fun WishListPage(pager: Pager) {
     }
 
     // 独立页每次打开都是新 Pager 组合,LaunchedEffect(Unit) 即每次进入都重拉(MomentPage 同款)。
-    // 首拉成功后自动定位到「待点亮」组头(2026-10-18 重构):历史区置顶但进页应见行动项而非
-    // 一屏灰卡,微信进页见最新同款;index 协程内读 wishes 重算(组合期 activeHeaderIndex 是
-    // 首拉前的陈旧空值),doneExpanded 初始恒折叠故 preview 数用常量;活跃空/拉取失败不滚
-    // (视口自然在顶看历史/失败态)
+    // 首拉成功后滚到最底部(2026-10-18 真机反馈「进入页面也没有到最底部」——原定位到活跃
+    // 组头距底部还差整个活跃队列,且定位公式是另一条无声失败链):用户裁决进页=见最新,
+    // 列表终态 item 总数的精确结构计数(进页滚底/追加跟随共用谓词):刷新头 1 + 已点亮区
+    // (组头1+展示数+展开钮)+ 待点亮区(组头1+队列数)或活跃空提示 1 + 尾 Spacer 1;
+    // 展示数折叠取 min(D,3) 展开设 D,展开钮 D>3 恒在(展开后文案变「收起历史」同一 item)。
+    // 时序 skeptic F1:下界若用语义总数 wishes.size+2,D≥7 折叠态 total=A+8<D+A+2 恒不满足
+    // →每次进页必等满 500ms 超时才跳底,谓词必须与真实结构逐项对齐
+    fun expectedListTotal(): Int {
+        val doneSize = wishes.count { it.done }
+        val activeSize = wishes.size - doneSize
+        val shownDone = if (doneExpanded) doneSize else minOf(doneSize, WISH_DONE_PREVIEW_COUNT)
+        val doneToggle = if (doneSize > WISH_DONE_PREVIEW_COUNT) 1 else 0
+        val doneSection = if (doneSize == 0) 0 else 1 + shownDone + doneToggle
+        val activeSection = if (activeSize > 0) 1 + activeSize else if (doneSize > 0) 1 else 0
+        return 1 + doneSection + activeSection + 1
+    }
+
+    // 进页滚到底(2026-10-18 轮16 真机反馈「进入页面也没有到最底部」;ChatPage 进页滚底
+    // LaunchedEffect(pageVisible) 452-458 同款):目标下标运行时取 totalItemsCount-1=尾 Spacer
+    // (顶对齐请求被 measure 回拉=底对齐),awaitMeasured 等含全数据的 measure 真正落地再滚,
+    // 规避铁律13 陈旧越界静默吞;活跃空(全历史)/拉取失败不滚,视口自然在顶看历史/失败态
     LaunchedEffect(Unit) {
         val ok = fetchFirst()
         loading = false
         if (ok && wishes.count { !it.done } > 0) {
-            val doneSize = wishes.count { it.done }
-            val headerIndex =
-                1 + if (doneSize == 0) 0 else 1 + minOf(doneSize, WISH_DONE_PREVIEW_COUNT) +
-                    if (doneSize > WISH_DONE_PREVIEW_COUNT) 1 else 0
-            listState.awaitMeasured(headerIndex + 1)
-            listState.scrollToItem(headerIndex)
+            listState.awaitMeasured(expectedListTotal())
+            listState.scrollToItem(listState.layoutInfo.totalItemsCount - 1)
+        }
+    }
+
+    // 追加跟随(ChatPage LaunchedEffect(messages.size) 431-448 分支③同款;interaction skeptic
+    // I1:轮询 fetchSilent 只改数据不触发滚动,对方许愿 ≤5s 同步到时新卡沉在悬浮输入条后面
+    // 仅露上缘):size 变化先 awaitMeasured 等新 measure 落地,再新鲜读贴底才滚+拖拽/惯性中
+    // 不拽,上翻读历史者不拽;本端添加不走此路——adding 守卫让添加流(自带滚底)独占,防双滚
+    // 竞争 scroll mutex
+    LaunchedEffect(wishes.size) {
+        if (loading || adding || wishes.isEmpty()) return@LaunchedEffect
+        if (wishes.count { !it.done } == 0) return@LaunchedEffect // 全历史:无活跃队列可跟随
+        listState.awaitMeasured(expectedListTotal())
+        if (!listState.isScrollInProgress && listState.isNearBottom()) {
+            listState.scrollToItem(listState.layoutInfo.totalItemsCount - 1)
         }
     }
 
@@ -316,7 +347,10 @@ internal fun WishListPage(pager: Pager) {
     LaunchedEffect(Unit) {
         while (true) {
             delay(5000)
-            if (!toggling && !deleting && !refreshing && !loading &&
+            // adding 也在守卫内(时序 skeptic F2):缺了它,添加请求在飞时轮询的 list 回包
+            // 可能后于 create 回包处理,fresh(不含新心愿)全量覆盖把刚加的心愿本地抹掉,
+            // 且 total 缩水使添加滚底的 awaitMeasured 不可满足(≤5s 下轮自愈但闪没)
+            if (!adding && !toggling && !deleting && !refreshing && !loading &&
                 deleteTarget == null && detailTarget == null
             ) {
                 fetchSilent()
@@ -570,11 +604,13 @@ internal fun WishListPage(pager: Pager) {
                         adding = true
                         scope.launch {
                             val result = WishApi.create(pager, text)
-                            adding = false
                             if (result is ApiResult.Ok) {
                                 inputText = ""
-                                val prevTotal = listState.layoutInfo.totalItemsCount
                                 WishInfo.from(result.data)?.let { fresh ->
+                                    // id 去重(时序 skeptic I2,对照 toggle 按 id 原位替换先例):极端交错
+                                    // 下轮询快照已含新心愿、create 回包再 add → 同 id 双条,key=id 重复崩
+                                    wishes.removeAll { it.id == fresh.id }
+                                    val prevTotal = listState.layoutInfo.totalItemsCount
                                     wishes.add(fresh)
                                     listState.awaitMeasured(prevTotal + 1)
                                     listState.scrollToItem(listState.layoutInfo.totalItemsCount - 1)
@@ -582,6 +618,11 @@ internal fun WishListPage(pager: Pager) {
                             } else {
                                 toastCoupleResult(pager, result)
                             }
+                            // adding 收口后置(原在回包处理前):wishes.add 会触发追加跟随 effect,
+                            // 添加流自带滚底,若此刻 adding 已翻 false,跟随 effect(守卫 !adding)会
+                            // 与本流在 scroll mutex 上竞争双滚——延后收口让 effect 看到 adding=true
+                            // 自行让路,顺带把 5s 轮询守卫(!adding)延伸覆盖滚动窗口
+                            adding = false
                         }
                     }
                 },
@@ -908,4 +949,15 @@ private suspend fun LazyListState.awaitMeasured(itemTotal: Int) {
     withTimeoutOrNull(500) {
         snapshotFlow { layoutInfo.totalItemsCount }.first { it >= itemTotal }
     }
+}
+
+/**
+ * isNearBottom — 贴底判定(ChatPage.isNearBottom 936-940 逐字同款,各页一份勿合并):末项内容位
+ * (下标 totalItemsCount-2,尾 Spacer 前一位)仍在可视区、或本就无前向可滚(真贴底)——用户
+ * 上翻读历史时不拽底。⚠ 必须在 awaitMeasured 之后或回调捕获点读取:陈旧 measure 会误判
+ */
+private fun LazyListState.isNearBottom(): Boolean {
+    val info = layoutInfo
+    val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+    return !canScrollForward || lastVisible >= info.totalItemsCount - 2
 }
