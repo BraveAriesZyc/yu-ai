@@ -25,6 +25,7 @@ enum class AppIconType {
     Image,                           // 通用(M10 聊天发图入口)
     Pin, Wallet, Service, Info,      // 我的页
     Components,                      // 组件列表入口
+    Flag,                            // 我的页(M14 恋爱清单入口)
     Star, Heart, Bell, Moon, Sun,    // 业务装饰
 }
 
@@ -407,6 +408,25 @@ fun DrawScope.drawAppIcon(type: AppIconType, color: Color, filled: Boolean = fal
                 lineTo(f(19.8f), f(16.8f))
             }
             drawPath(mountain, color, style = strokeStyle)
+        }
+
+        AppIconType.Flag -> {
+            // 旗杆
+            val pole = Path().apply {
+                moveTo(f(7.2f), f(3.8f))
+                lineTo(f(7.2f), f(20.6f))
+            }
+            drawPath(pole, color, style = strokeStyle)
+            // 燕尾旗面
+            val banner = Path().apply {
+                moveTo(f(7.2f), f(5.6f))
+                lineTo(f(18f), f(5.6f))
+                lineTo(f(15.2f), f(9.4f))
+                lineTo(f(18f), f(13.2f))
+                lineTo(f(7.2f), f(13.2f))
+                close()
+            }
+            drawPath(banner, color, style = strokeStyle)
         }
     }
 }

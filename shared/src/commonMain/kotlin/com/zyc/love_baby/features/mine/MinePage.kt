@@ -133,6 +133,14 @@ internal fun MinePage(
                     )
                     AppMenuDivider()
                     AppMenuRow(
+                        icon = AppIconType.Flag,
+                        iconTint = Color(0xFFF7A44A),
+                        iconBg = Color(0xFFFFF3E6),
+                        title = "恋爱清单",
+                        onClick = { openWishListPage(pager) }, // M14:接恋爱清单页(勾选完成自动发庆祝消息)
+                    )
+                    AppMenuDivider()
+                    AppMenuRow(
                         icon = AppIconType.Service,
                         iconTint = Color(0xFF34C77B),
                         iconBg = Color(0xFFE6F8EF),
@@ -227,6 +235,17 @@ private fun openMomentPage(pager: Pager) {
     try {
         pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
             .openPage("momentPage", JSONObject())
+    } catch (_: Exception) {
+    }
+}
+
+/**
+ * openWishListPage — 路由打开恋爱清单页(M14;openMomentPage 同款新 Activity 压栈)
+ */
+private fun openWishListPage(pager: Pager) {
+    try {
+        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
+            .openPage("wishListPage", JSONObject())
     } catch (_: Exception) {
     }
 }
