@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Box
@@ -31,6 +32,8 @@ import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.components.AppAvatar
+import com.zyc.love_baby.components.AppIcon
+import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.features.anniversary.AnnivDatePickerOverlay
@@ -69,6 +72,9 @@ import kotlin.coroutines.suspendCoroutine
  *    兜底);签名 trim≠现值才传——**含空串=清空**;四值全等直接 dismiss 不打请求
  *  - 关浮层先清焦(浮层卸载持焦输入框被移除 → Android 焦点转给待办页输入框 → Pager
  *    乱滚,M16 前多轮真机实锤)
+ *  - 美化轮(2026-10-18 二轮,真机反馈):标题行右上 Close 关闭钮+性别改双卡(SexCard:
+ *    AppIcons 新增 GenderFemale/GenderMale Canvas 图标,选中 brand 渐变白字白图标+白圆
+ *    Check 角标,未选灰底)+生日行右侧 ChevronRight 箭头+头像徽章「+」换 Plus 图标
  */
 
 /** 上传进行中/保存中都不放走遮罩点击,防丢视觉反馈;生日子滚轮开着时编辑遮罩点击被其全屏层截获 */
@@ -160,8 +166,26 @@ internal fun ProfileEditOverlay(
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("编辑资料", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(14.dp))
+            // 标题行:居中标题 + 右上关闭钮(26dp 圆灰底 Close 图标;保存中拦点击防丢态)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "编辑资料",
+                    color = AppTheme.TextPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+                Box(
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                        .size(26.dp)
+                        .background(Color(0xFFF0F1F5), RoundedCornerShape(13.dp))
+                        .clickable { if (!saving) dismiss() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppIcon(AppIconType.Close, AppTheme.TextSecondary, Modifier.size(11.dp))
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
             // 头像区(自 NicknameEditOverlay 迁入,视觉零变化):72dp 大头像 + 右下「+」徽章
             // + 居中提示,整块可点上报 onAvatarClick(选图/压缩/直传/写回全在 uploadAvatarAndUpdate);
             // 上传中蒙半透明黑 + 文案切换 + 拦点击防重复发起
@@ -192,12 +216,7 @@ internal fun ProfileEditOverlay(
                                 .background(AppTheme.CardBg, RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                "+",
-                                color = ThemeStore.current.brandStart,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
+                            AppIcon(AppIconType.Plus, ThemeStore.current.brandStart, Modifier.size(12.dp))
                         }
                     }
                 }
@@ -217,10 +236,10 @@ internal fun ProfileEditOverlay(
             Spacer(modifier = Modifier.height(12.dp))
             Text("性别", color = AppTheme.TextSecondary, fontSize = 12.sp)
             Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                SexChip("女", draftSex == 0) { draftSex = 0 }
+            Row(modifier = Modifier.fillMaxWidth()) {
+                SexCard("女", AppIconType.GenderFemale, draftSex == 0, Modifier.weight(1f)) { draftSex = 0 }
                 Spacer(modifier = Modifier.width(10.dp))
-                SexChip("男", draftSex == 1) { draftSex = 1 }
+                SexCard("男", AppIconType.GenderMale, draftSex == 1, Modifier.weight(1f)) { draftSex = 1 }
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text("生日", color = AppTheme.TextSecondary, fontSize = 12.sp)
@@ -241,7 +260,7 @@ internal fun ProfileEditOverlay(
                     fontSize = 15.sp,
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Text("选日期", color = AppTheme.TextTertiary, fontSize = 12.sp)
+                AppIcon(AppIconType.ChevronRight, Color(0xFFC8CCD8), Modifier.size(15.dp))
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text("个性签名", color = AppTheme.TextSecondary, fontSize = 12.sp)
@@ -273,23 +292,55 @@ internal fun ProfileEditOverlay(
     }
 }
 
-/** 性别选择胶囊:选中 brandBrush 渐变白字(白字主操作铁律:禁 brandEnd 浅端单色),未选灰底深字 */
+/**
+ * SexCard — 性别选择双卡之一(美化轮,替代原小胶囊):半宽 68dp 定高卡,竖排 性别图标+文字。
+ * 选中 brandBrush 渐变白字白图标(白字主操作铁律:禁 brandEnd 浅端单色)+右上白圆 Check 角标;
+ * 未选灰底(0xFFF5F6FA 与 BindInputField 同底)灰图标。点已选卡 no-op(性别选中后不可取消,
+ * 与 UserUpdateReq null 语义对齐)。modifier 外部传 RowScope.weight(1f)。
+ */
 @Composable
-private fun SexChip(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun SexCard(
+    label: String,
+    icon: AppIconType,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     val selectedBrush = ThemeStore.current.brandBrush
     // color/brush 重载禁混用(铁律):三元两分支必须同型——未选纯色转同色 linearGradient 走 brush 重载
-    val unselectedBrush = Brush.linearGradient(listOf(Color(0xFFF3F4F8), Color(0xFFF3F4F8)))
+    val idleBrush = Brush.linearGradient(listOf(Color(0xFFF5F6FA), Color(0xFFF5F6FA)))
     Box(
-        modifier = Modifier
-            .background(if (selected) selectedBrush else unselectedBrush, RoundedCornerShape(24.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 22.dp, vertical = 8.dp),
+        modifier = modifier
+            .height(68.dp)
+            .background(if (selected) selectedBrush else idleBrush, RoundedCornerShape(14.dp))
+            .clickable { onClick() },
     ) {
-        Text(
-            label,
-            color = if (selected) Color.White else AppTheme.TextPrimary,
-            fontSize = 13.sp,
-        )
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            AppIcon(icon, if (selected) Color.White else AppTheme.TextSecondary, Modifier.size(20.dp))
+            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                label,
+                color = if (selected) Color.White else AppTheme.TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            )
+        }
+        if (selected) {
+            // 选中角标:右上白圆 + brandStart Check(渐变底上对比来自白圆)
+            Box(
+                modifier = Modifier.align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(16.dp)
+                    .background(Color.White, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                AppIcon(AppIconType.Check, ThemeStore.current.brandStart, Modifier.size(9.dp))
+            }
+        }
     }
 }
 

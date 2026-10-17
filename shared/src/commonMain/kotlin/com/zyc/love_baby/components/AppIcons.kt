@@ -26,6 +26,7 @@ enum class AppIconType {
     Pin, Wallet, Service, Info,      // 我的页
     Components,                      // 组件列表入口
     Flag,                            // 我的页(M14 恋爱清单入口)
+    GenderFemale, GenderMale,        // 性别选择(资料编辑卡,M16 美化轮)
     Star, Heart, Bell, Moon, Sun,    // 业务装饰
 }
 
@@ -427,6 +428,23 @@ fun DrawScope.drawAppIcon(type: AppIconType, color: Color, filled: Boolean = fal
                 close()
             }
             drawPath(banner, color, style = strokeStyle)
+        }
+
+        AppIconType.GenderFemale -> {
+            // ♀ 圆环
+            drawCircle(color, radius = f(4.6f), center = off(12f, 9.6f), style = strokeStyle)
+            // 竖杆 + 横杠
+            drawLine(color, off(12f, 14.2f), off(12f, 20.6f), strokeWidth = f(2f), cap = StrokeCap.Round)
+            drawLine(color, off(8.8f, 17.4f), off(15.2f, 17.4f), strokeWidth = f(2f), cap = StrokeCap.Round)
+        }
+
+        AppIconType.GenderMale -> {
+            // ♂ 圆环(左下)
+            drawCircle(color, radius = f(4.6f), center = off(10.2f, 13.8f), style = strokeStyle)
+            // 45° 斜杆 + 箭头头部
+            drawLine(color, off(13.5f, 10.5f), off(19.2f, 4.8f), strokeWidth = f(2f), cap = StrokeCap.Round)
+            drawLine(color, off(14.4f, 4.8f), off(19.2f, 4.8f), strokeWidth = f(2f), cap = StrokeCap.Round)
+            drawLine(color, off(19.2f, 4.8f), off(19.2f, 9.6f), strokeWidth = f(2f), cap = StrokeCap.Round)
         }
     }
 }
