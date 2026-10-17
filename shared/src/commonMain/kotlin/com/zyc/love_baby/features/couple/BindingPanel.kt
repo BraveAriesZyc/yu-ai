@@ -39,6 +39,8 @@ import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.components.statusBarPaddingDp
+import com.zyc.love_baby.features.profile.PROFILE_WHO_PARTNER
+import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
@@ -289,6 +291,7 @@ internal fun BoundPartnerCard(pager: Pager, onUnbindClick: () -> Unit) {
         AppMenuGroup {
             Row(
                 modifier = Modifier.fillMaxWidth()
+                    .clickable { openProfilePage(pager, PROFILE_WHO_PARTNER) }
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

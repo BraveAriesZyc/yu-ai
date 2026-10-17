@@ -350,7 +350,11 @@ internal fun MainPageImpl(pager: BasePager) {
             userScrollEnabled = !overlayActive,
         ) { index ->
             when (index) {
-                0 -> HomePage(pager)
+                0 -> HomePage(
+                    pager,
+                    myNickname = profile?.nickname.orEmpty(),
+                    myAvatar = profile?.avatar.orEmpty(),
+                )
                 1 -> TodoPage(pager)
                 2 -> MoodPage(pager, onGoChat = goChat, onOpenManage = openMoodManage, listScrollEnabled = !overlayActive)
                 3 -> ChatPage(

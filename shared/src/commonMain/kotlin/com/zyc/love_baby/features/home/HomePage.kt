@@ -43,6 +43,8 @@ import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.features.chat.todayDayIndexGmt8
+import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
+import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.state.AnniversaryStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
@@ -61,7 +63,7 @@ import com.zyc.love_baby.state.nextAnniversaryCountdownDays
  * 功能:纯展示型首页;统计实时来自 TodoStore;bindState 驱动纪念日整表首拉(§7.4)
  */
 @Composable
-fun HomePage(pager: Pager) {
+fun HomePage(pager: Pager, myNickname: String = "", myAvatar: String = "") {
     val theme = ThemeStore.current
     // 纪念日首拉(bindState 驱动,TodoPage LaunchedEffect 同款):首页第 4 统计列消费
     // AnniversaryStore,未绑定/登出静默跳过;独立页增删写穿透即时反映,跨端靠回前台/
@@ -75,7 +77,7 @@ fun HomePage(pager: Pager) {
     }
     LazyColumn(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         item {
-            HeaderWithStats(pager)
+            HeaderWithStats(pager, myNickname, myAvatar)
         }
         item {
             // 今日打卡条(M8):HeaderWithStats 悬浮统计卡之下、快捷入口之上
@@ -156,7 +158,7 @@ fun HomePage(pager: Pager) {
 }
 
 @Composable
-private fun HeaderWithStats(pager: Pager) {
+private fun HeaderWithStats(pager: Pager, myNickname: String, myAvatar: String) {
     val theme = ThemeStore.current
     Box(modifier = Modifier.fillMaxWidth()) {
         // 渐变头部
@@ -170,8 +172,17 @@ private fun HeaderWithStats(pager: Pager) {
                 corner = 19.dp,
             )
             Spacer(modifier = Modifier.width(10.dp))
-            // 头像
-            AppAvatar("宝", size = 38.dp, bgColor = Color.White.copy(alpha = 0.35f), fontSize = 15.sp)
+            // 头像(2026-10-18 资料详情页入口):接真实昵称/头像(MainPager 传参),点击进自己资料页;
+            // 空值回退「宝」字——原写死「宝」是 M12 遗留,今随 profilePage 一并解决
+            Box(modifier = Modifier.clickable { openProfilePage(pager, PROFILE_WHO_MINE) }) {
+                AppAvatar(
+                    myNickname.trim().take(1).ifEmpty { "宝" },
+                    size = 38.dp,
+                    bgColor = Color.White.copy(alpha = 0.35f),
+                    fontSize = 15.sp,
+                    avatarUrl = myAvatar,
+                )
+            }
         }
         // 悬浮统计卡(实时来自待办 + StatsStore 真数据,「统计真数据化」里程碑;
         // 第 4 列纪念日倒数 = M5,值来自 AnniversaryStore 端上纯函数,D-17)

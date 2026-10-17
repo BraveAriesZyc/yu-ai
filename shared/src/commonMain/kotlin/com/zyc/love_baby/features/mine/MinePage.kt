@@ -53,6 +53,8 @@ import com.zyc.love_baby.features.couple.BoundPartnerCard
 import com.zyc.love_baby.features.couple.NICKNAME_MAX_LENGTH
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
+import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
+import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.CoupleBindState
@@ -184,26 +186,35 @@ private fun HeaderWithStats(pager: Pager, profile: UserProfile?, onEditClick: ()
         AppGradientHeader(height = 138.dp, topSpacing = 20.dp) {
             // 头像(双层圆环):avatar 非空走远程图(AppAvatar 圆角裁切,加载中半透白底透出
             // 充当占位),空走首字(文件服务里程碑,上传链路见 MainPager.submitAvatarUpload)
-            Box(
-                modifier = Modifier.size(58.dp)
-                    .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(29.dp)),
-                contentAlignment = Alignment.Center,
+            // 资料区整块可点进资料详情页(2026-10-18 profilePage 入口):头像+昵称包内层 Row,
+            // 「编辑」钮保持兄弟独立热区(仍开昵称编辑浮层,链路不动);副标题接真 bindDays
+            //(原写死「520 天」假数据,主界面必 BOUND bindDays>0)
+            Row(
+                modifier = Modifier.weight(1f)
+                    .clickable { openProfilePage(pager, PROFILE_WHO_MINE) },
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                AppAvatar(
-                    if (nickname.isEmpty()) "宝" else nickname.take(1),
-                    size = 50.dp,
-                    bgColor = Color.White.copy(alpha = 0.35f),
-                    fontSize = 20.sp,
-                    avatarUrl = profile?.avatar.orEmpty(),
+                Box(
+                    modifier = Modifier.size(58.dp)
+                        .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(29.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppAvatar(
+                        if (nickname.isEmpty()) "宝" else nickname.take(1),
+                        size = 50.dp,
+                        bgColor = Color.White.copy(alpha = 0.35f),
+                        fontSize = 20.sp,
+                        avatarUrl = profile?.avatar.orEmpty(),
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                AppHeaderTitle(
+                    if (nickname.isEmpty()) "宝贝 & 我" else nickname,
+                    "在一起的第 ${StatsStore.bindDays} 天,依然心动",
+                    titleSize = 19.sp,
+                    subtitleSize = 12.sp,
                 )
             }
-            Spacer(modifier = Modifier.width(14.dp))
-            AppHeaderTitle(
-                if (nickname.isEmpty()) "宝贝 & 我" else nickname,
-                "在一起的第 520 天,依然心动",
-                titleSize = 19.sp,
-                subtitleSize = 12.sp,
-            )
             // 编辑入口
             Box(
                 modifier = Modifier.background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(14.dp))

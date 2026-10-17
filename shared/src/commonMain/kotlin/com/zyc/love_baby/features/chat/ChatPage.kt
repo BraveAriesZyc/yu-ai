@@ -73,6 +73,9 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
+import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
+import com.zyc.love_baby.features.profile.PROFILE_WHO_PARTNER
+import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.network.ApiConfig
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.UserApi
@@ -498,23 +501,33 @@ fun ChatPage(
                 // 双头像簇(86x40 舞台):左我(白 30% 磨砂配角)右 TA(白底主色字视觉焦点),
                 // 中缝 18dp 白圆心形徽章点题
                 Box(modifier = Modifier.width(86.dp).height(40.dp)) {
-                    AppAvatar(
-                        myInitial,
-                        size = 40.dp,
-                        bgColor = Color.White.copy(alpha = 0.30f),
-                        fontSize = 15.sp,
-                        avatarUrl = myAvatar,
-                        modifier = Modifier.align(Alignment.CenterStart),
-                    )
-                    AppAvatar(
-                        partnerInitial,
-                        size = 40.dp,
-                        bgColor = Color.White,
-                        textColor = theme.brandStart,
-                        fontSize = 15.sp,
-                        avatarUrl = partnerAvatar,
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                    )
+                    // 双头像可点进对应资料页(2026-10-18 profilePage 入口):align 移到外包 Box,
+                    // 中缝心形徽章不动(无 pointer handler,点击穿透进不了两侧 clickable)
+                    Box(
+                        modifier = Modifier.align(Alignment.CenterStart)
+                            .clickable { openProfilePage(pager, PROFILE_WHO_MINE) },
+                    ) {
+                        AppAvatar(
+                            myInitial,
+                            size = 40.dp,
+                            bgColor = Color.White.copy(alpha = 0.30f),
+                            fontSize = 15.sp,
+                            avatarUrl = myAvatar,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                            .clickable { openProfilePage(pager, PROFILE_WHO_PARTNER) },
+                    ) {
+                        AppAvatar(
+                            partnerInitial,
+                            size = 40.dp,
+                            bgColor = Color.White,
+                            textColor = theme.brandStart,
+                            fontSize = 15.sp,
+                            avatarUrl = partnerAvatar,
+                        )
+                    }
                     Box(
                         modifier = Modifier.align(Alignment.Center)
                             .size(18.dp)
