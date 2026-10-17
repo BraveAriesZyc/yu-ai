@@ -7,6 +7,7 @@ import { getRangePickerDefaultProps } from '#/utils';
 const MESSAGE_KIND_MAP: Record<number, string> = {
   1: '文本悄悄话',
   2: '心愿消息',
+  3: '图片消息',
 };
 
 /** 审核状态映射（本地枚举语义，零字典） */
@@ -38,6 +39,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
         options: [
           { label: '文本悄悄话', value: 1 },
           { label: '心愿消息', value: 2 },
+          { label: '图片消息', value: 3 },
         ],
       },
     },
@@ -95,6 +97,8 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
       field: 'content',
       title: '内容',
       minWidth: 200,
+      // kind=3 图片消息显缩略图（M10），kind=1/2 文本原样——slot 见 index.vue #content
+      slots: { default: 'content' },
     },
     {
       field: 'wishKey',

@@ -4,7 +4,7 @@ import type { LoveMessageApi } from '#/api/love/message';
 
 import { Page } from '@vben/common-ui';
 
-import { message } from 'antdv-next';
+import { Image, message } from 'antdv-next';
 
 import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteLoveMessage, getLoveMessagePage } from '#/api/love/message';
@@ -66,6 +66,17 @@ const [Grid, gridApi] = useVbenVxeGrid({
 <template>
   <Page auto-content-height>
     <Grid table-title="悄悄话消息列表">
+      <!-- kind=3 图片消息显缩略图（antdv-next Image 自带点击放大），其余文本原样 -->
+      <template #content="{ row }">
+        <Image
+          v-if="row.kind === 3 && row.content"
+          :src="row.content"
+          :width="40"
+          :height="40"
+          style="object-fit: cover; border-radius: 4px"
+        />
+        <span v-else>{{ row.content }}</span>
+      </template>
       <template #actions="{ row }">
         <TableAction
           :actions="[

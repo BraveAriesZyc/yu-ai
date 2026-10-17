@@ -12,9 +12,9 @@ export namespace LoveMessageApi {
     senderId: number;
     /** 接收方用户编号（快照列，解绑后审计归对依据，D-11） */
     receiverId: number;
-    /** 消息类型：1=文本悄悄话 / 2=心愿消息 */
+    /** 消息类型：1=文本悄悄话 / 2=心愿消息 / 3=图片消息 */
     kind: number;
-    /** 文本内容，或心愿文案快照 */
+    /** 文本内容，或心愿文案快照，或图片 URL（kind=3） */
     content?: string;
     /** 心愿 key 快照，kind=2 时有值 */
     wishKey?: string;
