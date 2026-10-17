@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.ui.Modifier
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.input.KeyboardType
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.core.pager.Pager
@@ -39,6 +40,12 @@ internal fun LoginPanel(
     var submitting by remember { mutableStateOf(false) }
     var countdown by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+    // 登录/绑定→主界面乱滚治理(2026-10-17 真机):提交即清焦。原生 blur 经 setTimeout 下一 tick
+    // 落地,趁网络窗口先失焦——否则 Gate 卸载瞬间持焦输入框随面板被移除,Android 把窗口焦点转给
+    // 下一个可聚焦视图(五页全驻留,待办页输入框在树中),Pager 原生 RecyclerView 收到子 View 获焦
+    // 自动滚动露出该页 + SnapHelper 吸附 + compose/native 对齐来回纠偏 → 进主功能乱滚卡顿;
+    // 卸载时视图树无持焦视图则转移无从发生。清焦顺带获得「点登录即收键盘」标准 UX
+    val focusManager = LocalFocusManager.current
 
     AuthCountdownEffect(countdown) { countdown -= 1 }
 
@@ -50,6 +57,7 @@ internal fun LoginPanel(
         } else {
             if (!validatePasswordOrToast(password, pager)) return
         }
+        focusManager.clearFocus()
         submitting = true
         scope.launch {
             val result = if (smsMode) {

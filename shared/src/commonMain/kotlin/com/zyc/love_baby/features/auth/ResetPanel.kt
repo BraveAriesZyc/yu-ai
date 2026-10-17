@@ -11,6 +11,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.ui.Modifier
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.text.input.KeyboardType
@@ -40,6 +41,8 @@ internal fun ResetPanel(
     var submitting by remember { mutableStateOf(false) }
     var countdown by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+    // 提交即清焦(同 LoginPanel.submit;重置成功回登录面板,面板切换同样移除持焦输入框)
+    val focusManager = LocalFocusManager.current
 
     AuthCountdownEffect(countdown) { countdown -= 1 }
 
@@ -48,6 +51,7 @@ internal fun ResetPanel(
         if (!validateMobileOrToast(mobile, pager)) return
         if (!validateCodeOrToast(code, pager)) return
         if (!validatePasswordOrToast(password, pager)) return
+        focusManager.clearFocus()
         submitting = true
         scope.launch {
             val result = AuthApi.resetPassword(pager, mobile.trim(), code.trim(), password)

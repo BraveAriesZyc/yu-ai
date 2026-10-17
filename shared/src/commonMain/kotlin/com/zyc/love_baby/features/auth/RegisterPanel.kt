@@ -11,6 +11,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.ui.Modifier
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.text.input.KeyboardType
@@ -46,6 +47,9 @@ internal fun RegisterPanel(
     var submitting by remember { mutableStateOf(false) }
     var countdown by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+    // 提交即清焦(同 LoginPanel.submit:注册成功 Gate 卸载,持焦输入框被移除会触发 Android
+    // 焦点转移→待办页输入框获焦→Pager 滚去露出它,进主功能乱滚;趁网络窗口先失焦)
+    val focusManager = LocalFocusManager.current
 
     AuthCountdownEffect(countdown) { countdown -= 1 }
 
@@ -54,6 +58,7 @@ internal fun RegisterPanel(
         if (!validateMobileOrToast(mobile, pager)) return
         if (!validateCodeOrToast(code, pager)) return
         if (!validatePasswordOrToast(password, pager)) return
+        focusManager.clearFocus()
         submitting = true
         scope.launch {
             val result = AuthApi.register(pager, mobile.trim(), password, code.trim())

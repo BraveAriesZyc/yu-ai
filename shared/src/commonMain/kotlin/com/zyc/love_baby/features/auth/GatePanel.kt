@@ -21,6 +21,7 @@ import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -60,6 +61,10 @@ internal fun GatePanel(pager: Pager) {
     }
 
     var panel by remember { mutableStateOf(AuthPanel.LOGIN) }
+    // 面板切换即清焦(同 LoginPanel.submit 焦点转移问题):旧面板持焦输入框随切换被移除,
+    // Android 把焦点转给待办页输入框,Pager 在 Gate 底下滚走待办页——登录成功卸载 Gate 时
+    // 便直接亮在错误 Tab,故切换瞬间先失焦
+    val focusManager = LocalFocusManager.current
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -74,16 +79,16 @@ internal fun GatePanel(pager: Pager) {
             when (panel) {
                 AuthPanel.LOGIN -> LoginPanel(
                     pager = pager,
-                    onGoRegister = { panel = AuthPanel.REGISTER },
-                    onGoReset = { panel = AuthPanel.RESET },
+                    onGoRegister = { focusManager.clearFocus(); panel = AuthPanel.REGISTER },
+                    onGoReset = { focusManager.clearFocus(); panel = AuthPanel.RESET },
                 )
                 AuthPanel.REGISTER -> RegisterPanel(
                     pager = pager,
-                    onBackToLogin = { panel = AuthPanel.LOGIN },
+                    onBackToLogin = { focusManager.clearFocus(); panel = AuthPanel.LOGIN },
                 )
                 AuthPanel.RESET -> ResetPanel(
                     pager = pager,
-                    onBackToLogin = { panel = AuthPanel.LOGIN },
+                    onBackToLogin = { focusManager.clearFocus(); panel = AuthPanel.LOGIN },
                 )
             }
             Spacer(modifier = Modifier.height(24.dp + navBarSafePaddingDp()))

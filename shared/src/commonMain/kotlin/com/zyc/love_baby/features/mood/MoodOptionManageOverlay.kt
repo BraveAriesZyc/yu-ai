@@ -26,6 +26,7 @@ import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -86,6 +87,13 @@ internal fun MoodOptionManageOverlay(
     var colorHex by remember { mutableStateOf(colorPresets.first()) }
     var adding by remember { mutableStateOf(false) }
     var deletingId by remember { mutableStateOf("") }
+    // 关浮层先清焦(同 LoginPanel.submit 焦点转移问题):浮层卸载时持焦输入框被移除,Android
+    // 把窗口焦点转给待办页输入框(五页全驻留),Pager 滚去露出它 → 主界面乱滚
+    val focusManager = LocalFocusManager.current
+    fun dismiss() {
+        focusManager.clearFocus()
+        onDismiss()
+    }
 
     fun delete(id: String) {
         // 单飞写:增删同时在飞会让回滚快照互相踩,一次只放一个写请求
@@ -133,7 +141,7 @@ internal fun MoodOptionManageOverlay(
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { onDismiss() },
+            .clickable { dismiss() },
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -151,7 +159,7 @@ internal fun MoodOptionManageOverlay(
                 Box(
                     modifier = Modifier
                         .background(Color.Transparent, RoundedCornerShape(12.dp))
-                        .clickable { onDismiss() }
+                        .clickable { dismiss() }
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 ) {
                     Text("完成", color = ThemeStore.current.brandStart, fontSize = 13.sp)

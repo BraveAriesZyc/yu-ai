@@ -24,6 +24,7 @@ import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.dp
@@ -229,6 +230,9 @@ private fun InviteCodePane(pager: Pager) {
 @Composable
 private fun BindByCodePane(pager: Pager) {
     val scope = rememberCoroutineScope()
+    // 提交即清焦(同 LoginPanel.submit:绑定成功 BOUND 翻转卸载本面板,持焦输入框被移除会
+    // 触发 Android 焦点转移→待办页输入框获焦→Pager 滚去露出它,进主功能乱滚;趁网络窗口先失焦)
+    val focusManager = LocalFocusManager.current
     var code by remember { mutableStateOf("") }
     var submitting by remember { mutableStateOf(false) }
 
@@ -239,6 +243,7 @@ private fun BindByCodePane(pager: Pager) {
             toastCouple(pager, "请输入 $INVITE_CODE_LENGTH 位邀请码")
             return
         }
+        focusManager.clearFocus()
         submitting = true
         scope.launch {
             val result = CoupleStore.bind(pager, trimmed)

@@ -26,6 +26,7 @@ import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
+import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -313,6 +314,14 @@ internal fun NicknameEditOverlay(
     var draft by remember { mutableStateOf(currentNickname) }
     var saving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    // 关浮层先清焦(同 LoginPanel.submit 焦点转移问题):浮层卸载时持焦输入框被移除,Android
+    // 把窗口焦点转给待办页输入框(五页全驻留),Pager 原生 RecyclerView 滚去露出它 → 主界面乱滚;
+    // 保存路径另有提交即清焦,趁网络窗口先失焦
+    val focusManager = LocalFocusManager.current
+    fun dismiss() {
+        focusManager.clearFocus()
+        onDismiss()
+    }
 
     fun save() {
         if (saving) return
@@ -322,9 +331,10 @@ internal fun NicknameEditOverlay(
             return
         }
         if (next == currentNickname) {
-            onDismiss()
+            dismiss()
             return
         }
+        focusManager.clearFocus()
         saving = true
         scope.launch {
             val result = UserApi.updateUser(pager, nickname = next)
@@ -332,7 +342,7 @@ internal fun NicknameEditOverlay(
             if (result is ApiResult.Ok) {
                 onSaved(next)
                 toastCouple(pager, "已保存")
-                onDismiss()
+                dismiss()
             } else {
                 toastCoupleResult(pager, result)
             }
@@ -342,7 +352,7 @@ internal fun NicknameEditOverlay(
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { if (!saving) onDismiss() },
+            .clickable { if (!saving) dismiss() },
         contentAlignment = Alignment.Center,
     ) {
         Column(
