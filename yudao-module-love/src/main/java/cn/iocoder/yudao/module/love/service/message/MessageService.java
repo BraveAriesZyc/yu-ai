@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.love.service.message;
 
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
 
@@ -10,7 +11,8 @@ import java.util.List;
  * 悄悄话/心愿消息 Service 接口
  *
  * 端上契约见 INTEGRATION-DESIGN.md §5.2 message 组：增量拉取（lastId 游标只增不减，D-12）、
- * 发送（kind=1 文本 / kind=2 心愿快照）。消息域只有「按自己 couple 收发」，无客户端传 id，天然防 IDOR。
+ * 发送（kind=1 文本 / kind=2 心愿快照 / kind=3 图片 URL）。消息域只有「按自己 couple 收发」，
+ * 无客户端传 id，天然防 IDOR。
  *
  * @author 芋道源码
  */
@@ -53,5 +55,14 @@ public interface MessageService {
      * @return 落库后的完整消息 VO（含 id，语义同 {@link #sendMessage}）
      */
     AppMessageRespVO sendWishes(AppMessageSendWishesReqVO reqVO);
+
+    /**
+     * 发送图片消息（kind=3）：content 列存图片完整 URL（infra 文件服务上传返回，≤512）；
+     * 发送方/接收方/audit_status/回包语义同 {@link #sendMessage}，错误码零新增（M10）
+     *
+     * @param reqVO 图片 URL
+     * @return 落库后的完整消息 VO（含 id，语义同 {@link #sendMessage}）
+     */
+    AppMessageRespVO sendImage(AppMessageSendImageReqVO reqVO);
 
 }

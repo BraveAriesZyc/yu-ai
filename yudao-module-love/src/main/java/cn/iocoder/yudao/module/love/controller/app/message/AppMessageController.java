@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.love.controller.app.message;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
 import cn.iocoder.yudao.module.love.service.message.MessageService;
@@ -71,6 +72,14 @@ public class AppMessageController {
             description = "wishKey/text/color/icon 四字段整体快照入 love_message，服务端不校验 wish 归属（无 wish 实体，文案字典留端上），两设备还原靠快照字段而非字典版本（§5.2）；回包语义同 send")
     public CommonResult<AppMessageRespVO> sendWishes(@RequestBody @Valid AppMessageSendWishesReqVO reqVO) {
         return success(messageService.sendWishes(reqVO));
+    }
+
+    @PostMapping("/send-image")
+    @Operation(summary = "发送图片消息（kind=3）",
+            description = "imageUrl 必填、trim 后非空、≤512，落 love_message.content 列（varchar(512)，M10 500→512）；"
+                    + "发送方/接收方/audit_status/回包语义同 send（WS 推送自动继承）；错误码零新增：imageUrl 空 → 400，未绑定 → 1_003_004_003")
+    public CommonResult<AppMessageRespVO> sendImage(@RequestBody @Valid AppMessageSendImageReqVO reqVO) {
+        return success(messageService.sendImage(reqVO));
     }
 
 }

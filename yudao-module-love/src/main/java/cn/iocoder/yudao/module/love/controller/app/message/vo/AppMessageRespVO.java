@@ -34,10 +34,10 @@ public class AppMessageRespVO {
     @Schema(description = "接收方用户编号（对方快照，解绑后审计归对，D-11）", requiredMode = Schema.RequiredMode.REQUIRED, example = "2")
     private Long receiverId;
 
-    @Schema(description = "消息类型（1 文本悄悄话 / 2 心愿消息）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @Schema(description = "消息类型（1 文本悄悄话 / 2 心愿消息 / 3 图片消息）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer kind;
 
-    @Schema(description = "文本内容，或心愿文案快照", requiredMode = Schema.RequiredMode.REQUIRED, example = "今晚一起看电影呀")
+    @Schema(description = "文本内容，或心愿文案快照，或图片 URL（kind=3）", requiredMode = Schema.RequiredMode.REQUIRED, example = "今晚一起看电影呀")
     private String content;
 
     @Schema(description = "心愿 key 快照（kind=2 时有值，可空）", example = "hug")

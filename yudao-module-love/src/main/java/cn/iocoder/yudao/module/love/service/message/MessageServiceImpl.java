@@ -7,6 +7,7 @@ import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.websocket.core.sender.WebSocketMessageSender;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
 import cn.iocoder.yudao.module.love.dal.dataobject.couple.LoveCoupleDO;
@@ -120,6 +121,16 @@ public class MessageServiceImpl implements MessageService {
         String content = reqVO.getText() != null ? reqVO.getText() : "";
         return insertAndBuildRespVO(LoveMessageDO.KIND_WISH, content,
                 reqVO.getWishKey(), reqVO.getColor(), reqVO.getIcon());
+    }
+
+    @Override
+    public AppMessageRespVO sendImage(AppMessageSendImageReqVO reqVO) {
+        // trim 后非空、≤512：长度由 VO @Length 按原文早拦（列 varchar(512)），空白串在此打回全局参数错误
+        String imageUrl = reqVO.getImageUrl().trim();
+        if (imageUrl.isEmpty()) {
+            throw exception(BAD_REQUEST);
+        }
+        return insertAndBuildRespVO(LoveMessageDO.KIND_IMAGE, imageUrl, null, null, null);
     }
 
     /**

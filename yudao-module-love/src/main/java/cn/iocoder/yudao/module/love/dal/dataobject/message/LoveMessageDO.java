@@ -45,6 +45,11 @@ public class LoveMessageDO extends BaseDO {
     public static final Integer KIND_WISH = 2;
 
     /**
+     * 消息类型 - 图片消息（content 存图片完整 URL，infra 文件服务上传返回）
+     */
+    public static final Integer KIND_IMAGE = 3;
+
+    /**
      * 审核状态 - 待审
      */
     public static final Integer AUDIT_STATUS_PENDING = 0;
@@ -83,13 +88,13 @@ public class LoveMessageDO extends BaseDO {
     /**
      * 消息类型
      *
-     * 枚举 {@link #KIND_TEXT} / {@link #KIND_WISH}
+     * 枚举 {@link #KIND_TEXT} / {@link #KIND_WISH} / {@link #KIND_IMAGE}
      */
     private Integer kind;
     /**
-     * 文本内容，或心愿文案快照
+     * 文本内容，或心愿文案快照，或图片完整 URL（kind=3）
      *
-     * 列 content varchar(500)
+     * 列 content varchar(512)（M10 500→512，URL 按 ≤512 设计，同 love_moment.image_url 口径）
      */
     private String content;
     /**

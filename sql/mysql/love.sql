@@ -495,3 +495,13 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 SELECT @parentId := LAST_INSERT_ID();
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('瞬间查询', 'love:moment:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('瞬间删除', 'love:moment:delete', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+
+-- ----------------------------
+-- M10 段：聊天图片消息（kind=3，content 列存图片 URL；INTEGRATION-DESIGN.md §5.2 message 组）
+-- 重放安全：MODIFY 为幂等 DDL（列宽/注释收敛到目标值，love_user.mobile M3 修正段先例）；
+-- varchar(500)→512 变长扩列：仅元数据变更、存量行不动、在线 DDL 秒级；
+-- ⚠ 上线后禁止回改 512→500（存量超长行会截断报错）。
+-- ----------------------------
+ALTER TABLE `love_message`
+    MODIFY COLUMN `kind` tinyint NOT NULL COMMENT '消息类型（1文本悄悄话 2心愿消息 3图片消息）',
+    MODIFY COLUMN `content` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文本内容，或心愿文案快照，或图片完整 URL（kind=3，infra 文件服务上传返回）';
