@@ -835,7 +835,11 @@ internal object ChatStore {
      * 整页覆盖,拉过则重进靠切 Tab/轮询增量,不重复覆盖(防每次进页整表重建跳动)。send 不再推游标后,
      * 空串 lastId 事实上已等价「未首拉」,守卫仍独立于游标值——语义直白且防未来回归(M3 评审修正沿革)
      */
-    private var initialLoaded = false
+    // 首屏已成功拉取(loadInitial/resync Ok 置位,reset 复位):公开可观察,ChatPage 空态文案
+    // 以此为门——首拉在飞期间列表区静默空白,不闪「还没有悄悄话」再被消息顶掉(2026-10-17
+    // 真机反馈;微信语义:加载期不落空态,拿到空回包才确认真空)
+    var initialLoaded: Boolean by mutableStateOf(false)
+        private set
 
     /**
      * 首屏拉取(§7.4 ChatPage 进入触发):按 initialLoaded 判幂等(与 lastId 解耦),未拉过以空游标调

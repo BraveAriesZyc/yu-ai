@@ -511,7 +511,10 @@ fun ChatPage(
                     )
                 }
                 item { Spacer(modifier = Modifier.height(14.dp)) }
-                // 空态 / 失败态分家(F4,§6):首拉失败不再落「还没有悄悄话」假空态误导
+                // 空态 / 失败态分家(F4,§6):首拉失败不再落「还没有悄悄话」假空态误导;
+                // 首拉在飞期间三态都不落(initialLoaded 为门)——列表区静默空白,消息到达直接
+                // 出列,不闪空态文案(2026-10-17 真机反馈「进聊天页闪烁」,微信/QQ 语义:加载期
+                // 不转圈不落空态,拿到空回包才确认真空)
                 if (messages.isEmpty()) {
                     item {
                         if (loadFailed) {
@@ -523,7 +526,7 @@ fun ChatPage(
                                     }
                                 },
                             )
-                        } else {
+                        } else if (ChatStore.initialLoaded) {
                             ChatEmptyHint(modifier = Modifier.fillMaxWidth().padding(top = 48.dp))
                         }
                     }

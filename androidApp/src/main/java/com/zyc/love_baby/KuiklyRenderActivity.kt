@@ -3,6 +3,7 @@ package com.zyc.love_baby
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -69,6 +70,11 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 启动白屏治理(2026-10-17 真机反馈):加载期窗口背景对齐页面主题底色——默认主题由
+        // styles.xml windowBackground(splash_bg=蜜桃恋语底)静态兜底,非默认主题在此按持久化
+        // id 覆写;starting window→Activity window→Kuikly 首帧三级同色,白屏变主题底色无缝衔接
+        window.setBackgroundDrawable(ColorDrawable(themeBgColor(persistedThemeId())))
+
         setContentView(R.layout.activity_hr)
         setupImmersiveMode()
         hrContainerView = findViewById(R.id.hr_container)
@@ -121,13 +127,17 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         }
     }
 
+    /** 持久化主题 id(KRSharedPreferencesModule 同文件同 key,createPageData/window 背景共用一次读) */
+    private fun persistedThemeId(): String =
+        getSharedPreferences("KRSharedPreferencesModule", Context.MODE_PRIVATE)
+            .getString(THEME_KEY, "") ?: ""
+
     private fun createPageData(): Map<String, Any> {
         val param = argsToMap()
         param["appId"] = 1
         // 首帧前传主题:与 KRSharedPreferencesModule 同文件同 key(其存储文件名即模块名),
         // 页面 willInit 读 pageData 直接定主题,避免启动先渲染默认主题再全局重组一遍
-        param[THEME_KEY] = getSharedPreferences("KRSharedPreferencesModule", Context.MODE_PRIVATE)
-            .getString(THEME_KEY, "") ?: ""
+        param[THEME_KEY] = persistedThemeId()
         // 首帧前传会话:同文件同 key(与 shared state/SessionStore.PREF_KEY 一致)注入完整 session JSON
         // (accessToken/refreshToken/userId/expiresTime/clientId,§7.2)。GatePanel 组合期经
         // SessionStore.initFromPageData 判定:未过期放行 / 过期但 refreshToken 可用也放行
@@ -168,6 +178,18 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
 
         /** 双击返回退出的判定窗口 */
         private const val EXIT_INTERVAL_MS = 2_000L
+
+        /**
+         * 持久化主题 id → 页面背景色(与 shared components/AppTheme.kt ThemeStore.all 各主题 bg
+         * 一一对应,色值双源同步勿单改一边;未知 id/未持久化走默认「蜜桃恋语」,与 splash_bg 同源)
+         */
+        private fun themeBgColor(themeId: String): Int = when (themeId) {
+            "sunset" -> 0xFFFFF7F2.toInt()
+            "mint" -> 0xFFF2FAF5.toInt()
+            "ocean" -> 0xFFF3F8FD.toInt()
+            "lavender" -> 0xFFF8F6FD.toInt()
+            else -> 0xFFFDF6F4.toInt()
+        }
 
         /** 主题持久化 key,与 shared ThemeStore.PREF_KEY 保持一致 */
         private const val THEME_KEY = "app_theme_id"
