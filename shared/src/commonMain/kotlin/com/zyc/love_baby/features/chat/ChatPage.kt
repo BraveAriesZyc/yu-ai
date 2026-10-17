@@ -585,28 +585,37 @@ fun ChatPage(
                             .padding(top = topPad),
                     ) {
                         if (showDayDivider) {
-                            // 日期分隔条:单节点(背景+文字同节点,无 clickable),整宽居中胶囊
-                            Text(
-                                chatDayLabel(msg.createTime),
-                                fontSize = 10.sp,
-                                color = AppTheme.TextSecondary,
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                                    .background(AppTheme.TextTertiary.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
-                                    .padding(horizontal = 10.dp, vertical = 3.dp),
-                            )
+                            // 日期分隔条:单节点(背景+文字同节点,无 clickable),整宽居中胶囊。
+                            // 居中走 Box+contentAlignment 容器模式(AppIconTile/上传蒙层等全 App
+                            // 真机验证过的可靠通道),不依赖 ColumnScope.align(ParentData)——
+                            // 2026-10-17 真机反馈该通道胶囊居中不可靠(墓碑行首报),两处统一改写
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    chatDayLabel(msg.createTime),
+                                    fontSize = 10.sp,
+                                    color = AppTheme.TextSecondary,
+                                    modifier = Modifier
+                                        .background(AppTheme.TextTertiary.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
+                                        .padding(horizontal = 10.dp, vertical = 3.dp),
+                                )
+                            }
                             Spacer(modifier = Modifier.height(6.dp))
                         }
                         if (msg.recalled) {
                             // M12 墓碑行:整行替换为居中胶囊灰条(同日期分隔条胶囊语言,alpha 0.10 底),
-                            // 不画头像/气泡/时间行;上方日期分隔条照常保留
-                            Text(
-                                if (msg.isMine) "你撤回了一条消息" else "对方撤回了一条消息",
-                                fontSize = 11.sp,
-                                color = AppTheme.TextTertiary,
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                                    .background(AppTheme.TextTertiary.copy(alpha = 0.10f), RoundedCornerShape(9.dp))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                            )
+                            // 不画头像/气泡/时间行;上方日期分隔条照常保留。居中走 Box+contentAlignment
+                            // 容器模式(2026-10-17 真机反馈 ColumnScope.align 胶囊不居中,与日期条
+                            // 统一改写,见上注释)
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    if (msg.isMine) "你撤回了一条消息" else "对方撤回了一条消息",
+                                    fontSize = 11.sp,
+                                    color = AppTheme.TextTertiary,
+                                    modifier = Modifier
+                                        .background(AppTheme.TextTertiary.copy(alpha = 0.10f), RoundedCornerShape(9.dp))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                )
+                            }
                         } else {
                             // M12 长按撤回:仅自己发的消息且在 2 分钟窗内可长按(else 分支已排除
                             // recalled;超窗在屏消息长按无反应、服务端权威兜底,不做定时驱逐);

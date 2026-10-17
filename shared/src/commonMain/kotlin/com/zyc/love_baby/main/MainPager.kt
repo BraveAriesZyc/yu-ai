@@ -343,17 +343,24 @@ internal fun MainPageImpl(pager: BasePager) {
 
         // 悬浮底部导航(后组合压在页面上层;底部避让导航栏/手势条安全距离)
         // 角标(M11):聊天 Tab 未读红点,快照状态驱动(unreadCount 变化仅重组底栏区块)
-        Box(
-            modifier = Modifier.align(Alignment.BottomCenter)
-                .padding(horizontal = 14.dp)
-                .padding(bottom = 10.dp + navBarSafePaddingDp()),
-        ) {
-            AppBottomBar(
-                selectedIndex = selectedTab,
-                pillPosition = pillPosition,
-                badges = mapOf(3 to ChatStore.unreadCount),
-                onSelect = goTo,
-            )
+        // 2026-10-17 层级修复:聊天页两个全屏浮层(大图预览/撤回确认)挂在 ChatPage 内部
+        // (Pager 子树,z 序低于本浮岛底栏)盖不住也拦不住它——真机反馈「大图开着底栏还亮着」
+        // → chatOverlayActive 期间整块不组合:黑幕本就 fillMaxSize 盖满全屏(Pager fillMaxSize
+        // 含底栏区域),底栏退场即真全屏,同微信图片浏览器语义。MinePage/MoodPage 系浮层挂本根
+        // Box 且后于底栏组合(天然盖住),不参与此开关行为不变
+        if (!chatOverlayActive) {
+            Box(
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .padding(horizontal = 14.dp)
+                    .padding(bottom = 10.dp + navBarSafePaddingDp()),
+            ) {
+                AppBottomBar(
+                    selectedIndex = selectedTab,
+                    pillPosition = pillPosition,
+                    badges = mapOf(3 to ChatStore.unreadCount),
+                    onSelect = goTo,
+                )
+            }
         }
 
         // 解绑二次确认浮层(F6,§7.7):后于底栏组合 → 整层盖住底栏,遮罩挡触摸底栏不可误触;
