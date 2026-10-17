@@ -90,9 +90,9 @@ import kotlinx.coroutines.launch
  *    ——2.29 官方 pullToRefreshItem 只挂 LazyListScope(反编译 javap 锤实,scrollState 参数即
  *    LazyListState),计划里「网格+官方下拉刷新」二者取官方下拉刷新;M15 多图后行高随图数变高,
  *    生产等价先例同行有/无配文,Row 缺省 Top 对齐)
- *  - 卡片:图块三态(M15:单图 140dp 全宽 Crop / 多图三列迷你九宫格 56dp cell,浅灰底常驻充当
- *    加载占位)+ 配文(空串不显,maxLines=2 变高行收敛)+ 我/TA 与时间 + 纯展示红心;
- *    点击进大图预览
+ *  - 卡片:图块统一 140dp 全宽 Crop+多图右上「N张」黑胶囊角标(2026-10-17 真机反馈二轮:三列
+ *    迷你九宫格在半宽卡内 cell 过小弃用,全部图进预览横滑看)+ 配文(空串不显,maxLines=2)+
+ *    我/TA 与时间 + 纯展示红心;点击进大图预览
  *  - 可见期 5s 静默轮询对账(M15,D-20c:点赞/对方增删不发 WS 靠轮询感知,M14 心愿清单同款;
  *    恒拉首页合并删账/增改账,data class 相等跳过,失败静默自愈)
  *  - 发布浮层:选图仅本地预览零网络(pickImages 回 content:// URI,KRImageAdapter 已扩 content:
@@ -445,11 +445,11 @@ private fun MomentEmptyHint() {
 }
 
 /**
- * 单卡:图块(M15 三态:单图 140dp 全宽 Crop 现状字节不变 / 多图三列迷你九宫格,浅灰底常驻充当
- * 加载占位)+ 配文(空串不显)+ 我/TA 与时间 + 纯展示红心(不可点,点赞入口在预览浮层)。
- * 「我」= 主题色,「TA」= 暖橙(CheckinPage PartnerRingDot 同款语义色);
- * background+clickable 同节点(铁律⑤)。多图行高随图数变化 = 双列变高行,已有生产等价先例
- * (同行一卡有配文一卡无,Row 缺省 Top 对齐)
+ * 单卡:图块统一 140dp 全宽 Crop(浅灰底常驻充当加载占位),多图右上「N张」黑胶囊角标
+ * (三层胶囊写法铁律 14/15;全部图进大图预览横滑——三列迷你九宫格半宽卡内 cell 过小,
+ * 2026-10-17 真机反馈二轮弃用)+ 配文(空串不显,maxLines=2)+ 我/TA 与时间 + 纯展示红心
+ * (不可点,点赞入口在预览浮层)。「我」= 主题色,「TA」= 暖橙(CheckinPage PartnerRingDot
+ * 同款语义色);background+clickable 同节点(铁律⑤)。行高仅随配文有无变化,双列更整齐
  */
 @Composable
 private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick: () -> Unit) {
@@ -461,39 +461,35 @@ private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick:
             .clickable(onClick = onClick)
             .padding(8.dp),
     ) {
-        if (info.imageUrls.size <= 1) {
-            Box(
-                modifier = Modifier.fillMaxWidth()
-                    .height(140.dp)
-                    .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp)),
-            ) {
-                Image(
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
-                    painter = rememberAsyncImagePainter(info.imageUrl),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                )
-            }
-        } else {
-            // 多图:三列迷你九宫格(chunked(3),4dp gap,末行 repeat 补位对齐)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                info.imageUrls.chunked(3).forEach { rowUrls ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        rowUrls.forEach { url ->
-                            Box(
-                                modifier = Modifier.weight(1f)
-                                    .height(56.dp)
-                                    .background(Color(0xFFF5F6FA), RoundedCornerShape(6.dp)),
-                            ) {
-                                Image(
-                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
-                                    painter = rememberAsyncImagePainter(url),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                )
-                            }
-                        }
-                        repeat(3 - rowUrls.size) { Spacer(modifier = Modifier.weight(1f)) }
+        Box(
+            modifier = Modifier.fillMaxWidth()
+                .height(140.dp)
+                .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp)),
+        ) {
+            Image(
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                painter = rememberAsyncImagePainter(info.imageUrls.firstOrNull() ?: info.imageUrl),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+            )
+            if (info.imageUrls.size > 1) {
+                // 「N张」角标(三层胶囊:外层 Box 容器定位 → 内层 Box 载 background+padding →
+                // Text 子节点,铁律 14/15)
+                Box(
+                    modifier = Modifier.align(Alignment.TopEnd)
+                        .padding(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            "${info.imageUrls.size}张",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
                     }
                 }
             }
@@ -923,18 +919,22 @@ private fun MomentPreviewOverlay(
                     Text(info.text, color = AppTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
+                // 发布者+时间两行小字占 weight(1f) 弹性压缩,点赞/删除钮固定 intrinsic 宽在右
+                // (2026-10-17 真机反馈:单行塞四组时尾部「删除」被裁显不全——钮恒完整)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        if (mine) "我发布的" else "TA 发布的",
-                        color = if (mine) ThemeStore.current.brandStart else Color(0xFFFF9A56),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    if (timeLabel.isNotEmpty()) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(timeLabel, color = AppTheme.TextTertiary, fontSize = 12.sp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (mine) "我发布的" else "TA 发布的",
+                            color = if (mine) ThemeStore.current.brandStart else Color(0xFFFF9A56),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                        )
+                        if (timeLabel.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(timeLabel, color = AppTheme.TextTertiary, fontSize = 11.sp, maxLines = 1)
+                        }
                     }
-                    Spacer(modifier = Modifier.weight(1f))
                     // 点赞钮(M15):双方均可赞任意瞬间含自己(D-20e);回包真值经 toggleLike
                     // 原位替换,此处只读 info 落态;likeSubmitting/删除中拦
                     Row(
@@ -957,6 +957,7 @@ private fun MomentPreviewOverlay(
                                 color = if (info.liked) AppTheme.Danger else AppTheme.TextTertiary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
+                                maxLines = 1,
                             )
                         }
                     }
@@ -967,6 +968,7 @@ private fun MomentPreviewOverlay(
                             color = AppTheme.Danger,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
+                            maxLines = 1,
                             modifier = Modifier
                                 .background(Color.Transparent, RoundedCornerShape(14.dp))
                                 .clickable { if (!deleting) onDelete() }
