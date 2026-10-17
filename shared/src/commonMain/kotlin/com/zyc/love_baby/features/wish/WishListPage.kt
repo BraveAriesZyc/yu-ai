@@ -378,8 +378,16 @@ internal fun WishListPage(pager: Pager) {
                     WishRow(
                         wish = wish,
                         myId = myId,
-                        onOpen = { detailTarget = wish },
-                        onDelete = { deleteTarget = wish },
+                        // 开弹框先失焦收键盘(2026-10-18 真机反馈:键盘开着点清单项,详情框出来了
+                        // 键盘没收,弹框与键盘叠着;ChatPage/MomentPage 浮层收口同款写法)
+                        onOpen = {
+                            focusManager.clearFocus()
+                            detailTarget = wish
+                        },
+                        onDelete = {
+                            focusManager.clearFocus()
+                            deleteTarget = wish
+                        },
                     )
                 }
                 // 尾部 Spacer:给悬浮添加条让位(独立页自持几何,2026-10-18 修——原照抄 TodoPage
