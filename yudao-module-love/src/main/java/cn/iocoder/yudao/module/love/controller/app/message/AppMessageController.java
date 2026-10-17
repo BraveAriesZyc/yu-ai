@@ -118,4 +118,15 @@ public class AppMessageController {
         return success(true);
     }
 
+    @PostMapping("/typing")
+    @Operation(summary = "上报「正在输入」信号（M13）",
+            description = "无请求体（create-invite/unbind 先例）；不落库、无持久化（D-18）：服务端经 WS 向对方在线连接"
+                    + "推 love-typing 纯信号（content 单键占位，端上不消费），对方离线/未桥接时静默 no-op"
+                    + "（AbstractWebSocketMessageSender 既有语义）；节流在端上（3s），服务端不做限流；"
+                    + "错误码零新增：未绑定 → 1_003_004_003；回包标量 true（read 先例，端上只判 Ok）")
+    public CommonResult<Boolean> sendTyping() {
+        messageService.sendTyping();
+        return success(true);
+    }
+
 }

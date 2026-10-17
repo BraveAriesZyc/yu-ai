@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.love.service.couple;
 
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleBindReqVO;
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleCreateInviteRespVO;
+import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleOnlineRespVO;
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleRespVO;
 
 /**
@@ -35,6 +36,15 @@ public interface CoupleService {
      * @return 情侣关系；未绑定时抛 1_003_004_003，端上据此切回绑定引导态
      */
     AppCoupleRespVO getCouple();
+
+    /**
+     * 查询伴侣在线状态（M13）：以 WS 内存会话表为准（sender-type=local 单实例，D-18），
+     * 对方名下任一在线连接即 true；websocket 关闭/未桥接端恒 false（渐进降级）。
+     * 无 lastSeen，「最近在线时间」显式不做；端上仅聊天页停留期间 5s 轮询
+     *
+     * @return 在线状态 VO（对象形态——端上 HttpClient toOk 标量落空对象，禁改回标量回包）
+     */
+    AppCoupleOnlineRespVO getCoupleOnline();
 
     /**
      * 解绑情侣关系：双方任一可发起，事务内物理删除 couple 行（D-11）

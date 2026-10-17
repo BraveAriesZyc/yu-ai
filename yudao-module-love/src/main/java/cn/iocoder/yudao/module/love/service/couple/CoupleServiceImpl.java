@@ -1,9 +1,12 @@
 package cn.iocoder.yudao.module.love.service.couple;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
+import cn.iocoder.yudao.framework.websocket.core.session.WebSocketSessionManager;
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleBindReqVO;
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleCreateInviteRespVO;
+import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleOnlineRespVO;
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleRespVO;
 import cn.iocoder.yudao.module.love.dal.dataobject.couple.LoveCoupleDO;
 import cn.iocoder.yudao.module.love.dal.dataobject.user.LoveUserDO;
@@ -13,6 +16,7 @@ import cn.iocoder.yudao.module.love.service.mood.MoodOptionService;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -72,6 +76,14 @@ public class CoupleServiceImpl implements CoupleService {
     private LoveCoupleMapper loveCoupleMapper;
     @Resource
     private MoodOptionService moodOptionService;
+
+    /**
+     * WS 内存会话表（M13 在线判定，D-18）：required=false——yudao.websocket.enable=false 时 bean
+     * 不注册，null 即恒离线（渐进降级，与 MessageServiceImpl 的 sender 弱注同款）；
+     * sender-type=local 单实例内存直查，多实例部署前须先落 redis sender 扩展（D-18 部署红线）
+     */
+    @Autowired(required = false)
+    private WebSocketSessionManager webSocketSessionManager;
 
     @Override
     public AppCoupleCreateInviteRespVO createInvite() {
@@ -213,6 +225,36 @@ public class CoupleServiceImpl implements CoupleService {
         // 物理删除 couple 行（DO 无 @TableLogic，deleteById 即物理 DELETE，D-11）；
         // todo/mood/message 数据保留（couple_id 留历史值），重绑产生新 couple_id，双方端上回未绑定态
         loveCoupleMapper.deleteById(couple.getId());
+    }
+
+    @Override
+    public AppCoupleOnlineRespVO getCoupleOnline() {
+        Long currentUserId = getCurrentUserId();
+        // §6.5 停用账号收口
+        getValidatedCurrentUser(currentUserId);
+        // couple 由当前登录人反查（无客户端传参），防 IDOR；端上仅 BOUND 态轮询，
+        // 此分支多为解绑竞态，端上按 BizError 静默
+        LoveCoupleDO couple = loveCoupleMapper.selectByUserId(currentUserId);
+        if (couple == null) {
+            throw exception(COUPLE_NOT_EXISTS);
+        }
+        // 在线判定 = WS 内存会话表（D-18）：对方名下任一在线连接即在线（多端并存天然覆盖）；
+        // 回包禁改 CommonResult<Boolean> 标量（端上 toOk 标量落空对象，M11 冻结决策）
+        boolean partnerOnline = webSocketSessionManager != null && !webSocketSessionManager
+                .getSessionList(UserTypeEnum.MEMBER.getValue(), getPartnerId(couple, currentUserId))
+                .isEmpty();
+        AppCoupleOnlineRespVO resp = new AppCoupleOnlineRespVO();
+        resp.setPartnerOnline(partnerOnline);
+        return resp;
+    }
+
+    /**
+     * 取 couple 对方 userId（userA/userB 二选一；与 MessageServiceImpl.getPartnerId 同构，
+     * 两 service 无继承关系从简各自持有）
+     */
+    private Long getPartnerId(LoveCoupleDO couple, Long currentUserId) {
+        return Objects.equals(couple.getUserAId(), currentUserId)
+                ? couple.getUserBId() : couple.getUserAId();
     }
 
     /**

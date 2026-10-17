@@ -79,6 +79,13 @@ public class MessageServiceImpl implements MessageService {
      */
     private static final String MESSAGE_TYPE_LOVE_RECALL = "love-message-recall";
 
+    /**
+     * WS 正在输入信号类型（M13）：typing 是纯瞬态信号——无数据不落库、无「停止输入」信号
+     * （端上 4s 过期唯一收口，D-18）；content 为单键占位 JSON 对象（JsonWebSocketMessage.content
+     * 要求 JSON 字符串），端上不消费
+     */
+    private static final String MESSAGE_TYPE_LOVE_TYPING = "love-typing";
+
     @Resource
     private LoveUserMapper loveUserMapper;
     @Resource
@@ -225,6 +232,20 @@ public class MessageServiceImpl implements MessageService {
             webSocketMessageSender.send(UserTypeEnum.MEMBER.getValue(), message.getReceiverId(),
                     MESSAGE_TYPE_LOVE_RECALL, JsonUtils.toJsonString(
                             Map.of("messageId", String.valueOf(message.getId()))));
+        }
+    }
+
+    @Override
+    public void sendTyping() {
+        Long currentUserId = getCurrentUserId();
+        // §6.5 停用账号收口
+        getValidatedCurrentUser(currentUserId);
+        LoveCoupleDO couple = getValidatedCouple(currentUserId);
+        // 纯中继（D-18）：无落库无状态，对方离线/未桥接时 send 静默 no-op；节流在端上（3s），
+        // 服务端不做限流（情侣双方仅两人，不落库无存储放大）
+        if (webSocketMessageSender != null) {
+            webSocketMessageSender.send(UserTypeEnum.MEMBER.getValue(), getPartnerId(couple, currentUserId),
+                    MESSAGE_TYPE_LOVE_TYPING, JsonUtils.toJsonString(Map.of("typing", "1")));
         }
     }
 

@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.love.controller.app.couple;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleBindReqVO;
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleCreateInviteRespVO;
+import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleOnlineRespVO;
 import cn.iocoder.yudao.module.love.controller.app.couple.vo.AppCoupleRespVO;
 import cn.iocoder.yudao.module.love.service.couple.CoupleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,6 +51,16 @@ public class AppCoupleController {
             description = "未绑定时返回 1_003_004_003，端上据此切回绑定引导态（解绑/被解绑后对方端的感知路径）")
     public CommonResult<AppCoupleRespVO> getCouple() {
         return success(coupleService.getCouple());
+    }
+
+    @GetMapping("/online")
+    @Operation(summary = "查询伴侣在线状态（M13）",
+            description = "以 WS 内存会话表为准（sender-type=local 单实例，D-18）：对方名下任一在线连接即 true；"
+                    + "websocket 关闭/未桥接端恒 false（渐进降级）；未绑定 → 1_003_004_003，错误码零新增；"
+                    + "回包为对象形态——端上 HttpClient toOk 标量落空对象，禁改回 CommonResult<Boolean>（M11 冻结决策）；"
+                    + "端上仅聊天页停留期间 5s 轮询（离页重置），无 lastSeen，「最近在线时间」显式不做（D-18）")
+    public CommonResult<AppCoupleOnlineRespVO> getCoupleOnline() {
+        return success(coupleService.getCoupleOnline());
     }
 
     @PostMapping("/unbind")

@@ -95,4 +95,11 @@ public interface MessageService {
      */
     void recallMessage(AppMessageRecallReqVO reqVO);
 
+    /**
+     * 上报「正在输入」信号（M13，D-18）：纯中继，无请求体、不落库、无持久化；
+     * 校验链 getValidatedCurrentUser → getValidatedCouple 后经 WS 向对方在线连接推
+     * love-typing 纯信号，对方离线/未桥接静默 no-op；节流在端上（3s），服务端不做限流
+     */
+    void sendTyping();
+
 }
