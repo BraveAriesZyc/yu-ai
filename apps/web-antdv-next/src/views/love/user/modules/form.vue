@@ -65,6 +65,7 @@ const [Modal, modalApi] = useVbenModal({
       id: data.id,
       nickname: data.nickname,
       status: data.status,
+      signature: data.signature,
     });
   },
 });

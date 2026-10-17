@@ -9,6 +9,12 @@ const statusOptions = [
   { label: '停用', value: 1 },
 ];
 
+/** 性别本地映射（0=女 / 1=男，null=未设置显 '-'；与系统字典语义相反，勿用系统字典） */
+const sexMap: Record<number, string> = {
+  0: '女',
+  1: '男',
+};
+
 /** 编辑的表单（本页仅编辑，无新增） */
 export function useFormSchema(): VbenFormSchema[] {
   return [
@@ -35,6 +41,15 @@ export function useFormSchema(): VbenFormSchema[] {
       label: '帐号状态',
       componentProps: {
         options: statusOptions,
+      },
+    },
+    {
+      component: 'Textarea',
+      fieldName: 'signature',
+      label: '个性签名',
+      componentProps: {
+        placeholder: '请输入个性签名',
+        maxLength: 100,
       },
     },
   ];
@@ -106,6 +121,24 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
       title: '头像',
       minWidth: 80,
       slots: { default: 'avatar' },
+    },
+    {
+      field: 'sex',
+      title: '性别',
+      minWidth: 70,
+      formatter: ({ cellValue }) => sexMap[cellValue] ?? '-',
+    },
+    {
+      field: 'birthday',
+      title: '生日',
+      minWidth: 110,
+      formatter: ({ cellValue }) => cellValue || '-',
+    },
+    {
+      field: 'signature',
+      title: '个性签名',
+      minWidth: 160,
+      formatter: ({ cellValue }) => cellValue || '-',
     },
     {
       field: 'status',
