@@ -7,7 +7,7 @@ import cn.iocoder.yudao.framework.common.exception.ErrorCode;
  *
  * love 模块独立使用 1-003-000-000 段（infra = 1-001，system = 1-002），子段划分：
  * 待办 1-003-001-xxx；心情选项 1-003-002-xxx（M3.5 激活，record 覆盖写仍不打错）；
- * 消息 1-003-003-xxx；情侣 1-003-004-xxx；账号/鉴权 1-003-005-xxx。
+ * 消息 1-003-003-xxx；情侣 1-003-004-xxx；账号/鉴权 1-003-005-xxx；纪念日 1-003-006-xxx（M5）。
  *
  * 短信验证码本身的错误（未发送、已过期、不正确等）由 system 的 SmsCodeApi 抛其自有错误码，不在本段定义。
  */
@@ -59,5 +59,16 @@ public interface ErrorCodeConstants {
      * app 侧不需要此码——app 全部以当前登录人为出发点，行不存在统一按 {@link #AUTH_LOGIN_USER_DISABLED} 处理
      */
     ErrorCode AUTH_USER_NOT_EXISTS = new ErrorCode(1_003_005_004, "用户不存在");
+
+    // ========== 纪念日 模块 1-003-006-xxx（M5 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）
+     */
+    ErrorCode ANNIVERSARY_NOT_EXISTS = new ErrorCode(1_003_006_000, "纪念日不存在");
+    ErrorCode ANNIVERSARY_NO_PERMISSION = new ErrorCode(1_003_006_001, "无权操作该纪念日");
+    /**
+     * annivDate 入参为 String + @Pattern 挡格式，此处挡「正则通过但日历非法」（如 2026-02-30）
+     */
+    ErrorCode ANNIVERSARY_DATE_INVALID = new ErrorCode(1_003_006_002, "日期格式非法");
 
 }

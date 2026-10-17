@@ -370,3 +370,45 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('默认选项新增', 'love:mood-option-default:create', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('默认选项更新', 'love:mood-option-default:update', 3, 3, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('默认选项删除', 'love:mood-option-default:delete', 3, 4, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+
+-- ============================================================================
+-- M5 段：纪念日表 + 菜单/按钮权限（INTEGRATION-DESIGN.md §12.4 预留落位 / §5.2 anniversary 组 / D-17）
+-- 本段追加于 M3.5 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- love_anniversary 继承 BaseDO 走【逻辑删除】（deleted 列 + DO 侧 @TableLogic），
+-- 与 love_couple 的物理删除路线相反；解绑/重绑后数据保留，couple_id 留历史值（D-11）。
+-- 无 update 端点（删了重加）；repeat_type tinyint 值域 1=每年 2=一次性，预留月/周扩展；
+-- 倒数算术全在端上（GMT+8 日序），服务端只存原始日期不做任何推算。
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS `love_anniversary`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '纪念日编号',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（couple 共享，列表按此过滤）',
+  `owner_id` bigint NOT NULL COMMENT '创建人用户编号（仅记录归属，双方均可见可操作）',
+  `title` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '纪念日名称（恋爱纪念日/TA 的生日/领证日…）',
+  `anniv_date` date NOT NULL COMMENT '纪念日日期（原始日期，每年重复的下一次发生日由端上推算，D-17）',
+  `repeat_type` tinyint NOT NULL DEFAULT 1 COMMENT '重复类型（1=每年重复 2=一次性；值域收口在 service create）',
+  `emoji` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'emoji 图标（端上预设字典选一，客户端字典；空串端上按 ❤ 兜底）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_couple`(`couple_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '纪念日表（情侣业务）';
+
+-- ----------------------------
+-- 菜单/按钮权限 SQL（M5，「情侣业务」目录下第六个管理页）
+-- 挂接：目录 id 按 type+name 回查（同 M3.5 段理由，不依赖前段 LAST_INSERT_ID）；
+-- 幂等：按钮（按 permission）→ 管理菜单（按 component_name）先行 DELETE，先子后父（M-3 同款）。
+-- ----------------------------
+DELETE FROM `system_menu` WHERE `permission` IN ('love:anniversary:query', 'love:anniversary:delete');
+DELETE FROM `system_menu` WHERE `component_name` = 'LoveAnniversary';
+
+SELECT @loveDirectoryId := `id` FROM `system_menu` WHERE `type` = 1 AND `name` = '情侣业务' AND `deleted` = b'0' LIMIT 1;
+
+-- 管理菜单六：纪念日（component_name 唯一 = LoveAnniversary）
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('纪念日', '', 2, 6, @loveDirectoryId, 'anniversary', 'ep:calendar', 'love/anniversary/index', 'LoveAnniversary', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+SELECT @parentId := LAST_INSERT_ID();
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('纪念日查询', 'love:anniversary:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('纪念日删除', 'love:anniversary:delete', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
