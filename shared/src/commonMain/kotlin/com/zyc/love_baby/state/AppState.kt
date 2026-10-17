@@ -793,6 +793,7 @@ internal data class ChatMsg(
     val iconName: String = "",
     val imageUrl: String = "", // kind=IMAGE 时为图片完整 URL(content 列透传,M10)
     val createTime: Long = 0L, // epoch 毫秒(服务端 VO 回传);0 = 未回传,渲染侧整层隐藏时间元素
+    val recalled: Boolean = false, // M12 墓碑:已撤回消息渲染灰条(服务端不删行,原字段保留)
 )
 
 internal object ChatStore {
@@ -953,7 +954,7 @@ internal object ChatStore {
 
     /** MessageInfo → ChatMsg:isMine 以 senderId 比对当前会话;kind=2 走快照字段,kind=3 图片
      *  (imageUrl=content 透传),其余按文本;createTime 透传(消息时间行/日期分组用,send/sendWishes/
-     *  sendImage 走服务端回包 VO 天然有值) */
+     *  sendImage 走服务端回包 VO 天然有值);recalled 墓碑透传(M12,list/回包统一携带) */
     private fun toMsg(info: MessageInfo): ChatMsg {
         val mine = info.senderId == SessionStore.userId
         return when (info.kind) {
@@ -967,6 +968,7 @@ internal object ChatStore {
                 colorHex = info.color,
                 iconName = info.icon,
                 createTime = info.createTime,
+                recalled = info.recalled,
             )
             MessageInfo.KIND_IMAGE -> ChatMsg(
                 id = info.id,
@@ -975,8 +977,15 @@ internal object ChatStore {
                 kind = MsgKind.IMAGE,
                 imageUrl = info.content,
                 createTime = info.createTime,
+                recalled = info.recalled,
             )
-            else -> ChatMsg(id = info.id, isMine = mine, text = info.content, createTime = info.createTime)
+            else -> ChatMsg(
+                id = info.id,
+                isMine = mine,
+                text = info.content,
+                createTime = info.createTime,
+                recalled = info.recalled,
+            )
         }
     }
 
@@ -1055,6 +1064,45 @@ internal object ChatStore {
         val cb = b.toLongOrNull()
         return if (ca != null && cb != null) ca > cb else a > b
     }
+
+    // ---------- M12 消息撤回 ----------
+
+    /**
+     * 撤回(§7.4 写穿透):POST 成功才本地置墓碑(服务端 CAS 幂等);失败不置位,调用方 toast
+     * (1_003_003_001 超窗/1_003_003_000 非本人等文案由服务端回包携带)。回包为标量 true 经
+     * toOk 归空对象,只判 Ok
+     */
+    suspend fun recall(pager: Pager, messageId: String): ApiResult {
+        val result = MessageApi.recall(pager, messageId)
+        if (result is ApiResult.Ok) markLocalRecalled(messageId)
+        return result
+    }
+
+    /**
+     * 全量重拉纠偏(M12):切 Tab 进聊天页触发——覆盖「我不在线时对方撤回」的漏更新。
+     * 增量拉按 id > lastId 扫,拉不到已拉取老消息的字段变更,唯全量覆盖能纠偏;
+     * 50 条量级成本可接受。成功置 initialLoaded(与 loadInitial 收敛同态,防首拉失败残留半态)
+     */
+    suspend fun resync(pager: Pager): ApiResult {
+        val result = pull(pager, overwrite = true)
+        if (result is ApiResult.Ok) initialLoaded = true
+        return result
+    }
+
+    /**
+     * WS 撤回信号入口(ChatPushStore 调,M12):本地置墓碑,不重拉——recall 信号携 messageId,
+     * 数据在信号里(D-16 显式破例:增量拉拉不到老消息变更)。id 不在本地列表(未拉过/已清场)
+     * 时 map 无命中即 no-op,墓碑由下次覆盖拉(resync/首拉)补齐
+     */
+    fun applyRecall(messageId: String) {
+        if (messageId.isEmpty()) return
+        markLocalRecalled(messageId)
+    }
+
+    /** 原位替换置墓碑:key=m.id 不变,LazyColumn 无位移仅本行重组合;map 幂等,重复信号/重复 POST 无副作用 */
+    private fun markLocalRecalled(messageId: String) {
+        messages = messages.map { if (it.id == messageId) it.copy(recalled = true) else it }
+    }
 }
 
 // ---------- ChatPushStore:WS 触发器(D-16,§5.2 WS 通道) ----------
@@ -1075,6 +1123,10 @@ internal object ChatPushStore {
 
     /** 服务端信号类型(MessageServiceImpl.MESSAGE_TYPE_LOVE_NEW 同串,§5.2 契约) */
     private const val TYPE_LOVE_NEW = "love-message-new"
+
+    /** 撤回信号类型(M12,MessageServiceImpl.MESSAGE_TYPE_LOVE_RECALL 同串):携 messageId,
+     *  端上本地置墓碑不重拉(增量拉拉不到老消息变更,纠偏兜底 = 切 Tab resync) */
+    private const val TYPE_LOVE_RECALL = "love-message-recall"
 
     /** 连接态:普通 var 非快照状态——不驱动 UI,只做幂等判重(主线程读写见头注释) */
     private const val STATE_DISCONNECTED = 0
@@ -1128,6 +1180,18 @@ internal object ChatPushStore {
                 if (type == TYPE_LOVE_NEW) {
                     pager.lifecycleScope.launch {
                         ChatStore.loadIncrement(pager)
+                    }
+                } else if (type == TYPE_LOVE_RECALL) {
+                    // content 是字符串化的 JSON(JsonWebSocketMessage.content:String,双层解析),取 messageId
+                    val messageId = try {
+                        JSONObject(JSONObject(text).optString("content")).optString("messageId")
+                    } catch (_: Exception) {
+                        ""
+                    }
+                    if (messageId.isNotEmpty()) {
+                        pager.lifecycleScope.launch {
+                            ChatStore.applyRecall(messageId)
+                        }
                     }
                 }
             }

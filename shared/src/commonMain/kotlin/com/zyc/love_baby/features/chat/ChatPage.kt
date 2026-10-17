@@ -1,3 +1,5 @@
+@file:OptIn(com.tencent.kuikly.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.zyc.love_baby.features.chat
 
 import androidx.compose.runtime.Composable
@@ -12,6 +14,7 @@ import com.tencent.kuikly.compose.coil3.rememberAsyncImagePainter
 import com.tencent.kuikly.compose.foundation.Image
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
+import com.tencent.kuikly.compose.foundation.combinedClickable
 import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
 import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
@@ -81,6 +84,7 @@ import com.zyc.love_baby.state.MsgKind
 import com.zyc.love_baby.state.SessionStore
 import com.zyc.love_baby.state.appIconFromName
 import com.zyc.love_baby.state.colorFromHex
+import com.zyc.love_baby.state.nowEpochMs
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.math.abs
@@ -125,8 +129,16 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    列表容器被动观察器不消费事件不扰原生滚动;程序化滚底无指针事件天然不误伤(LazyColumn 注释)
  *  - 下拉刷新/停留 5s 轮询/切 Tab 补拉在 ChatStore 串行(指示器不闪现);文本 500 字上限 + 3 行输入
  *  - 图片消息(M10,预览确认流程):输入行图片按钮 → 系统选图 → pickAndUpload(1080) 自动上传 →
- *    输入条上方浮「预览条」(缩略图+✕取消+发送) → 点发送才 ChatStore.sendImage 入聊天(消息无撤回,
- *    确认条防误发)。上传动作收口页内 pickImage(瞬态 UI 态不进 ChatStore,同 pendingSendScroll 裁决);
+ *    输入条上方浮「预览条」(缩略图+✕取消+发送) → 点发送才 ChatStore.sendImage 入聊天(M12 起发送
+ *    后 2 分钟内可长按撤回,确认条防误发)。上传动作收口页内 pickImage(瞬态 UI 态不进 ChatStore,
+ *    同 pendingSendScroll 裁决);
+ *  - 消息撤回(M12):发送后 2 分钟内长按自己发的气泡(文本/心愿/图片)→ 页内确认浮层 →
+ *    ChatStore.recall(POST recall,服务端权威校验归属+时间窗,recalled 墓碑列不删行);本端 Ok
+ *    即地变灰条,TA 在线走 WS love-message-recall 信号(ChatPushStore→ChatStore.applyRecall),
+ *    离线靠切 Tab 进页 ChatStore.resync 全量重拉纠偏(增量拉按 id>lastId 扫不到老消息变更)。
+ *    墓碑行整行替换居中灰条提示(你/对方撤回了一条消息)并打断分组;长按走 combinedClickable
+ *    (Text/Wish 用 interactionSource=null+indication=null 长重载——短重载取 LocalIndication
+ *    会给原本无手势的气泡凭空加按压视觉;Image 与既有 clickable 指示器持平走短重载)
  *    发送收口 ChatStore.sendImage(appendDedupe/不推游标语义单源)。图片气泡 180dp 定方 Crop(高度恒定,
  *    LazyColumn item 不随加载跳动),点击开全屏大图浮层(黑 0.9+Fit+点击关闭;F6:浮层开着列表
  *    userScrollEnabled=false + MainPager 横滑经 onOverlayChange 一并关——遮罩只吃 tap 不吃拖拽)
@@ -142,6 +154,9 @@ private const val CHAT_IMAGE_MAX_EDGE = 1080
 
 /** 图片气泡定方边长(180dp):高度恒定 → LazyColumn item 高度不随图片加载变化不跳;与输入区上限协调 */
 private val IMAGE_BUBBLE_SIZE = 180.dp
+
+/** 撤回时间窗(毫秒,与服务端 RECALL_WINDOW_SECONDS=120 对齐):端上预判可长按,服务端权威兜底超窗 */
+private const val RECALL_WINDOW_MS = 120_000L
 
 /**
  * TA 气泡底:同色渐变(视觉=纯白,AppAvatar 同款先例)。⚠ 必须与我方 brandBrush 同走
@@ -174,6 +189,10 @@ fun ChatPage(
     var imageUploading by remember { mutableStateOf(false) }
     var pendingImageUrl by remember { mutableStateOf("") }
     var imagePreviewUrl by remember { mutableStateOf("") }
+    // M12 撤回确认浮层:recallTargetId = 待撤回消息 id(空串=关,开着时列表滚动/MainPager 横滑一并关);
+    // recallSubmitting = POST 在飞(浮层撤回钮防双击)。瞬态 UI 态留页内,同 imagePreviewUrl 裁决
+    var recallTargetId by remember { mutableStateOf("") }
+    var recallSubmitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     // P3a 发送滚底标志(2026-10-16):本端发送(文本/贴纸)POST 成功置位,由 messages.size effect
@@ -279,6 +298,21 @@ fun ChatPage(
         }
     }
 
+    // M12 撤回提交:POST Ok 后墓碑已由 ChatStore.recall 内部 markLocalRecalled 即地置灰,关浮层即见;
+    // 失败也关浮层 + toast(超窗 1_003_003_001 由服务端权威兜底,不在端上复制时间窗判定细节)
+    fun submitRecall() {
+        if (recallSubmitting || recallTargetId.isEmpty()) return
+        recallSubmitting = true
+        scope.launch {
+            val result = ChatStore.recall(pager, recallTargetId)
+            recallSubmitting = false
+            recallTargetId = ""
+            if (result !is ApiResult.Ok) {
+                toastCoupleResult(pager, result)
+            }
+        }
+    }
+
     // 昵称首字(§1/§7):take(1) 按 code point,emoji 昵称不截坏;空昵称兜底「TA」/「我」。
     // 头像 URL(文件服务里程碑):我方走 MainPager 下发的 profile.avatar,TA 方走 CoupleStore
     // couple/get 回查;空走首字形态(AppAvatar 内部分支,加载中背景圆透出占位)
@@ -298,21 +332,26 @@ fun ChatPage(
             loadFailed = false
             pendingImageUrl = "" // M10 登出/解绑清场:待发图与大图浮层一并弃
             imagePreviewUrl = ""
+            recallTargetId = "" // M12 撤回确认浮层同清(在飞提交结果落 ChatStore 幂等无害)
             return@LaunchedEffect
         }
         loadFailed = ChatStore.loadInitial(pager) !is ApiResult.Ok
         ChatStore.setChatVisible(pager, pageVisible) // M11:翻 BOUND 后重断言可见态(reset 清 false 而 pageVisible 未变的停留场景)
     }
-    // M10 切 Tab 关全屏大图浮层(pageVisible=false 即离页):全屏黑浮层跨 Tab 驻留不可见且拦手势;
-    // 预览条(非全屏)保留——上传协程属常驻组合的 rememberCoroutineScope,切 Tab 不中断,回来即绪
+    // M10/M12 切 Tab 关全屏浮层(pageVisible=false 即离页):全屏浮层跨 Tab 驻留不可见且拦手势
+    // (大图黑幕/撤回确认卡);预览条(非全屏)保留——上传协程属常驻组合的 rememberCoroutineScope,
+    // 切 Tab 不中断,回来即绪
     LaunchedEffect(pageVisible) {
-        if (!pageVisible) imagePreviewUrl = ""
+        if (!pageVisible) {
+            imagePreviewUrl = ""
+            recallTargetId = "" // M12 撤回确认浮层同随离页收口
+        }
         ChatStore.setChatVisible(pager, pageVisible) // M11:进出页上报,置 true 即主动 sync 一次(与补拉尾钩子双保险,D6)
     }
-    // M10 浮层开合上报 MainPager(横滑切 Tab 必须随浮层关:遮罩只吃 tap 不吃拖拽,不接线则
+    // M10/M12 浮层开合上报 MainPager(横滑切 Tab 必须随浮层关:遮罩只吃 tap 不吃拖拽,不接线则
     // 预览开着横滑会切 Tab、黑浮层驻留聊天 Tab 不可见,F6)
-    LaunchedEffect(imagePreviewUrl) {
-        onOverlayChange(imagePreviewUrl.isNotEmpty())
+    LaunchedEffect(imagePreviewUrl, recallTargetId) {
+        onOverlayChange(imagePreviewUrl.isNotEmpty() || recallTargetId.isNotEmpty())
     }
     // 下拉刷新(§7.4):官方 pullToRefreshItem(须为 LazyColumn 首个 item),刷新走 loadIncrement;
     // Store 层在飞串行等待(F13),指示器到真正拉完才收起;成功即消除失败态
@@ -459,8 +498,8 @@ fun ChatPage(
                         }
                     },
                 state = listState,
-                // M10 F6:全屏大图浮层开着时关列表滚动(遮罩只吃 tap 不吃拖拽,拖列表会穿透到浮层下层)
-                userScrollEnabled = imagePreviewUrl.isEmpty(),
+                // M10/M12 F6:全屏浮层(大图/撤回确认)开着时关列表滚动(遮罩只吃 tap 不吃拖拽,拖列表会穿透到浮层下层)
+                userScrollEnabled = imagePreviewUrl.isEmpty() && recallTargetId.isEmpty(),
             ) {
                 pullToRefreshItem(
                     state = pullState,
@@ -510,6 +549,7 @@ fun ChatPage(
                     // 图片气泡做 mine/TA 分化,池子隔离也兜底(每池上限 7,聊天量级无感)
                     contentType = { _, m ->
                         when {
+                            m.recalled -> "recall" // M12 墓碑行独立池(灰条布局与气泡完全不同,槽位隔离)
                             m.kind == MsgKind.WISH -> "wish"
                             m.kind == MsgKind.IMAGE -> if (m.isMine) "image-mine" else "image-ta"
                             m.isMine -> "text-mine"
@@ -529,8 +569,11 @@ fun ChatPage(
                     // 分隔条件并入分组判定,跨天同发送者的前一条不丢头像与时间)
                     val nextHasDivider = next != null && next.createTime > 0L &&
                         (msg.createTime <= 0L || chatDayIndex(msg.createTime) != chatDayIndex(next.createTime))
-                    val groupStart = prev == null || prev.isMine != msg.isMine || showDayDivider
-                    val groupTail = next == null || next.isMine != msg.isMine || nextHasDivider
+                    // M12 墓碑打断分组:灰条行无头像无气泡,相邻普通消息一律按组首/组尾重画头像与时间行
+                    val groupStart = prev == null || prev.isMine != msg.isMine ||
+                        showDayDivider || prev.recalled
+                    val groupTail = next == null || next.isMine != msg.isMine ||
+                        nextHasDivider || next.recalled
                     val topPad = when {
                         showDayDivider -> 8.dp // 分隔条自带与上组的呼吸
                         groupStart -> 10.dp // 组间
@@ -553,57 +596,90 @@ fun ChatPage(
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = if (msg.isMine) Arrangement.End else Arrangement.Start,
-                            verticalAlignment = Alignment.Bottom,
-                        ) {
-                            if (!msg.isMine) {
-                                if (groupTail) {
-                                    Avatar(mine = false, name = partnerInitial, avatarUrl = partnerAvatar)
+                        if (msg.recalled) {
+                            // M12 墓碑行:整行替换为居中胶囊灰条(同日期分隔条胶囊语言,alpha 0.10 底),
+                            // 不画头像/气泡/时间行;上方日期分隔条照常保留
+                            Text(
+                                if (msg.isMine) "你撤回了一条消息" else "对方撤回了一条消息",
+                                fontSize = 11.sp,
+                                color = AppTheme.TextTertiary,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                                    .background(AppTheme.TextTertiary.copy(alpha = 0.10f), RoundedCornerShape(9.dp))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                            )
+                        } else {
+                            // M12 长按撤回:仅自己发的消息且在 2 分钟窗内可长按(else 分支已排除
+                            // recalled;超窗在屏消息长按无反应、服务端权威兜底,不做定时驱逐);
+                            // onRecall 先收键盘再开浮层,浮层不被键盘顶住
+                            val canRecall = msg.isMine && msg.createTime > 0L &&
+                                nowEpochMs() - msg.createTime <= RECALL_WINDOW_MS
+                            val onRecall: (() -> Unit)? = if (canRecall) {
+                                {
+                                    focusManager.clearFocus()
+                                    recallTargetId = msg.id
+                                }
+                            } else {
+                                null
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = if (msg.isMine) Arrangement.End else Arrangement.Start,
+                                verticalAlignment = Alignment.Bottom,
+                            ) {
+                                if (!msg.isMine) {
+                                    if (groupTail) {
+                                        Avatar(mine = false, name = partnerInitial, avatarUrl = partnerAvatar)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    } else {
+                                        // 组首/组内透明占位(34 头像 + 8 间距),无背景无点击,纯布局节点
+                                        Spacer(modifier = Modifier.width(42.dp))
+                                    }
+                                }
+                                when (msg.kind) {
+                                    MsgKind.TEXT -> TextBubble(
+                                        msg.text,
+                                        mine = msg.isMine,
+                                        groupTail = groupTail,
+                                        theme = theme,
+                                        onLongClick = onRecall,
+                                    )
+                                    MsgKind.WISH -> WishBubble(msg, theme = theme, onLongClick = onRecall) // 卡片语言,不吃撇角
+                                    // M10 图片气泡:定方 Crop 不吃撇角;点击开全屏大图(先收键盘),长按可撤回(M12)
+                                    MsgKind.IMAGE -> ImageBubble(
+                                        msg.imageUrl,
+                                        mine = msg.isMine,
+                                        onClick = {
+                                            focusManager.clearFocus()
+                                            imagePreviewUrl = msg.imageUrl
+                                        },
+                                        onLongClick = onRecall,
+                                    )
+                                }
+                                if (msg.isMine) {
                                     Spacer(modifier = Modifier.width(8.dp))
-                                } else {
-                                    // 组首/组内透明占位(34 头像 + 8 间距),无背景无点击,纯布局节点
-                                    Spacer(modifier = Modifier.width(42.dp))
+                                    if (groupTail) {
+                                        Avatar(mine = true, name = myInitial, avatarUrl = myAvatar)
+                                    } else {
+                                        Spacer(modifier = Modifier.width(34.dp))
+                                    }
                                 }
                             }
-                            when (msg.kind) {
-                                MsgKind.TEXT -> TextBubble(msg.text, mine = msg.isMine, groupTail = groupTail, theme = theme)
-                                MsgKind.WISH -> WishBubble(msg, theme = theme) // 卡片语言,不吃撇角
-                                // M10 图片气泡:定方 Crop 不吃撇角;点击开全屏大图(先收键盘)
-                                MsgKind.IMAGE -> ImageBubble(
-                                    msg.imageUrl,
-                                    mine = msg.isMine,
-                                    onClick = {
-                                        focusManager.clearFocus()
-                                        imagePreviewUrl = msg.imageUrl
+                            // 组尾时间行(F8):挂在头像正下方(两侧对称)——我方 align(End) 贴右缘 =
+                            // 我方头像正下;TA 方默认 Start(x=0)= TA 头像正下。原 TA 方
+                            // padding(start=42) 落在头像(34dp)与气泡的夹缝,既不贴头像也不随气泡,
+                            // 真机反馈「头像下面的时间位置不对」(2026-10-16 Q1),归头像竖向车道
+                            if (groupTail && msg.createTime > 0L) {
+                                Text(
+                                    chatHHmm(msg.createTime),
+                                    fontSize = 10.sp,
+                                    color = AppTheme.TextTertiary,
+                                    modifier = if (msg.isMine) {
+                                        Modifier.align(Alignment.End).padding(top = 2.dp)
+                                    } else {
+                                        Modifier.padding(top = 2.dp)
                                     },
                                 )
                             }
-                            if (msg.isMine) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                if (groupTail) {
-                                    Avatar(mine = true, name = myInitial, avatarUrl = myAvatar)
-                                } else {
-                                    Spacer(modifier = Modifier.width(34.dp))
-                                }
-                            }
-                        }
-                        // 组尾时间行(F8):挂在头像正下方(两侧对称)——我方 align(End) 贴右缘 =
-                        // 我方头像正下;TA 方默认 Start(x=0)= TA 头像正下。原 TA 方
-                        // padding(start=42) 落在头像(34dp)与气泡的夹缝,既不贴头像也不随气泡,
-                        // 真机反馈「头像下面的时间位置不对」(2026-10-16 Q1),归头像竖向车道
-                        if (groupTail && msg.createTime > 0L) {
-                            Text(
-                                chatHHmm(msg.createTime),
-                                fontSize = 10.sp,
-                                color = AppTheme.TextTertiary,
-                                modifier = if (msg.isMine) {
-                                    Modifier.align(Alignment.End).padding(top = 2.dp)
-                                } else {
-                                    Modifier.padding(top = 2.dp)
-                                },
-                            )
                         }
                     }
                 }
@@ -641,7 +717,7 @@ fun ChatPage(
                 }
             }
 
-            // M10 图片预览条(预览确认流程,消息无撤回防误发):上传中/有待发图时显示在输入条上方,
+            // M10 图片预览条(预览确认流程防误发;M12 起发送后 2 分钟内可长按撤回):上传中/有待发图时显示在输入条上方,
             // 随输入行键盘避让 padding 整体顶起(普通 Column 节点,无需特殊处理)
             if (imageUploading || pendingImageUrl.isNotEmpty()) {
                 ChatImagePreviewBar(
@@ -738,6 +814,15 @@ fun ChatPage(
         // 一并关(F6:遮罩只吃 tap 不吃拖拽);切 Tab 由 pageVisible effect 收口
         if (imagePreviewUrl.isNotEmpty()) {
             ChatImagePreviewOverlay(url = imagePreviewUrl, onDismiss = { imagePreviewUrl = "" })
+        }
+        // M12 撤回确认浮层:同大图浮层挂根 Box 尾部盖住全部内容;列表滚动与 MainPager 横滑已随
+        // onOverlayChange 关闭;切 Tab 由 pageVisible effect 收口
+        if (recallTargetId.isNotEmpty()) {
+            ChatRecallConfirmOverlay(
+                submitting = recallSubmitting,
+                onDismiss = { recallTargetId = "" },
+                onConfirm = { submitRecall() },
+            )
         }
     }
 }
@@ -849,10 +934,19 @@ private fun Avatar(mine: Boolean, name: String, avatarUrl: String = "") {
  * 内边距 13/9。形状按 (mine, groupTail) remember 缓存(铁律⑤同因,避免每帧新建实例)。
  * ⚠ 背景两分支统一走 brush 重载(2026-10-16 Q2,TA=taBubbleBrush 同色渐变纯白):
  * color/brush 两个重载写不同原生 prop/图层且层序首建冻结,.then 分支混用会让白实色层
- * 冻结在渐变层上方,复用槽位上我方气泡概率渲染成纯白(真机复现,详见 taBubbleBrush 注释)
+ * 冻结在渐变层上方,复用槽位上我方气泡概率渲染成纯白(真机复现,详见 taBubbleBrush 注释)。
+ * M12 长按撤回:onLongClick 非空挂 combinedClickable 长重载(interactionSource=null+
+ * indication=null——短重载取 LocalIndication 会给原本无手势的气泡凭空加按压视觉,全 App
+ * 无 Provider 也生效);null 时无任何手势节点,槽位复用安全
  */
 @Composable
-private fun TextBubble(text: String, mine: Boolean, groupTail: Boolean, theme: KuiklyTheme) {
+private fun TextBubble(
+    text: String,
+    mine: Boolean,
+    groupTail: Boolean,
+    theme: KuiklyTheme,
+    onLongClick: (() -> Unit)? = null, // M12:非空 = 可撤回,长按弹确认浮层
+) {
     val bubbleShape = remember(mine, groupTail) {
         if (groupTail) {
             RoundedCornerShape(
@@ -872,6 +966,18 @@ private fun TextBubble(text: String, mine: Boolean, groupTail: Boolean, theme: K
                 shape = bubbleShape,
             )
             .widthIn(max = 260.dp) // 含内边距;360 屏 − 32 页边 − 42 头像列 − 26 呼吸
+            .then(
+                if (onLongClick != null) {
+                    Modifier.combinedClickable(
+                        interactionSource = null,
+                        indication = null,
+                        onClick = {},
+                        onLongClick = onLongClick,
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .padding(horizontal = 13.dp, vertical = 9.dp),
     ) {
         Text(
@@ -886,15 +992,29 @@ private fun TextBubble(text: String, mine: Boolean, groupTail: Boolean, theme: K
  * WishBubble — 心愿消息卡(§4 重做):心愿色 8% 洗底单节点软卡(零描边,层次靠 8%/14% 两级 alpha),
  * 颜色语言参照 AppTag/待办标签洗底(tagColor.copy(alpha=0.12f) 先例);按快照字段还原(§5.2 两设备
  * 还原靠快照而非端上字典版本),colorHex/iconName 缺省或他端字典新增图标时兜底(主题主色/Heart),
- * 渲染不空转;不做状态角标(love_message 无兑现状态字段,不造假状态)
+ * 渲染不空转;不做状态角标(love_message 无兑现状态字段,不造假状态)。
+ * M12 长按撤回:同 TextBubble——onLongClick 非空挂 combinedClickable 长重载
+ * (interactionSource=null+indication=null),不给无手势卡片凭空加按压视觉
  */
 @Composable
-private fun WishBubble(msg: ChatMsg, theme: KuiklyTheme) {
+private fun WishBubble(msg: ChatMsg, theme: KuiklyTheme, onLongClick: (() -> Unit)? = null) {
     val wishColor = if (msg.colorHex.isEmpty()) theme.brandStart else colorFromHex(msg.colorHex, theme.brandStart)
     val wishIcon = appIconFromName(msg.iconName)
     Column(
         modifier = Modifier.widthIn(max = 250.dp)
             .background(wishColor.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+            .then(
+                if (onLongClick != null) {
+                    Modifier.combinedClickable(
+                        interactionSource = null,
+                        indication = null,
+                        onClick = {},
+                        onLongClick = onLongClick,
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -932,14 +1052,21 @@ private fun WishBubble(msg: ChatMsg, theme: KuiklyTheme) {
  * ImageBubble — 图片消息气泡(M10):180dp 定方 Crop 圆角(高度恒定 → LazyColumn item 高度不随
  * 图片加载变化不跳,槽位复用稳定);浅灰占位底恒驻(加载中/失败透出,MomentCard 同色同思路)。
  * ⚠ 不做 mine/TA 背景分化(mine 参数仅留签名占位):占位底恒 background(color=) 单值,
- * 规避 Q2 color/brush 重载混用坑;不吃 TextBubble 的撇角(图片无方向语义)
+ * 规避 Q2 color/brush 重载混用坑;不吃 TextBubble 的撇角(图片无方向语义)。
+ * M12:clickable 换 combinedClickable 短重载(onClick 开大图 + onLongClick 撤回)——短重载
+ * 取 LocalIndication 与原 clickable 指示器行为持平,长按语义新增不改变点击视觉
  */
 @Composable
-private fun ImageBubble(url: String, mine: Boolean, onClick: () -> Unit) {
+private fun ImageBubble(
+    url: String,
+    mine: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null, // M12:非空 = 可撤回,长按弹确认浮层
+) {
     Box(
         modifier = Modifier
             .background(Color(0xFFF5F6FA), RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .size(IMAGE_BUBBLE_SIZE),
     ) {
         Image(
@@ -953,9 +1080,10 @@ private fun ImageBubble(url: String, mine: Boolean, onClick: () -> Unit) {
 
 /**
  * ChatImagePreviewBar — 待发图片预览条(M10 预览确认流程):选图→自动上传→此处确认→点发送才入
- * 聊天(消息无撤回,防误发)。缩略图 56dp 方(浅灰底恒驻;上传中黑 28% 蒙层+「上传中…」,
- * MomentAddOverlay 同款);✕ 取消仅非上传中可点(上传不可中断,已传文件留档 infra_file 同 D-12);
- * 发送胶囊 uploading/sending 降透明禁用(guard 另在 sendPendingImage)。背景与 clickable 同节点(铁律⑦)
+ * 聊天(确认条防误发;M12 起发送后 2 分钟内可长按撤回)。缩略图 56dp 方(浅灰底恒驻;上传中
+ * 黑 28% 蒙层+「上传中…」,MomentAddOverlay 同款);✕ 取消仅非上传中可点(上传不可中断,
+ * 已传文件留档 infra_file);发送胶囊 uploading/sending 降透明禁用(guard 另在 sendPendingImage)。
+ * 背景与 clickable 同节点(铁律⑦)
  */
 @Composable
 private fun ChatImagePreviewBar(
@@ -995,7 +1123,7 @@ private fun ChatImagePreviewBar(
             }
         }
         Spacer(modifier = Modifier.width(10.dp))
-        Text("发出后不可撤回", color = AppTheme.TextTertiary, fontSize = 11.sp)
+        Text("发送后 2 分钟内可长按撤回", color = AppTheme.TextTertiary, fontSize = 11.sp) // M12 文案回改(D9)
         Spacer(modifier = Modifier.weight(1f))
         // ✕ 取消:清预览条
         Box(
@@ -1041,5 +1169,72 @@ private fun ChatImagePreviewOverlay(url: String, onDismiss: () -> Unit) {
             contentDescription = null,
             contentScale = ContentScale.Fit,
         )
+    }
+}
+
+/**
+ * ChatRecallConfirmOverlay — 撤回确认浮层(M12):黑 0.45 幕 + 白卡 20dp 圆角,「撤回这条消息?」
+ * + 说明文案,取消(灰)/撤回(Danger)双钮;submitting 期间幕/双钮防点、撤回钮显「撤回中…」。
+ * 挂 ChatPage 根 Box 内大图浮层之后;开着时列表滚动与 MainPager 横滑一并关(onOverlayChange);
+ * 确认走 submitRecall(POST Ok → ChatStore 已地置墓碑,关浮层即时见灰条)
+ */
+@Composable
+private fun ChatRecallConfirmOverlay(
+    submitting: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable { if (!submitting) onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.widthIn(max = 280.dp)
+                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                "撤回这条消息?",
+                color = AppTheme.TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "撤回后双方都会看到一条撤回提示,此操作不可恢复。",
+                color = AppTheme.TextSecondary,
+                fontSize = 12.sp,
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier.weight(1f)
+                        .background(AppTheme.Divider, RoundedCornerShape(22.dp))
+                        .clickable { if (!submitting) onDismiss() }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("取消", color = AppTheme.TextSecondary, fontSize = 13.sp)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier.weight(1f)
+                        .background(AppTheme.Danger, RoundedCornerShape(22.dp))
+                        .clickable { if (!submitting) onConfirm() }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        if (submitting) "撤回中…" else "撤回",
+                        color = Color.White.copy(alpha = if (submitting) 0.6f else 1f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
     }
 }

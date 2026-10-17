@@ -2,6 +2,7 @@ package com.zyc.love_baby.network
 
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.data.model.MessageReadReq
+import com.zyc.love_baby.data.model.MessageRecallReq
 import com.zyc.love_baby.data.model.MessageSendImageReq
 import com.zyc.love_baby.data.model.MessageSendReq
 import com.zyc.love_baby.data.model.MessageSendWishesReq
@@ -38,6 +39,7 @@ internal object MessageApi {
     private const val PATH_SEND_IMAGE = "/love/message/send-image"
     private const val PATH_UNREAD = "/love/message/unread"
     private const val PATH_READ = "/love/message/read"
+    private const val PATH_RECALL = "/love/message/recall"
 
     /**
      * 增量拉取:data 为数组(ApiResult.Ok.dataArray),服务端恒升序返回。
@@ -88,4 +90,11 @@ internal object MessageApi {
     /** 标记已读(M11):服务端 GREATEST 只进不退;回包标量 true 经 toOk 归空对象,调用方只判 Ok 不读 data */
     suspend fun markRead(pager: Pager, lastMessageId: String): ApiResult =
         HttpClient.request(pager, PATH_READ, isPost = true, body = MessageReadReq(lastMessageId).toJson())
+
+    /**
+     * 撤回消息(M12):服务端权威校验归属(couple+sender,统一 1_003_003_000 防探测)与 2 分钟窗
+     * (超窗 1_003_003_001);已撤回幂等成功。回包标量 true 经 toOk 归空对象,调用方只判 Ok 不读 data
+     */
+    suspend fun recall(pager: Pager, messageId: String): ApiResult =
+        HttpClient.request(pager, PATH_RECALL, isPost = true, body = MessageRecallReq(messageId).toJson())
 }

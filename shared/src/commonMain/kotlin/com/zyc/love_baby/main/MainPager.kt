@@ -497,7 +497,9 @@ internal fun MainPageImpl(pager: BasePager) {
                     MoodStore.loadMonth(pager, MoodStore.displayMonth)
                     MoodStore.loadOptions(pager)
                 }
-                3 -> ChatStore.loadIncrement(pager)
+                // M12:聊天 Tab 补拉改全量 resync——增量拉拉不到我不在线时对方撤回的老消息变更,
+                // 唯全量覆盖能纠偏;50 条量级成本可接受(key 槽位复用无视觉跳动)
+                3 -> ChatStore.resync(pager)
             }
             // 统计顺手刷新(切任意 Tab):发消息/建待办后切页即见最新计数,不等回前台
             StatsStore.refresh(pager)

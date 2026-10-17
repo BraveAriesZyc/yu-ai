@@ -21,9 +21,10 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
  *    wishKey/color/icon 可空,皆以空串表示缺省(CoupleModels 同款惯例),color 为 hex、icon 为 icon name
  *    字符串——Color/AppIconType 不可 JSON 序列化(§7.6 铁律⑥),映射留 Store 层;
  *    createTime 为 epoch 毫秒(yudao LocalDateTime 序列化),0 = 服务端未回传
- *  - 错误码(§6.4,1_003_003_xxx):000 消息不存在——端上无差异化分支,统一走 BizError toast,
- *    不设常量(AuthModels 同款惯例);未绑定时收到的 1_003_004_003 亦走普通错误通道
- *    (状态信号放行是 couple/get 专用,§5.2)
+ *  - 错误码(§6.4,1_003_003_xxx):000 消息不存在(recall 跨 couple/非本人统一按此,防探测)——
+ *    端上无差异化分支,统一走 BizError toast,不设常量(AuthModels 同款惯例);
+ *    001 撤回超窗(>2 分钟)——同走普通 BizError toast;未绑定时收到的 1_003_004_003 亦走
+ *    普通错误通道(状态信号放行是 couple/get 专用,§5.2)
  */
 
 // ---------- 请求体(§5.2,全部 POST + application/json) ----------
@@ -60,11 +61,18 @@ internal data class MessageReadReq(val lastMessageId: String) {
         .put("lastMessageId", lastMessageId)
 }
 
+/** 撤回消息(message/recall,M12):messageId String 传(§5.1,同 MessageReadReq);服务端校验归属+2 分钟窗 */
+internal data class MessageRecallReq(val messageId: String) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("messageId", messageId)
+}
+
 // ---------- 响应模型 ----------
 
 /**
  * 悄悄话/心愿消息(message/list 数组元素与 send、send-wishes 回包 VO;§5.2 message 组契约)。
- * id/senderId String;wishKey/color/icon 空串 = 缺省;createTime epoch 毫秒,0 = 未回传
+ * id/senderId String;wishKey/color/icon 空串 = 缺省;createTime epoch 毫秒,0 = 未回传;
+ * recalled = 墓碑(M12,list 照常含已撤回行,端上渲染灰条;旧回包无此字段时缺省 false)
  */
 internal data class MessageInfo(
     val id: String,
@@ -75,6 +83,7 @@ internal data class MessageInfo(
     val color: String,
     val icon: String,
     val createTime: Long,
+    val recalled: Boolean = false,
 ) {
     companion object {
 
@@ -98,6 +107,7 @@ internal data class MessageInfo(
                 color = data.optString("color"),
                 icon = data.optString("icon"),
                 createTime = data.optLong("createTime"),
+                recalled = data.optBoolean("recalled", false),
             )
         }
 
