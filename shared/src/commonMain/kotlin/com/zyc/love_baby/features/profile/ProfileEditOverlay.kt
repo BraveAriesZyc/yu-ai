@@ -31,6 +31,7 @@ import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.FileModule
+import com.zyc.love_baby.base.setTimeout
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
@@ -101,8 +102,24 @@ internal fun ProfileEditOverlay(
     val focusManager = LocalFocusManager.current
 
     fun dismiss() {
+        // 先清焦,卸载迟一拍:compose clearFocus 只同步清 compose 焦点,原生 blur 经
+        // SoftwareKeyboardController 的 setTimeout(0) 批处理异步落地;onDismiss 若同回合执行,
+        // 浮层在下一帧卸载时与 blur 竞速——持焦 EditText(KRTextFieldView 是全树唯一
+        // focusableInTouchMode 叶子)一旦带焦点随视图树被移除,Android ViewRootImpl 自动把焦点
+        // 转给五页驻留树中的待办页输入框→Pager 原生 KRRecyclerView requestChildRectangleOnScreen
+        // 横滚露出它+SnapHelper 吸附=关闭后页面自滚(1570d07 同源;M12 修的 submit 路径有网络
+        // 窗口护住 blur 落地,遮罩/Close 即时路径无窗口,2026-10-18 真机复现)。
+        // 落序保证(对抗验证锤实):blur 批处理与 onDismiss 均经 SET_TIMEOUT 桥接落入同一原生
+        // HRContextQueueHandlerThread 的 MessageQueue,同 delay=0 按 AOSP enqueueMessage 插入序
+        // 执行——clearFocus 的 blur 批同步先入队,本 onDismiss 后入队,blur 必然先落地:卸载时
+        // 树中已无持焦视图,焦点转移无从发生(原生主队列排水亦按序 FIFO,blur 的原生清焦严格
+        // 先于 removeView——落序是确定性而非竞速)。
+        // ⚠ 维护红线:本收口依赖 clearFocus 真正清焦——输入框祖先链不得加 focusProperties exit
+        // 拦截(那会使 clearFocus 变 no-op、blur 批不入队,延迟卸载独自挡不住转移);且仅适用于
+        // 静态布局——LazyList 复用窗口存在原生先行触焦致 activeView 失同步、blur 不入队的通道
+        // (CoreTextField 复用窗口防御注释),抄写本模式前先核对
         focusManager.clearFocus()
-        onDismiss()
+        pager.setTimeout(0) { onDismiss() }
     }
 
     fun save() {

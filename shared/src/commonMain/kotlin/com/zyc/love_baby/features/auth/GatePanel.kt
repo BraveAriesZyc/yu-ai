@@ -26,6 +26,7 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.base.setTimeout
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppTheme
@@ -63,8 +64,15 @@ internal fun GatePanel(pager: Pager) {
     var panel by remember { mutableStateOf(AuthPanel.LOGIN) }
     // 面板切换即清焦(同 LoginPanel.submit 焦点转移问题):旧面板持焦输入框随切换被移除,
     // Android 把焦点转给待办页输入框,Pager 在 Gate 底下滚走待办页——登录成功卸载 Gate 时
-    // 便直接亮在错误 Tab,故切换瞬间先失焦
+    // 便直接亮在错误 Tab。切换统一走 switchPanel:清焦后目标面板迟一拍再上(机制详见
+    // ProfileEditOverlay.dismiss)——旧写法清焦与状态翻转同回合,旧面板卸载与 blur 竞速,
+    // 只是赌 blur 赢(2026-10-18 ProfileEditOverlay 真机复现证明会输);推迟一拍入同一
+    // MessageQueue 后落序钉死,blur 必然先行
     val focusManager = LocalFocusManager.current
+    fun switchPanel(target: AuthPanel) {
+        focusManager.clearFocus()
+        pager.setTimeout(0) { panel = target }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -79,16 +87,16 @@ internal fun GatePanel(pager: Pager) {
             when (panel) {
                 AuthPanel.LOGIN -> LoginPanel(
                     pager = pager,
-                    onGoRegister = { focusManager.clearFocus(); panel = AuthPanel.REGISTER },
-                    onGoReset = { focusManager.clearFocus(); panel = AuthPanel.RESET },
+                    onGoRegister = { switchPanel(AuthPanel.REGISTER) },
+                    onGoReset = { switchPanel(AuthPanel.RESET) },
                 )
                 AuthPanel.REGISTER -> RegisterPanel(
                     pager = pager,
-                    onBackToLogin = { focusManager.clearFocus(); panel = AuthPanel.LOGIN },
+                    onBackToLogin = { switchPanel(AuthPanel.LOGIN) },
                 )
                 AuthPanel.RESET -> ResetPanel(
                     pager = pager,
-                    onBackToLogin = { focusManager.clearFocus(); panel = AuthPanel.LOGIN },
+                    onBackToLogin = { switchPanel(AuthPanel.LOGIN) },
                 )
             }
             Spacer(modifier = Modifier.height(24.dp + navBarSafePaddingDp()))

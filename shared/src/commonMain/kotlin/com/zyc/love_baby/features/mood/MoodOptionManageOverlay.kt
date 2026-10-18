@@ -31,6 +31,7 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.base.setTimeout
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.features.couple.BindInputField
@@ -92,7 +93,12 @@ internal fun MoodOptionManageOverlay(
     val focusManager = LocalFocusManager.current
     fun dismiss() {
         focusManager.clearFocus()
-        onDismiss()
+        // 卸载迟一拍(机制详见 ProfileEditOverlay.dismiss):clearFocus 的原生 blur 走 setTimeout
+        // 批处理异步落地,onDismiss 同回合执行会让浮层卸载与 blur 竞速——持焦输入框带焦点被移除
+        // 时焦点转给待办页输入框,Pager 滚去露出它=主界面乱滚(2026-10-18 ProfileEditOverlay
+        // 真机复现同源)。onDismiss 推迟一拍入同一 MessageQueue,按入队序必然排在 blur 之后,
+        // 卸载时树中已无持焦视图
+        pager.setTimeout(0) { onDismiss() }
     }
 
     fun delete(id: String) {
