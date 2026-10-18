@@ -35,9 +35,16 @@ android {
         }
     }
     buildTypes {
+        getByName("debug") {
+            // app-api 基地址,经 KuiklyRenderActivity.createPageData 第四路注入 shared ApiConfig
+            // (§7.5 pageData 覆盖通道);真机联调改此处,模拟器直跑走 shared 默认 10.0.2.2
+            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.4:48080\"")
+        }
         getByName("release") {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("release")
+            // ⚠️ 占位域名,上线前替换为真实 HTTPS 地址(D-4 上线清单项)
+            buildConfigField("String", "API_BASE_URL", "\"https://api.lovebaby.example.com\"")
         }
     }
     // AGP 8 默认关闭 BuildConfig;KRUncaughtExceptionHandlerAdapter 引用了 BuildConfig.DEBUG

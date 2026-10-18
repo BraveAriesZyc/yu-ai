@@ -15,9 +15,8 @@ import com.tencent.kuikly.core.pager.Pager
  */
 internal object ApiConfig {
 
-    /** 默认基地址:Android 模拟器映射宿主机;其他端可被 pageData.params.apiBaseUrl 覆盖 */
-//    const val DEFAULT_BASE_URL = "http://172.16.31.44:48080"  // 公司环境
-    const val DEFAULT_BASE_URL = "http://192.168.1.3:48080"  //家庭
+    /** 默认基地址:仅兜底(Android 模拟器直跑用;真机/正式包由宿主 createPageData 注入 apiBaseUrl 覆盖) */
+    const val DEFAULT_BASE_URL = "http://10.0.2.2:48080"
 
     /** OAuth2 client,§5.2 约定恒为 couple-app */
     const val CLIENT_ID = "couple-app"

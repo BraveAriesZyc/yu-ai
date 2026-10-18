@@ -141,12 +141,14 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
     private fun createPageData(): Map<String, Any> {
         val param = argsToMap()
         param["appId"] = 1
-        // 首帧前原生 prefs 一次读、三路注入(同文件同 key,与 shared 各 Store 持久化 key 双源一致):
+        // 首帧前原生 prefs 一次读、四路注入(同文件同 key,与 shared 各 Store 持久化 key 双源一致):
         // ① 主题(ThemeStore):页面 willInit 读 pageData 直接定主题,避免启动先渲染默认主题再全局重组一遍;
         // ② 会话(SessionStore):注入完整 session JSON(accessToken/refreshToken/userId/expiresTime/
         //    clientId,§7.2),GatePanel 组合期经 initFromPageData 判定放行,消除冷启动 Gate 闪帧;
         // ③ 绑定提示(CoupleStore):已绑定冷启动 willInit 乐观恢复直接翻 BOUND 进主功能,
-        //    不闪 BindingPanel「校准中」卡(2026-10-17 真机反馈)
+        //    不闪 BindingPanel「校准中」卡(2026-10-17 真机反馈);
+        // ④ api 基地址(ApiConfig):debug/release 各自的 BuildConfig.API_BASE_URL 注入,
+        //    覆盖 shared ApiConfig 默认 10.0.2.2(§7.5 pageData 双通道)
         param[THEME_KEY] = persistedThemeId()
         val sessionJson = bootPrefs.getString(SESSION_KEY, "") ?: ""
         param[SESSION_KEY] = sessionJson
@@ -155,6 +157,8 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         if (sessionJson.isNotEmpty()) {
             param[BIND_HINT_KEY] = bootPrefs.getString(BIND_HINT_KEY, "") ?: ""
         }
+        // ④ api 基地址:WS 地址由 shared ApiConfig.wsUrl 派生,改此处 HTTP/WS 一处双生效
+        param[API_BASE_URL_KEY] = BuildConfig.API_BASE_URL
         return param
     }
 
@@ -210,6 +214,9 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
 
         /** 绑定态提示持久化 key,与 shared state/CoupleStore.BIND_HINT_KEY 同串双源,勿单改一边 */
         private const val BIND_HINT_KEY = "couple_bind_hint"
+
+        /** api 基地址 pageData key,与 shared network/ApiConfig.PAGE_DATA_KEY 同串双源,勿单改一边 */
+        private const val API_BASE_URL_KEY = "apiBaseUrl"
 
         init {
             initKuiklyAdapter()
