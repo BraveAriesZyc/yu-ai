@@ -43,6 +43,7 @@ import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.LoveConfigStore
 import com.zyc.love_baby.state.MoodStore
 import com.zyc.love_baby.state.StatsStore
 import com.zyc.love_baby.state.TodoStore
@@ -235,6 +236,8 @@ internal fun MainPageImpl(pager: BasePager) {
             }
             // 恋爱统计(统计真数据化):与 profile 同点首拉,失败静默(只读降级)
             StatsStore.refresh(pager)
+            // 业务配置(M23):登录后首拉(客服微信号等 KV),失败静默走内置兜底(只读降级)
+            LoveConfigStore.refresh(pager)
         }
     }
 
@@ -497,6 +500,8 @@ internal fun MainPageImpl(pager: BasePager) {
                 CoupleStore.refresh(pager)
                 // 统计同步新(发消息/待办/心情后回前台即可见最新计数)
                 StatsStore.refresh(pager)
+                // 业务配置同步新(M23):后台改客服微信号等,App 回前台即见(失败静默走兜底)
+                LoveConfigStore.refresh(pager)
                 // 纪念日整表补拉(M5):首页第 4 列消费 AnniversaryStore,回前台即可见对端增删;
                 // 未绑定时服务端回 1_003_004_003,loadList 失败静默保留旧值(解绑清场已清空,无残留)
                 if (CoupleStore.bindState == CoupleBindState.BOUND) {

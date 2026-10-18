@@ -54,6 +54,7 @@ import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
 import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.LoveConfigStore
 import com.zyc.love_baby.state.StatsStore
 import kotlinx.coroutines.launch
 
@@ -66,7 +67,8 @@ import kotlinx.coroutines.launch
  * 依赖:ThemeStore/AppIcons/components 通用组件;RouterModule(打开组件列表页);
  *      UserProfile(MainPager 回填);CoupleStore/BoundPartnerCard(情侣空间,M2)
  * 事件:主题圆点点击 → ThemeStore.switch + persist;「组件列表」→ openPage("componentList");
- *      「帮助与客服」→ 复制客服微信号 + toast(页内自持);「关于我们」→ onAboutClick()(信息卡
+ *      「帮助与客服」→ 复制客服微信号(M23 后台业务配置动态下发,LoveConfigStore 具名取值器,
+ *      缺键走内置兜底)+ toast(页内自持);「关于我们」→ onAboutClick()(信息卡
  *      MineAboutOverlay 挂 MainPager 根);右上角「详情」/资料区整块 → openProfilePage(mine);
  *      「解绑」→ onUnbindClick();「退出登录」→ onLogoutClick()(动作由 MainPager 收口)
  * 功能:
@@ -113,10 +115,13 @@ internal fun MinePage(
                         iconTint = Color(0xFF34C77B),
                         iconBg = Color(0xFFE6F8EF),
                         title = "帮助与客服",
-                        // M18 死入口接轻功能:复制客服微信号 + toast(纯动作无浮层,页内自持)
+                        // M23 动态化:客服微信号迁后台「业务配置」(customer_service_wechat),
+                        // LoveConfigStore 具名取值器读快照,缺键/停用/拉取失败回内置兜底值;
+                        // 点击时读当前值(非组合期闭包),后台改值即时生效
                         onClick = {
-                            copyToPasteboard(pager, CONTACT_WECHAT_ID) {
-                                toastCouple(pager, "微信号 $CONTACT_WECHAT_ID 已复制，去微信添加吧")
+                            val wechat = LoveConfigStore.contactWechat
+                            copyToPasteboard(pager, wechat) {
+                                toastCouple(pager, "微信号 $wechat 已复制，去微信添加吧")
                             }
                         },
                     )
@@ -319,9 +324,6 @@ private fun ThemePickerCard(pager: Pager) {
 }
 
 // ---------- 关于我们(M18 死入口接轻功能) ----------
-
-/** 客服微信号(⚠️ 占位值,上线前替换为真实微信号;「帮助与客服」行点击复制) */
-private const val CONTACT_WECHAT_ID = "lovebaby-helper"
 
 /** 产品版本号(与 androidApp build.gradle versionName 同步维护;Kuikly commonMain 读不到 BuildConfig) */
 private const val APP_VERSION_NAME = "1.0.0"
