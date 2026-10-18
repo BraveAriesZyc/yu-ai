@@ -94,7 +94,7 @@ internal fun appIconFromName(name: String): AppIconType =
 
 // ---------- 月份/日期工具(心情日历;commonMain 无 java.time,纯公历算术) ----------
 
-/** 两位补零(聊天时间格式化 ChatTime.kt 复用,故放宽 internal;月份/日期工具内部也用) */
+/** 两位补零(聊天时间格式化 TimeKit.kt 复用,故放宽 internal;月份/日期工具内部也用) */
 internal fun pad2(v: Int): String {
     val s = v.toString()
     return if (s.length < 2) "0$s" else s
@@ -144,7 +144,7 @@ internal fun daysFromCivil(y0: Int, m: Int, d: Int): Long {
     return era * 146097L + doe - 719468L
 }
 
-/** Howard Hinnant civil_from_days:距 1970-01-01 天数 → (y,m,d)(聊天日期条 ChatTime.kt 复用,故放宽 internal) */
+/** Howard Hinnant civil_from_days:距 1970-01-01 天数 → (y,m,d)(聊天日期条 TimeKit.kt 复用,故放宽 internal) */
 internal fun civilFromDays(z0: Long): Triple<Int, Int, Int> {
     val z = z0 + 719468
     val era = (if (z >= 0) z else z - 146096) / 146097

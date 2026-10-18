@@ -30,11 +30,9 @@ import com.zyc.love_baby.features.auth.GatePanel
 import com.zyc.love_baby.features.chat.ChatImagePreviewOverlay
 import com.zyc.love_baby.features.chat.ChatPage
 import com.zyc.love_baby.features.chat.ChatRecallConfirmOverlay
-import com.zyc.love_baby.features.couple.BindUnbindConfirm
 import com.zyc.love_baby.features.couple.BindingPanel
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
-import com.zyc.love_baby.features.mine.LogoutConfirmOverlay
 import com.zyc.love_baby.features.mine.MineAboutOverlay
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.AuthApi
@@ -396,22 +394,31 @@ internal fun MainPageImpl(pager: BasePager) {
             )
         }
 
-        // 解绑二次确认浮层(F6,§7.7):后于底栏组合 → 整层盖住底栏,遮罩挡触摸底栏不可误触;
-        // 提交中不关浮层(dismiss 拦截)防重复解绑
+        // 解绑二次确认浮层(F6,§7.7):components/AppConfirmOverlay 单源(原 BindUnbindConfirm
+        // 私版已删,title/message/confirmText/busyText 逐项对齐原副本文案);后于底栏组合 → 整层
+        // 盖住底栏,遮罩挡触摸底栏不可误触;busy 在飞本体拦全部出口,外层 dismiss 守卫保留双保险
         if (showUnbindConfirm) {
-            BindUnbindConfirm(
-                partnerName = CoupleStore.couple?.partnerNickname?.trim().orEmpty().ifEmpty { "TA" },
-                submitting = unbindSubmitting,
+            AppConfirmOverlay(
+                title = "解除绑定?",
+                message = "解绑后你和 ${CoupleStore.couple?.partnerNickname?.trim().orEmpty().ifEmpty { "TA" }} " +
+                    "都会回到未绑定状态,历史记录会保留。确定要解绑吗?",
+                confirmText = "确认解绑",
+                busyText = "解绑中…",
+                busy = unbindSubmitting,
                 onConfirm = { submitUnbind() },
                 onDismiss = { if (!unbindSubmitting) showUnbindConfirm = false },
             )
         }
 
-        // 退出登录二次确认浮层(F6 同款根级挂载):后于底栏组合盖住底栏、遮罩挡触摸;
-        // 提交中不关浮层(dismiss 拦截)防重复提交
+        // 退出登录二次确认浮层(F6 同款根级挂载,AppConfirmOverlay 单源,原 LogoutConfirmOverlay
+        // 私版已删):后于底栏组合盖住底栏、遮罩挡触摸;提交中不关浮层(dismiss 拦截)防重复提交
         if (showLogoutConfirm) {
-            LogoutConfirmOverlay(
-                submitting = logoutSubmitting,
+            AppConfirmOverlay(
+                title = "退出登录?",
+                message = "退出后需要重新登录才能继续,本机的记录会保留。确定要退出吗?",
+                confirmText = "确认退出",
+                busyText = "退出中…",
+                busy = logoutSubmitting,
                 onConfirm = { submitLogout() },
                 onDismiss = { if (!logoutSubmitting) showLogoutConfirm = false },
             )
@@ -427,7 +434,7 @@ internal fun MainPageImpl(pager: BasePager) {
         }
 
         // 「关于我们」信息卡(M18 死入口接轻功能):MinePage 菜单行打开,纯展示零网络,
-        // 后于底栏组合盖住底栏(LogoutConfirmOverlay 同款);卡外点击/知道了关闭
+        // 后于底栏组合盖住底栏(根级浮层惯例);卡外点击/知道了关闭
         if (showMineAbout) {
             MineAboutOverlay(onDismiss = { showMineAbout = false })
         }

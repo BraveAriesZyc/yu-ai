@@ -36,6 +36,7 @@ import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.components.rememberKeyboardHeight
 import com.zyc.love_baby.features.couple.BindInputField
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
@@ -155,7 +156,7 @@ internal fun FieldInputOverlay(
     onDismiss: () -> Unit,
 ) {
     var draft by remember { mutableStateOf(initialValue) }
-    var keyboardHeight by remember { mutableStateOf(0f) } // 键盘高度(dp,KeyboardParams.height),0=收起
+    val (keyboardHeight, onKeyboardHeightChange) = rememberKeyboardHeight()
     val focusManager = LocalFocusManager.current
 
     // dismiss 收口(铁律 16,ProfileEditOverlay 同款简化):先清焦再推后一拍卸载——compose
@@ -178,8 +179,8 @@ internal fun FieldInputOverlay(
         contentAlignment = Alignment.Center,
     ) {
         // Kuikly padding 无 top+horizontal 混合 named 重载,链两个已知重载等价
-        val bottomPad = if (keyboardHeight > 0f) {
-            keyboardHeight.dp + navBarSafePaddingDp() + 12.dp
+        val bottomPad = if (keyboardHeight.value > 0f) {
+            keyboardHeight.value.dp + navBarSafePaddingDp() + 12.dp
         } else {
             140.dp
         }
@@ -197,7 +198,7 @@ internal fun FieldInputOverlay(
                 value = draft,
                 onValueChange = { draft = it.take(maxLength) },
                 placeholder = placeholder,
-                keyboardHeightChange = { params -> keyboardHeight = params.height },
+                keyboardHeightChange = onKeyboardHeightChange,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(

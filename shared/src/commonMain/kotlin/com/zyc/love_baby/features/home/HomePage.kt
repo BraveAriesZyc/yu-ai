@@ -42,7 +42,7 @@ import com.zyc.love_baby.components.AppStatItem
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
-import com.zyc.love_baby.features.chat.todayDayIndexGmt8
+import com.zyc.love_baby.state.todayDayIndexGmt8
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
 import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.state.AnniversaryStore

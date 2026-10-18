@@ -10,10 +10,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.ui.Modifier
+import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.input.KeyboardType
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.components.AppSegmentedChips
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.AuthApi
 import kotlinx.coroutines.launch
@@ -75,12 +77,14 @@ internal fun LoginPanel(
     }
 
     AuthCard {
-        AuthModeChips(
-            firstText = "密码登录",
-            secondText = "验证码登录",
-            firstSelected = !smsMode,
-            onSelectFirst = { smsMode = false },
-            onSelectSecond = { smsMode = true },
+        // 分段选择胶囊(components/AppSegmentedChips 单源,白透底容器变体):chip 圆角由原
+        // AuthModeChips 18dp 漂移统一到组件默认 15dp(视觉归一,与绑定域灰底变体同结构)
+        AppSegmentedChips(
+            options = listOf("密码登录", "验证码登录"),
+            selectedIndex = if (smsMode) 1 else 0,
+            onSelect = { smsMode = it == 1 },
+            containerBg = Color.White.copy(alpha = 0.25f),
+            unselectedTextColor = Color.White,
         )
         Spacer(modifier = Modifier.height(14.dp))
         AuthFieldCard(

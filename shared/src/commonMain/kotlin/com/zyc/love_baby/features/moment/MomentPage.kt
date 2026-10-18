@@ -31,7 +31,6 @@ import com.tencent.kuikly.compose.foundation.pager.HorizontalPager
 import com.tencent.kuikly.compose.foundation.pager.rememberPagerState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
-import com.tencent.kuikly.compose.material3.pullToRefreshItem
 import com.tencent.kuikly.compose.material3.rememberPullToRefreshState
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
@@ -40,7 +39,6 @@ import com.tencent.kuikly.compose.ui.draw.clip
 import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.layout.ContentScale
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
-import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -48,31 +46,33 @@ import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.nvi.serialization.json.JSONArray
 import com.tencent.kuikly.core.pager.Pager
-import com.tencent.kuikly.core.views.KeyboardParams
-import com.zyc.love_baby.TextField
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.components.AppConfirmOverlay
-import com.zyc.love_baby.components.AppGradientHeader
-import com.zyc.love_baby.components.AppHeaderTitle
+import com.zyc.love_baby.components.AppEmptyHint
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppInputField
+import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppLoadFailed
+import com.zyc.love_baby.components.AppPrimaryButton
+import com.zyc.love_baby.components.AppPullRefreshItem
+import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
+import com.zyc.love_baby.components.keyboardLiftBottomDp
 import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.components.rememberKeyboardHeight
 import com.zyc.love_baby.data.model.MomentInfo
-import com.zyc.love_baby.features.chat.chatDayLabelFriendly
+import com.zyc.love_baby.state.chatDayLabelFriendly
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
-import com.zyc.love_baby.features.mood.TimelineLoadFailed
-import com.zyc.love_baby.features.mood.TimelineLoading
 import com.zyc.love_baby.network.ApiConfig
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.MomentApi
 import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.SessionStore
-import com.zyc.love_baby.state.nowEpochMs
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.delay
@@ -84,7 +84,8 @@ import kotlinx.coroutines.launch
  *      独立二级页(CheckinPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:MomentApi/MomentInfo(页内自持不进 AppState,M7 时间线页先例——页销毁即弃,登出/解绑零
  *      reset);FileModule.pickImages/uploadImage(maxEdge=1080,选图本地预览+发布时上传,M15);couple 组 toast;
- *      chat.chatDayLabelFriendly(时间文案);mood.TimelineLoading/LoadFailed;RouterModule(返回)
+ *      chat.chatDayLabelFriendly(时间文案);components.AppLoading/AppLoadFailed(原 mood.Timeline
+ *      同款,收编单源);RouterModule(返回)
  * 事件:返回钮 closePage;卡片点击开大图预览;FAB「+」开发布浮层;失败态「重试」重拉;
  *      「加载更多」beforeId=当前最小 id 翻页;下拉刷新(官方 pullToRefreshItem,ChatPage 先例)重拉首页
  * 功能:
@@ -292,20 +293,11 @@ internal fun MomentPage(pager: Pager) {
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AppGradientHeader {
-                Box(
-                    modifier = Modifier.size(38.dp)
-                        .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                        .clickable {
-                            pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(AppIconType.ChevronLeft, Color.White, Modifier.size(20.dp))
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                AppHeaderTitle("我们的相册", "每一帧都值得收藏")
-            }
+            // 二级页头单源化 AppSubPageHeader(38dp 白 25% 圆返回钮 + Spacer10 + 标题列,
+            // 与原件手写件同构,视觉逐字一致)
+            AppSubPageHeader("我们的相册", "每一帧都值得收藏", onBack = {
+                pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+            })
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 state = listState,
@@ -314,45 +306,42 @@ internal fun MomentPage(pager: Pager) {
                 userScrollEnabled = !showAdd && preview == null,
             ) {
                 // 下拉刷新(官方 pullToRefreshItem 须为首个 item,ChatPage 先例):重拉首页。
-                // 最短驻留(2026-10-17 真机反馈「松手立马恢复原状,不知道好没好」):本地服务端
-                // 几十 ms 即回,指示器还没展开完就开始收回动画,「刷新中…」一闪而过——请求耗时
-                // 不足 REFRESH_MIN_VISIBLE_MS 时补齐再收,让状态至少完整显示一拍;失败 toast
-                // (成功不 toast,数据自己会更新,肉眼可辨)
-                pullToRefreshItem(
-                    state = pullState,
-                    onRefresh = {
-                        refreshing = true
-                        scope.launch {
-                            val t0 = nowEpochMs()
-                            val ok = fetchFirst()
-                            val elapsed = nowEpochMs() - t0
-                            if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
-                            if (!ok) toastCouple(pager, "刷新失败，请重试")
-                            refreshing = false
-                        }
-                    },
-                    scrollState = listState,
-                ) { _, isRefreshing, _ ->
-                    Text(
-                        if (isRefreshing) "刷新中…" else "下拉刷新",
-                        color = AppTheme.TextTertiary,
-                        fontSize = 12.sp,
-                    )
-                }
+                // 最短驻留 + 失败 toast 已收口在 AppPullRefreshItem(components,三页单源,
+                // REFRESH_MIN_VISIBLE_MS=600L 同常数;成功不 toast,数据自己会更新,肉眼可辨)
+                AppPullRefreshItem(
+                    pullState = pullState,
+                    listState = listState,
+                    scope = scope,
+                    setRefreshing = { refreshing = it },
+                    pager = pager,
+                    onRefresh = { fetchFirst() },
+                )
                 when {
                     loading -> item {
+                        // 三态件收编 components.AppLoading/AppLoadFailed(mood 域 Timeline
+                        // 同款原件原样迁入,视觉逐字一致);外层 48dp 垫 Box 保留,叠加几何不变
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
                             contentAlignment = Alignment.Center,
-                        ) { TimelineLoading() }
+                        ) { AppLoading() }
                     }
                     loadFailed -> item {
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
                             contentAlignment = Alignment.Center,
-                        ) { TimelineLoadFailed { load() } }
+                        ) { AppLoadFailed { load() } }
                     }
-                    moments.isEmpty() -> item { MomentEmptyHint() }
+                    moments.isEmpty() -> item {
+                        // 空态收编 components.AppEmptyHint(56dp brandStart 10% 圆 + Heart 26dp +
+                        // 14sp 标题 + 11sp 副文案,与原件逐字一致,iconSize 26 显式传参)
+                        AppEmptyHint(
+                            AppIconType.Heart,
+                            "还没有瞬间",
+                            modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
+                            hint = "点右下角 + 晒一张今天的照片吧",
+                            iconSize = 26.dp,
+                        )
+                    }
                     else -> {
                         // 双列自排:chunked(2) Row(CheckinPage 日历同款);头插/删除按整行重排,量级可接受
                         moments.chunked(2).forEach { rowItems ->
@@ -466,28 +455,6 @@ internal fun MomentPage(pager: Pager) {
     }
 }
 
-/** 空态:软色 Heart 圆底 + 引导文案(AnniversaryEmptyHint 同款结构) */
-@Composable
-private fun MomentEmptyHint() {
-    val theme = ThemeStore.current
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier.size(56.dp)
-                .background(theme.brandStart.copy(alpha = 0.1f), RoundedCornerShape(28.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIcon(AppIconType.Heart, theme.brandStart, Modifier.size(26.dp))
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("还没有瞬间", color = AppTheme.TextSecondary, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text("点右下角 + 晒一张今天的照片吧", color = AppTheme.TextTertiary, fontSize = 11.sp)
-    }
-}
-
 /**
  * 单卡:图块统一 140dp 全宽 Crop(浅灰底常驻充当加载占位),多图右上「N张」黑胶囊角标
  * (三层胶囊写法铁律 14/15;全部图进大图预览横滑——三列迷你九宫格半宽卡内 cell 过小,
@@ -597,12 +564,10 @@ private fun MomentAddOverlay(
     val uploadedMap = remember { mutableMapOf<String, String>() }
     var draft by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }
-    // 发布进度文案(空串 = 空闲):「上传中 i/N…」/「发布中…」,PublishButton 据此显态禁点
+    // 发布进度文案(空串 = 空闲):「上传中 i/N…」/「发布中…」,发布钮据此显态禁点
     var publishStep by remember { mutableStateOf("") }
-    var keyboardHeight by remember { mutableStateOf(0f) }
-    val onKeyboardHeightChange: (KeyboardParams) -> Unit = remember {
-        { params: KeyboardParams -> keyboardHeight = params.height }
-    }
+    // 键盘高度状态对(components.rememberKeyboardHeight 单源,0 = 收起)
+    val (keyboardHeight, onKeyboardHeightChange) = rememberKeyboardHeight()
 
     // 仅选图(pickImages,按余量多选 remain=9-已选):零网络零上传,本地 URI 直接进缩略条;
     // 回包双形态解析(maxCount=1 单 URI 字符串 / >1 JSON 数组字符串,D-20f 同款);code=1 用户
@@ -734,16 +699,17 @@ private fun MomentAddOverlay(
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier.fillMaxSize()
-                // 键盘起时整体顶到键盘上方(原生 KeyboardParams.height 不含导航栏区域),
-                // 收起归零回正中(AnniversaryAddOverlay 同款几何)
+                // 键盘起时整体顶到键盘上方(原生 KeyboardParams.height 不含导航栏区域的补偿
+                // 已收口 components.keyboardLiftBottomDp = 键盘高 + navBar + 12dp,与原件
+                // 逐字一致),收起归零回正中(AnniversaryAddOverlay 同款几何)
                 .padding(
-                    bottom = if (keyboardHeight > 0f) {
-                        keyboardHeight.dp + navBarSafePaddingDp() + 12.dp
+                    bottom = if (keyboardHeight.value > 0f) {
+                        keyboardLiftBottomDp(keyboardHeight.value)
                     } else {
                         0.dp
                     },
                 ),
-            contentAlignment = if (keyboardHeight > 0f) Alignment.BottomCenter else Alignment.Center,
+            contentAlignment = if (keyboardHeight.value > 0f) Alignment.BottomCenter else Alignment.Center,
         ) {
             // 灰幕:收键盘 + 关浮层一体
             Box(
@@ -834,26 +800,16 @@ private fun MomentAddOverlay(
                     }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
-                // 配文输入行:固定高挂行容器、TextField 自适应行高居中(原生 gravity 恒 TOP|START,
-                // AnnivInputRow 同款铁律);≤64 字服务端 @Length 兜底,端上 take 同步拦
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .height(48.dp)
-                        .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextField(
-                        modifier = Modifier.weight(1f),
-                        value = draft,
-                        onValueChange = { draft = it.filterNot { ch -> ch == '\n' }.take(MOMENT_TEXT_MAX) },
-                        placeholder = "说点什么…(可不填)",
-                        placeholderColor = AppTheme.TextTertiary,
-                        autoFocus = false,
-                        textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 15.sp),
-                        keyboardHeightChange = onKeyboardHeightChange,
-                    )
-                }
+                // 配文输入行(AppInputField 单源:固定高挂行容器、TextField 居中,原生 gravity
+                // 恒 TOP|START 铁律);≤64 字服务端 @Length 兜底,端上 take 同步拦。
+                // maxLines 显式传 Int.MAX_VALUE 维持原件缺省(未限行,48dp 定高容器裁剪行为不变)
+                AppInputField(
+                    value = draft,
+                    onValueChange = { draft = it.filterNot { ch -> ch == '\n' }.take(MOMENT_TEXT_MAX) },
+                    placeholder = "说点什么…(可不填)",
+                    maxLines = Int.MAX_VALUE,
+                    keyboardHeightChange = onKeyboardHeightChange,
+                )
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -863,30 +819,19 @@ private fun MomentAddOverlay(
                     )
                 }
                 Spacer(modifier = Modifier.height(14.dp))
-                PublishButton(publishStep) { submit() }
+                // 发布钮收编 components.AppPrimaryButton(brandBrush 渐变主钮 + submitting
+                // 拦点;44dp/22dp 圆角/15sp 对齐原件,publishStep 非空 = submitting、进度文案
+                // 经 busyText 承载,守卫语义与原件逐字一致)
+                AppPrimaryButton(
+                    "发 布",
+                    submitting = publishStep.isNotEmpty(),
+                    busyText = publishStep,
+                    height = 44.dp,
+                    corner = 22.dp,
+                    fontSize = 15.sp,
+                ) { submit() }
             }
         }
-    }
-}
-
-/** 发布钮(品牌渐变圆角大钮,BindPrimaryButton 语义本域私有复制——浮层提交场景文案不同):
- *  publishStep 非空 = 提交中,显进度文案(「上传中 i/N…」/「发布中…」)并禁点 */
-@Composable
-private fun PublishButton(publishStep: String, onClick: () -> Unit) {
-    val theme = ThemeStore.current
-    Box(
-        modifier = Modifier.fillMaxWidth()
-            .height(44.dp)
-            .background(theme.brandBrush, RoundedCornerShape(22.dp))
-            .clickable { if (publishStep.isEmpty()) onClick() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            if (publishStep.isEmpty()) "发 布" else publishStep,
-            color = Color.White,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-        )
     }
 }
 
@@ -1046,7 +991,3 @@ private const val MOMENT_TEXT_MAX = 64
 
 /** 单条瞬间图片上限(与服务端 @Size(max=9) 对齐,M15;发布浮层按余量多选) */
 private const val MOMENT_IMAGE_MAX = 9
-
-// 下拉刷新指示器最短可见时长(三页同值:MomentPage/ChatPage/WishListPage,注释互引):
-// 本地服务端往返几十 ms,不设下限则「刷新中…」一闪而过,用户无法确认刷新是否发生
-private const val REFRESH_MIN_VISIBLE_MS = 600L

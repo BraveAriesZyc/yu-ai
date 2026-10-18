@@ -16,7 +16,8 @@ data class GalleryMenuItem(
 
 /**
  * GalleryMock — 组件列表页的 mock 数据(纯展示用,无持久化)
- * 用法:GalleryMock.menuItems / stats / tags / featureColors
+ * 用法:GalleryMock.menuItems / stats / tags / featureColors / segmentedOptions /
+ *      segmentedOptionsOnBrand / monthLabels
  * 依赖:AppStatItem/AppIconType
  * 事件:无
  * 功能:预留结构化 mock,后续接真数据时按同结构替换即可
@@ -47,4 +48,13 @@ object GalleryMock {
 
     /** 灵感卡渐变 mock(AppFeatureCard 演示) */
     val featureColors = listOf(Color(0xFFFFB27A), Color(0xFFFF7A8C))
+
+    /** 分段选择 mock 灰底变体(AppSegmentedChips 演示,与生产调用方 BindingPanel 双模式同文案) */
+    val segmentedOptions = listOf("我的邀请码", "输码绑定")
+
+    /** 分段选择 mock 白透底变体(AppSegmentedChips 演示,品牌渐变条上展示,与 LoginPanel 登录方式同文案) */
+    val segmentedOptionsOnBrand = listOf("密码登录", "验证码登录")
+
+    /** 月份导航 mock(AppMonthNav 演示):‹ › 在三个月标签间翻动 */
+    val monthLabels = listOf("2026年8月", "2026年9月", "2026年10月")
 }

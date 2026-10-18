@@ -13,8 +13,6 @@ import com.tencent.kuikly.compose.animation.core.FastOutSlowInEasing
 import com.tencent.kuikly.compose.animation.core.tween
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
-import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
-import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
@@ -37,19 +35,14 @@ import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
-import com.tencent.kuikly.compose.ui.input.pointer.PointerEventPass
-import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
-import com.tencent.kuikly.compose.ui.input.pointer.positionChangeIgnoreConsumed
-import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
-import com.tencent.kuikly.compose.ui.unit.max
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
-import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
 import com.zyc.love_baby.components.AppCheckbox
+import com.zyc.love_baby.components.AppEmptyHint
 import com.zyc.love_baby.components.AppFilterChip
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
@@ -59,8 +52,10 @@ import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
-import com.zyc.love_baby.components.navBarSafePaddingDp
-import com.zyc.love_baby.features.chat.chatDayLabelFriendly
+import com.zyc.love_baby.components.dragDismissKeyboard
+import com.zyc.love_baby.components.inputBarBottomPaddingDp
+import com.zyc.love_baby.components.rememberKeyboardHeight
+import com.zyc.love_baby.state.chatDayLabelFriendly
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.state.CoupleBindState
@@ -69,7 +64,6 @@ import com.zyc.love_baby.state.TODO_DEFAULT_COLOR_HEX
 import com.zyc.love_baby.state.colorFromHex
 import com.zyc.love_baby.state.TodoItem
 import com.zyc.love_baby.state.TodoStore
-import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -130,18 +124,11 @@ fun TodoPage(
     var selectedTagIndex by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-    // 软键盘高度(dp,KeyboardParams.height),0 = 收起;驱动输入条 bottom 与列表尾 Spacer 顶起
-    var keyboardHeight by remember { mutableStateOf(0f) }
-    // Q3 拖拽收键盘(2026-10-16,同聊天页):键盘开着时手指拖列表 → clearFocus 收键盘
-    // (微信语义)。观察器挂列表容器(见 LazyColumn modifier),被动不消费事件;程序化滚动
-    // (新增滚底 scrollToItem 只写原生偏移)零指针事件,天然不误伤(铁律13)
-    val focusManager = LocalFocusManager.current
-    // 键盘高度回调(BasicWidget 内部 rememberUpdatedState 透传;remember 化满足铁律⑩)。
-    // 不需要聊天页的 kbFollow 贴底快照链:本页输入条是悬浮浮岛,列表视口不随键盘收缩,
-    // 键盘弹起期间列表不重锚;「新增后滚到新条目」已覆盖键盘开着看新待办的诉求
-    val onKeyboardHeightChange: (KeyboardParams) -> Unit = remember {
-        { params: KeyboardParams -> keyboardHeight = params.height }
-    }
+    // 软键盘高度状态对(components.rememberKeyboardHeight 单源:高度 dp,0 = 收起;驱动输入条
+    // bottom 与列表尾 Spacer 顶起;回调 remember 化满足铁律⑩)。不需要聊天页的 kbFollow 贴底
+    // 快照链:本页输入条是悬浮浮岛,列表视口不随键盘收缩,键盘弹起期间列表不重锚;「新增后
+    // 滚到新条目」已覆盖键盘开着看新待办的诉求
+    val (keyboardHeight, onKeyboardHeightChange) = rememberKeyboardHeight()
     val todos = TodoStore.todos
     // M20 标签维度过滤(叠加在完成状态三态 visibleTodos() 之上,两筛选正交)。
     // 页内局部函数:添加滚底回调必须新鲜重算,勿复用组合期 filtered val(陈旧闭包)
@@ -200,38 +187,10 @@ fun TodoPage(
             // 清单
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth()
-                    // Q3 拖拽收键盘:被动手势观察器(同聊天页,三个不可妥协点见铁律13④):
-                    // ①全程不调 change.consume()——Compose 侧消费移动才会 preventTouch
-                    // 阻断原生触摸,不消费 = 原生滚动/惯性/行点击勾选/切过滤全部无感;
-                    // ②pass 一律 Initial + requireUnconsumed=false,位移读
-                    // positionChangeIgnoreConsumed()——原生层接管滚动后事件带预消费标记,
-                    // 普通 positionChange() 对已消费事件返回 Zero 会检测失灵;③竖向
-                    // 位移越 touchSlop 且竖向占优(dy>dx)才收——横滑翻页由 MainPager 切
-                    // Tab 的 clearFocus 承接,轻点行勾选/切过滤不越 slop 不收。
-                    // key=focusManager(页内稳定实例;勿用逐帧变化值做 key,重组会重启
-                    // 手势协程)。手势 handler 内勿用 withTimeoutOrNull(2.29 no-op 存根)
-                    .pointerInput(focusManager) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(
-                                requireUnconsumed = false,
-                                pass = PointerEventPass.Initial,
-                            )
-                            var dx = 0f
-                            var dy = 0f
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                if (!change.pressed) break
-                                val delta = change.positionChangeIgnoreConsumed()
-                                dx += abs(delta.x)
-                                dy += abs(delta.y)
-                                if (dy > viewConfiguration.touchSlop && dy > dx) {
-                                    focusManager.clearFocus()
-                                    break
-                                }
-                            }
-                        }
-                    },
+                    // Q3 拖拽收键盘(同聊天页,微信语义):被动观察器已单源化到
+                    // components.dragDismissKeyboard(铁律13④ 三不可妥协点见组件注释);
+                    // 程序化滚动(新增滚底 scrollToItem 只写原生偏移)零指针事件,天然不误伤
+                    .dragDismissKeyboard(),
                 state = listState,
                 // 删除确认浮层(M18)开着时关本页滚动:遮罩只吃 tap 不吃拖拽,背景列表仍收
                 // down/move(真机实证),Mood/Mine/Chat 三页同款门控,本页此前是唯一缺口
@@ -240,8 +199,11 @@ fun TodoPage(
             ) {
                 if (filtered.isEmpty()) {
                     item {
-                        TodoEmptyHint(
-                            text = when {
+                        // 空态收编 components.AppEmptyHint(circled 形态:56dp brandStart 10% 圆 +
+                        // Todo 图标 24dp;标题归一为组件 14sp TextSecondary 档)
+                        AppEmptyHint(
+                            AppIconType.Todo,
+                            when {
                                 todos.isEmpty() -> "还没有待办,添加一条吧"
                                 selectedTagIndex > 0 && filtered.isEmpty() -> "这个分类还没有待办"
                                 TodoStore.filter == 1 -> "都做完啦,好好休息一下吧"
@@ -283,10 +245,9 @@ fun TodoPage(
                 item {
                     Spacer(
                         modifier = Modifier.height(
-                            max(
-                                188.dp + navBarSafePaddingDp(),
-                                keyboardHeight.dp + navBarSafePaddingDp() + 108.dp,
-                            ),
+                            // 尾 Spacer 让位公式单源化(max(rest 188, 键盘高 + navBar + 108),
+                            // 与原件逐字一致;rest/extra 非默认值显式传参)
+                            inputBarBottomPaddingDp(keyboardHeight.value, rest = 188.dp, extra = 108.dp),
                         ),
                     )
                 }
@@ -294,22 +255,15 @@ fun TodoPage(
         }
 
         // 底部添加条(悬浮在底栏上方;软键盘避让 2026-10-16 对齐聊天页 F2/F7)。⚠ 原生
-        // Android11PlusKeyboardWatcher 的 height = imeInsets.bottom - navigationBars.bottom
-        // (聊天页反编译核实同款)——不含导航栏区域,键盘实际顶边比它高出一条 navBar,
-        // 须再叠加 navBarSafePaddingDp() 补齐,否则输入框下缘被导航栏区域上方的键盘盖住
-        // 一条;弹起时 bottom 切到「键盘高 + navBar + 12dp」顶到键盘上方,收起回调归零
-        // 恢复浮岛常数(悬浮浮岛与聊天页流内顶起等观感)。
+        // Android11PlusKeyboardWatcher 的 height 不含导航栏区域、须叠加 navBar 补齐的补偿
+        // 已收口 components.inputBarBottomPaddingDp(= max(rest 86dp, 键盘高 + navBar + 12dp),
+        // 与原件逐字一致);收起回调归零恢复浮岛常数(悬浮浮岛与聊天页流内顶起等观感)。
         // M19:外包 Column 加标签 chips 行(LazyRow——5 枚 3 字 ≈347dp 超窄屏可用宽,横滑兜底);
         // bottom 浮岛常数搬 Column 整体,输入 Row 几何原样内嵌
         Column(
             modifier = Modifier.align(Alignment.BottomCenter)
                 .padding(horizontal = AppTheme.PageHPadding)
-                .padding(
-                    bottom = max(
-                        86.dp + navBarSafePaddingDp(),
-                        keyboardHeight.dp + navBarSafePaddingDp() + 12.dp,
-                    ),
-                )
+                .padding(bottom = inputBarBottomPaddingDp(keyboardHeight.value))
                 .fillMaxWidth(),
         ) {
             // 标签筛选行(M20 升级「筛选+新增一体」,原 M19 纯新增选择器):首枚「全部」恒品牌色,
@@ -443,23 +397,6 @@ private fun TodoDayHeader(label: String) {
         fontWeight = FontWeight.Medium,
         modifier = Modifier.padding(start = 4.dp, top = 2.dp),
     )
-}
-
-/** 空态引导:软色图标圆底 + 一句文案(语气对齐既有页面) */
-@Composable
-private fun TodoEmptyHint(text: String, modifier: Modifier = Modifier) {
-    val theme = ThemeStore.current
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            modifier = Modifier.size(56.dp)
-                .background(theme.brandStart.copy(alpha = 0.1f), RoundedCornerShape(28.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIcon(AppIconType.Todo, theme.brandStart, Modifier.size(24.dp))
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text, color = AppTheme.TextTertiary, fontSize = 13.sp)
-    }
 }
 
 @Composable

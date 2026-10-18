@@ -30,33 +30,32 @@ import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
-import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
-import com.tencent.kuikly.core.views.KeyboardParams
-import com.zyc.love_baby.TextField
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.components.AppConfirmOverlay
 import com.zyc.love_baby.components.AppDatePickerOverlay
-import com.zyc.love_baby.components.AppGradientHeader
-import com.zyc.love_baby.components.AppHeaderTitle
+import com.zyc.love_baby.components.AppEmptyHint
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppInputField
+import com.zyc.love_baby.components.AppLoadFailed
+import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
-import com.zyc.love_baby.features.chat.todayDayIndexGmt8
+import com.zyc.love_baby.components.rememberKeyboardHeight
+import com.zyc.love_baby.state.todayDayIndexGmt8
 import com.zyc.love_baby.features.couple.BindPrimaryButton
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
-import com.zyc.love_baby.features.mood.TimelineLoadFailed
-import com.zyc.love_baby.features.mood.TimelineLoading
 import com.zyc.love_baby.data.model.AnniversaryInfo
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.state.AnniversaryStore
@@ -76,7 +75,7 @@ private val annivEmojiPresets = listOf("❤️", "🎂", "💍", "💌", "🌸",
  *      返回键/closePage 返回。独立二级页(WishTimelinePager 同款壳,不走 MainPager 五 Tab)
  * 依赖:AnniversaryStore(全局清单,首页第 4 列共消费,此处增删即时反映回首页);
  *      AppState 倒数纯函数(anniversaryCountdownLabel/sortedAnniversaries,跨天只重算不重拉);
- *      ChatTime.todayDayIndexGmt8;couple 组 toast 与 BindPrimaryButton;RouterModule(返回)
+ *      TimeKit.todayDayIndexGmt8;couple 组 toast 与 BindPrimaryButton;RouterModule(返回)
  * 事件:返回钮 closePage;失败态「重试」重拉;行删除乐观移除(失败回滚+toast);FAB 开新增浮层
  * 功能:
  *  - 四态:加载中 / 失败重试 / 空态「还没有纪念日」/ 正常列表(展示序 = sortedAnniversaries:
@@ -149,25 +148,26 @@ internal fun AnniversaryPage(pager: Pager) {
             userScrollEnabled = !showAdd,
         ) {
             item {
-                AppGradientHeader {
-                    Box(
-                        modifier = Modifier.size(38.dp)
-                            .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                            .clickable {
-                                pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AppIcon(AppIconType.ChevronLeft, Color.White, Modifier.size(20.dp))
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    AppHeaderTitle("纪念日", "重要的日子,都值得记住")
-                }
+                AppSubPageHeader(
+                    "纪念日",
+                    "重要的日子,都值得记住",
+                    onBack = {
+                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    },
+                )
             }
             when {
-                loading -> item { TimelineLoading() }
-                loadFailed -> item { TimelineLoadFailed { load() } }
-                sorted.isEmpty() -> item { AnniversaryEmptyHint() }
+                loading -> item { AppLoading() }
+                loadFailed -> item { AppLoadFailed { load() } }
+                sorted.isEmpty() -> item {
+                    AppEmptyHint(
+                        AppIconType.Heart,
+                        "还没有纪念日",
+                        modifier = Modifier.padding(top = 64.dp),
+                        hint = "恋爱纪念日、生日……点右下角 + 添加一个吧",
+                        iconSize = 26.dp,
+                    )
+                }
                 else -> items(
                     sorted,
                     key = { it.id },
@@ -218,28 +218,6 @@ internal fun AnniversaryPage(pager: Pager) {
                 onDismiss = { deleteTargetId = "" },
             )
         }
-    }
-}
-
-/** 空态:软色 Heart 圆底 + 引导文案(照 WishEmptyHint 结构) */
-@Composable
-private fun AnniversaryEmptyHint() {
-    val theme = ThemeStore.current
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier.size(56.dp)
-                .background(theme.brandStart.copy(alpha = 0.1f), RoundedCornerShape(28.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIcon(AppIconType.Heart, theme.brandStart, Modifier.size(26.dp))
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("还没有纪念日", color = AppTheme.TextSecondary, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text("恋爱纪念日、生日……点右下角 + 添加一个吧", color = AppTheme.TextTertiary, fontSize = 11.sp)
     }
 }
 
@@ -323,10 +301,7 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
     var emoji by remember { mutableStateOf(annivEmojiPresets.first()) }
     var repeatYearly by remember { mutableStateOf(true) }
     var adding by remember { mutableStateOf(false) }
-    var keyboardHeight by remember { mutableStateOf(0f) }
-    val onKeyboardHeightChange: (KeyboardParams) -> Unit = remember {
-        { params: KeyboardParams -> keyboardHeight = params.height }
-    }
+    val (keyboardHeight, onKeyboardHeightChange) = rememberKeyboardHeight()
 
     fun submit() {
         if (adding) return
@@ -358,13 +333,13 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
                 // 键盘起时整体顶到键盘上方(原生 KeyboardParams.height 不含导航栏区域,TodoPage 输入条
                 // 同款几何),收起归零回正中;卡片紧凑,小屏 + 全键盘也放得下
                 .padding(
-                    bottom = if (keyboardHeight > 0f) {
-                        keyboardHeight.dp + navBarSafePaddingDp() + 12.dp
+                    bottom = if (keyboardHeight.value > 0f) {
+                        keyboardHeight.value.dp + navBarSafePaddingDp() + 12.dp
                     } else {
                         0.dp
                     },
                 ),
-            contentAlignment = if (keyboardHeight > 0f) Alignment.BottomCenter else Alignment.Center,
+            contentAlignment = if (keyboardHeight.value > 0f) Alignment.BottomCenter else Alignment.Center,
         ) {
         // 灰幕:收键盘 + 关浮层一体(TodoPage 浮层无灰幕是输入条场景,本浮层键盘由输入行触发)
         Box(
@@ -389,10 +364,11 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
                 fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.height(14.dp))
-            AnnivInputRow(
+            AppInputField(
                 value = title,
                 onValueChange = { title = it.filterNot { ch -> ch == '\n' }.take(TITLE_MAX_LENGTH) },
                 placeholder = "纪念日名称(如:领证纪念日)",
+                maxLines = Int.MAX_VALUE, // 原 AnnivInputRow 走 TextField 缺省可折行,长标题换行展示保真
                 keyboardHeightChange = onKeyboardHeightChange,
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -467,34 +443,6 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
                 onDismiss = { showDatePicker = false },
             )
         }
-    }
-}
-
-/** 输入行(浅灰底圆角,BindInputField 同视觉;键盘回调透传——浮层避让靠任一聚焦行上报)。固定高挂行容器、TextField 自适应行高居中(原生 gravity 恒 TOP|START) */
-@Composable
-private fun AnnivInputRow(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    keyboardHeightChange: (KeyboardParams) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth()
-            .height(48.dp)
-            .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextField(
-            modifier = Modifier.weight(1f),
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = placeholder,
-            placeholderColor = AppTheme.TextTertiary,
-            autoFocus = false,
-            textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 15.sp),
-            keyboardHeightChange = keyboardHeightChange,
-        )
     }
 }
 

@@ -13,7 +13,6 @@ import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
-import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
@@ -31,14 +30,12 @@ import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.components.AppAvatar
-import com.zyc.love_baby.components.AppIcon
-import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppBrandIntroScreen
 import com.zyc.love_baby.components.AppMenuGroup
 import com.zyc.love_baby.components.AppSectionTitle
+import com.zyc.love_baby.components.AppSegmentedChips
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
-import com.zyc.love_baby.components.navBarSafePaddingDp
-import com.zyc.love_baby.components.statusBarPaddingDp
 import com.zyc.love_baby.features.profile.PROFILE_WHO_PARTNER
 import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.network.ApiResult
@@ -51,8 +48,8 @@ import kotlinx.coroutines.launch
  * 用法:
  *  - MainPager:已登录且 CoupleStore.bindState != BOUND(未知校准态/未绑定)时整树条件渲染本面板,
  *    后组合画在上层盖住五 Tab(与 Gate 同款手法,不动常驻堆叠);绑定成功翻 CoupleStore.bindState 整树卸载
- *  - MinePage:已绑定时组合 BoundPartnerCard(伴侣信息 + 解绑入口;解绑二次确认浮层 BindUnbindConfirm
- *    由 MinePage 顶层持有,避免浮层陷入 LazyColumn 滚动项)
+ *  - MinePage:已绑定时组合 BoundPartnerCard(伴侣信息 + 解绑入口;解绑二次确认浮层
+ *    AppConfirmOverlay 由 MainPager 根级持有,避免浮层陷入 LazyColumn 滚动项)
  * 依赖:CoupleStore(三态/邀请码/伴侣信息);BindWidgets 各小件;components 通用库
  * 事件:生成/复制/绑定/解绑走 CoupleStore 与宿主 BridgeModule;绑定/解绑成功由状态翻转驱动层挂卸
  * 功能:
@@ -63,55 +60,17 @@ import kotlinx.coroutines.launch
  */
 @Composable
 internal fun BindingPanel(pager: Pager) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(ThemeStore.current.brandBrush)
-            .clickable { },
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(statusBarPaddingDp() + 40.dp))
-            BindHeader()
-            Spacer(modifier = Modifier.height(26.dp))
-            // 三态条件渲染(禁 Crossfade/AnimatedVisibility,铁律④;子视图整体销毁无残留)
-            when (CoupleStore.bindState) {
-                CoupleBindState.UNKNOWN -> CheckingBody(pager)
-                CoupleBindState.UNBOUND -> GuideBody(pager)
-                // BOUND 时本层已被 MainPager 卸载(§7.3「已绑定 → 主功能」);防御性空分支
-                CoupleBindState.BOUND -> {}
-            }
-            Spacer(modifier = Modifier.height(24.dp + navBarSafePaddingDp()))
+    // 品牌引导壳(components/AppBrandIntroScreen 单源):brandBrush 全屏底 + hero 头
+    // (64dp 白 30% 圆 + Heart + 26sp 标题 + 13sp 白 85% 副标题)+ statusBar+40 顶留白 +
+    // 26/24+navBar 上下间距,与原自绘骨架(含已删 BindHeader)逐值同构;三态表单走 content 槽
+    AppBrandIntroScreen(title = "绑定另一半", subtitle = "一张邀请码,把两颗心连在一起") {
+        // 三态条件渲染(禁 Crossfade/AnimatedVisibility,铁律④;子视图整体销毁无残留)
+        when (CoupleStore.bindState) {
+            CoupleBindState.UNKNOWN -> CheckingBody(pager)
+            CoupleBindState.UNBOUND -> GuideBody(pager)
+            // BOUND 时本层已被 MainPager 卸载(§7.3「已绑定 → 主功能」);防御性空分支
+            CoupleBindState.BOUND -> {}
         }
-    }
-}
-
-@Composable
-private fun BindHeader() {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-            .padding(horizontal = AppTheme.PageHPadding),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // 半透明白底圆 + 心形白 icon(与 GateHeader 同款画法)
-        Box(
-            modifier = Modifier.size(64.dp)
-                .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(32.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIcon(AppIconType.Heart, Color.White, Modifier.size(30.dp))
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-        Text(
-            "绑定另一半",
-            color = Color.White,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            "一张邀请码,把两颗心连在一起",
-            color = Color.White.copy(alpha = 0.85f),
-            fontSize = 13.sp,
-        )
     }
 }
 
@@ -149,12 +108,11 @@ private fun CheckingBody(pager: Pager) {
 private fun GuideBody(pager: Pager) {
     var mode by remember { mutableIntStateOf(0) } // 0 我的邀请码 / 1 输码绑定
     BindCard {
-        BindModeChips(
-            firstText = "我的邀请码",
-            secondText = "输码绑定",
-            firstSelected = mode == 0,
-            onSelectFirst = { mode = 0 },
-            onSelectSecond = { mode = 1 },
+        // 分段选择胶囊(components/AppSegmentedChips 单源;灰底容器默认参数即原 BindModeChips 生产视觉)
+        AppSegmentedChips(
+            options = listOf("我的邀请码", "输码绑定"),
+            selectedIndex = mode,
+            onSelect = { mode = it },
         )
         Spacer(modifier = Modifier.height(16.dp))
         if (mode == 0) {

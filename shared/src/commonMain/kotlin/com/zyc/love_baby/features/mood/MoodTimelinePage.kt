@@ -28,7 +28,6 @@ import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
-import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -37,19 +36,21 @@ import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.base.Utils
-import com.zyc.love_baby.components.AppGradientHeader
-import com.zyc.love_baby.components.AppHeaderTitle
+import com.zyc.love_baby.components.AppDateCapsule
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppLoadFailed
+import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.MoodRecordInfo
-import com.zyc.love_baby.features.chat.chatHHmm
-import com.zyc.love_baby.features.chat.civilDateKeyGmt8
-import com.zyc.love_baby.features.chat.daypartLabel
-import com.zyc.love_baby.features.chat.todayDayIndexGmt8
+import com.zyc.love_baby.state.chatHHmm
+import com.zyc.love_baby.state.civilDateKeyGmt8
+import com.zyc.love_baby.state.daypartLabel
+import com.zyc.love_baby.state.todayDayIndexGmt8
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.MoodApi
 import com.zyc.love_baby.state.SessionStore
@@ -64,7 +65,7 @@ import kotlinx.coroutines.launch
  * 用法:心情页月历图例「心情时间线 ›」RouterModule.openPage 打开;返回键/closePage 返回。
  *      独立二级页(GalleryPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:MoodApi.list(按月拉 couple 双方记录);MoodRecordInfo(快照三列+createTime);
- *      ChatTime(chatHHmm/daypartLabel);AppState(currentDate/moodRecordColor/monthParts/monthShift/
+ *      TimeKit(chatHHmm/daypartLabel);AppState(currentDate/moodRecordColor/monthParts/monthShift/
  *      civilDateKeyGmt8/todayDayIndexGmt8);Utils(toast);RouterModule(返回);ThemeStore
  * 事件:返回钮 closePage;月份钮切月重拉;失败态「重试」重拉当月
  * 功能:
@@ -150,20 +151,13 @@ internal fun MoodTimelinePage(pager: Pager) {
     Column(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         LazyColumn(modifier = Modifier.weight(1f).fillMaxSize()) {
             item {
-                AppGradientHeader {
-                    Box(
-                        modifier = Modifier.size(38.dp)
-                            .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                            .clickable {
-                                pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AppIcon(AppIconType.ChevronLeft, Color.White, Modifier.size(20.dp))
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    AppHeaderTitle("心情日签", "每一天的心情都值得收藏")
-                }
+                AppSubPageHeader(
+                    "心情日签",
+                    "每一天的心情都值得收藏",
+                    onBack = {
+                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    },
+                )
             }
             item {
                 // 月份切换条:双钮等宽 + SpaceBetween,标题自然居中(月历卡月份行同构)
@@ -185,9 +179,9 @@ internal fun MoodTimelinePage(pager: Pager) {
                 }
             }
             when {
-                loading -> item { TimelineLoading() }
+                loading -> item { AppLoading() }
                 loadFailed -> item {
-                    TimelineLoadFailed { load(month.ifEmpty { currentDate(pager).take(7) }) }
+                    AppLoadFailed { load(month.ifEmpty { currentDate(pager).take(7) }) }
                 }
                 records.isEmpty() -> item { MoodMonthEmpty() }
                 else -> items(
@@ -200,15 +194,8 @@ internal fun MoodTimelinePage(pager: Pager) {
                             .padding(horizontal = AppTheme.PageHPadding)
                             .padding(top = 6.dp),
                     ) {
-                        // 组头日期胶囊:单节点(背景+文字同节点,无 clickable),ChatPage 日期条同款
-                        Text(
-                            moodGroupLabel(date),
-                            fontSize = 10.sp,
-                            color = AppTheme.TextSecondary,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                                .background(AppTheme.TextTertiary.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
-                                .padding(horizontal = 10.dp, vertical = 3.dp),
-                        )
+                        // 组头日期胶囊:AppDateCapsule 单源(components 三层居中写法;ChatPage 日期条同款)
+                        AppDateCapsule(moodGroupLabel(date))
                         Spacer(modifier = Modifier.height(8.dp))
                         dayRecords.forEachIndexed { index, record ->
                             if (index > 0) {

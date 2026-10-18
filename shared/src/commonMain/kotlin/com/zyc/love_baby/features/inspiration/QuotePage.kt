@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.foundation.background
-import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Spacer
@@ -17,13 +16,11 @@ import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
-import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
-import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.dp
@@ -32,18 +29,17 @@ import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
-import com.zyc.love_baby.components.AppGradientHeader
-import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppLoadFailed
+import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.InspirationQuote
 import com.zyc.love_baby.features.couple.BindPrimaryButton
 import com.zyc.love_baby.features.couple.toastCoupleResult
-import com.zyc.love_baby.features.mood.TimelineLoadFailed
-import com.zyc.love_baby.features.mood.TimelineLoading
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.InspirationApi
 import kotlinx.coroutines.launch
@@ -53,7 +49,7 @@ import kotlinx.coroutines.launch
  * 用法:首页「恋爱灵感·今日情话」卡 RouterModule.openPage 打开(HomePage.openQuotePage);
  *      返回键 closePage;独立二级页(WishListPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:InspirationApi/InspirationQuote(页内自持不进 AppState,D-19g——页销毁即弃);
- *      mood.TimelineLoading/LoadFailed(加载/失败态);couple.BindPrimaryButton(换一句钮);
+ *      components.AppLoading/AppLoadFailed(加载/失败态);couple.BindPrimaryButton(换一句钮);
  *      RouterModule(返回)
  * 事件:返回钮 closePage;「换一句」→ quote-random(服务端排除今日句,池 >1 必换),单飞锁防双击
  * 功能:
@@ -109,27 +105,20 @@ internal fun QuotePage(pager: Pager) {
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AppGradientHeader {
-                Box(
-                    modifier = Modifier.size(38.dp)
-                        .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                        .clickable {
-                            pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(AppIconType.ChevronLeft, Color.White, Modifier.size(20.dp))
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                AppHeaderTitle("今日情话", "每天一句小甜蜜")
-            }
+            AppSubPageHeader(
+                "今日情话",
+                "每天一句小甜蜜",
+                onBack = {
+                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                },
+            )
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
                 when {
-                    loading -> TimelineLoading()
-                    loadFailed -> TimelineLoadFailed(onRetry = {
+                    loading -> AppLoading()
+                    loadFailed -> AppLoadFailed(onRetry = {
                         loading = true
                         scope.launch { fetchToday(); loading = false }
                     })

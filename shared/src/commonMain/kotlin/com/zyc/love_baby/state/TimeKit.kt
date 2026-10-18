@@ -1,11 +1,7 @@
-package com.zyc.love_baby.features.chat
-
-import com.zyc.love_baby.state.civilFromDays
-import com.zyc.love_baby.state.nowEpochMs
-import com.zyc.love_baby.state.pad2
+package com.zyc.love_baby.state
 
 /**
- * ChatTime — 聊天时间格式化(GMT+8 固定偏移,产品为中国大陆场景)
+ * TimeKit — 聊天时间格式化(GMT+8 固定偏移,产品为中国大陆场景)
  * 用法:跨天判定 chatDayIndex(a) != chatDayIndex(b);气泡下单行时刻用 chatHHmm;日期分隔条文案 chatDayLabel
  * 依赖:AppState 的 civilFromDays/nowEpochMs/pad2(放宽 internal 直接复用,不复制 Hinnant 算法);
  *      commonMain 禁 JVM-only(无 java.time/String.format,纯 Long 整除算术)

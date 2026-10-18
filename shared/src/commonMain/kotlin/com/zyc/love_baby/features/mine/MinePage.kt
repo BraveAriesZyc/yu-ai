@@ -254,69 +254,6 @@ private fun HeaderWithStats(pager: Pager, profile: UserProfile?) {
 }
 
 /**
- * LogoutConfirmOverlay — 退出登录二次确认浮层(全屏灰幕 + 居中白卡,BindUnbindConfirm 同款结构):
- * 灰幕点击取消,卡片 background+clickable 同节点吞点击防透传(铁律⑤);submitting 期间所有出口拦点击。
- * M3(F6)起 internal 由 MainPager 根 Box 挂载(同 NicknameEditOverlay,本页滚动项不吞浮层触摸);
- * 确认动作 = 先调 AuthApi.logout(容忍失败,§5.2)再 SessionStore.clear 回 Gate,由 MainPager 收口
- */
-@Composable
-internal fun LogoutConfirmOverlay(
-    submitting: Boolean,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { if (!submitting) onDismiss() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 36.dp)
-                .fillMaxWidth()
-                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
-                .clickable { }
-                .padding(horizontal = 20.dp, vertical = 22.dp),
-        ) {
-            Text("退出登录?", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "退出后需要重新登录才能继续,本机的记录会保留。确定要退出吗?",
-                color = AppTheme.TextSecondary,
-                fontSize = 13.sp,
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            Row {
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .height(42.dp)
-                        .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
-                        .clickable { if (!submitting) onDismiss() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("取消", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .height(42.dp)
-                        .background(AppTheme.Danger, RoundedCornerShape(21.dp))
-                        .clickable { if (!submitting) onConfirm() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        if (submitting) "退出中…" else "确认退出",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
  * ThemePickerCard — 主题外观:5 个主题圆点,点击即时切换并持久化
  */
 @Composable
@@ -385,7 +322,7 @@ private const val APP_VERSION_NAME = "1.0.0"
  * 依赖:AppTheme(brandBrush/CardBg/TextSecondary/TextTertiary)/AppIconTile/AppIcon;
  *      骨架同全屏浮层惯例(黑幕 0.45 + 居中白卡 20dp 圆角 + 空 clickable 吞点击)
  * 事件:卡外点击/「知道了」→ onDismiss()
- * 功能:黑幕盖底栏由挂载位置保证(后于底栏组合,LogoutConfirmOverlay 同款);卡片吞点击防误关
+ * 功能:黑幕盖底栏由挂载位置保证(后于底栏组合,根级浮层惯例同 AppConfirmOverlay);卡片吞点击防误关
  */
 @Composable
 internal fun MineAboutOverlay(onDismiss: () -> Unit) {

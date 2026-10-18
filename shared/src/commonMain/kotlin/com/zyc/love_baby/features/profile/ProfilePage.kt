@@ -38,6 +38,7 @@ import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppDatePickerOverlay
 import com.zyc.love_baby.components.AppGradientHeader
+import com.zyc.love_baby.components.AppHeaderBackButton
 import com.zyc.love_baby.components.AppMenuDivider
 import com.zyc.love_baby.components.AppMenuGroup
 import com.zyc.love_baby.components.AppMenuRow
@@ -521,19 +522,10 @@ private fun ProfileHeader(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Box(
-                    modifier = Modifier.size(38.dp)
-                        .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                        .clickable {
-                            pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(
-                        AppIconType.ChevronLeft,
-                        Color.White,
-                        Modifier.size(20.dp),
-                    )
+                // 返回钮(components/AppHeaderBackButton 单源:38dp 白 25% 圆 + ChevronLeft 20dp,
+                // 与原手写件逐值同构);仅换返回钮,本头部 SpaceBetween 自绘结构不动
+                AppHeaderBackButton {
+                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))

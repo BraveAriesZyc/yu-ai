@@ -53,7 +53,7 @@ love_baby/
 │   └── src/commonMain/kotlin/com/zyc/love_baby/
 │       ├── base/            # BasePager、BridgeModule、Utils(基建)
 │       ├── main/MainPager.kt      # @Page("main") 主容器:底栏五 Tab,HorizontalPager 左右滑切换(五页全驻留)
-│       ├── components/      # AppTheme(含 ThemeStore 主题切换)/AppIcons(矢量图标)/AppBottomBar(浮岛底栏)+ 通用组件库(AppGradientHeader/AppCheckbox/AppTag/AppAvatar/AppMenu/AppStats/AppSection/AppCards)
+│       ├── components/      # AppTheme(含 ThemeStore 主题切换)/AppIcons(矢量图标)/AppBottomBar(浮岛底栏)+ 通用组件库(AppGradientHeader/AppCheckbox/AppTag/AppAvatar/AppMenu/AppStats/AppSection/AppCards + AppStatus/AppGestures/AppButton/AppInputField/AppOverlayCard/AppPullRefresh/AppSegmentedChips/AppCalendar/AppDateCapsule/AppGhostIconButton/AppKeyboard/AppFeedback/AppPillChip/AppBrandIntroScreen,时间工具 state/TimeKit——新浮层一律走 AppOverlayCard 壳,组件清单见画廊 6 大类分区)
 │       ├── state/AppState.kt      # 全局状态:TodoStore/MoodStore/ChatStore
 │       ├── features/
 │       │   ├── home/ HomePage.kt    # 首页(渐变头部+统计+快捷入口)

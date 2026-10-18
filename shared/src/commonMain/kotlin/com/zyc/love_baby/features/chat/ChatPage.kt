@@ -15,8 +15,6 @@ import com.tencent.kuikly.compose.foundation.Image
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.combinedClickable
-import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
-import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
@@ -47,21 +45,20 @@ import com.tencent.kuikly.compose.ui.draw.clip
 import com.tencent.kuikly.compose.ui.graphics.Brush
 import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.graphics.SolidColor
-import com.tencent.kuikly.compose.ui.input.pointer.PointerEventPass
-import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
-import com.tencent.kuikly.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import com.tencent.kuikly.compose.ui.layout.ContentScale
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
-import com.tencent.kuikly.compose.ui.unit.max
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
 import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.components.AppAvatar
+import com.zyc.love_baby.components.AppDateCapsule
+import com.zyc.love_baby.components.AppEmptyHint
+import com.zyc.love_baby.components.AppGhostIconButton
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
@@ -70,7 +67,8 @@ import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.KuiklyTheme
 import com.zyc.love_baby.components.ThemeStore
-import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.components.dragDismissKeyboard
+import com.zyc.love_baby.components.inputBarBottomPaddingDp
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
@@ -86,11 +84,13 @@ import com.zyc.love_baby.state.CoupleStore
 import com.zyc.love_baby.state.MsgKind
 import com.zyc.love_baby.state.SessionStore
 import com.zyc.love_baby.state.appIconFromName
+import com.zyc.love_baby.state.chatDayIndex
+import com.zyc.love_baby.state.chatDayLabel
+import com.zyc.love_baby.state.chatHHmm
 import com.zyc.love_baby.state.colorFromHex
 import com.zyc.love_baby.state.nowEpochMs
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -102,7 +102,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  *      消息状态在 ChatStore(lastId 增量游标,与心情页联动);Pager 常驻五页仅组合一次,首拉
  *      bindState 驱动,后续刷新靠 MainPager 切 Tab 副作用 + 页内 5s 轮询
  * 依赖:ChatStore/ThemeStore/CoupleStore/SessionStore/AppIcons/BasicWidget TextField/AppIconButton;
- *      MessageApi 经 ChatStore 走透;ChatTime.kt(时间格式化);MessageModels MessageInfo.createTime
+ *      MessageApi 经 ChatStore 走透;state/TimeKit.kt(时间格式化);MessageModels MessageInfo.createTime
  * 入参:myNickname 我方昵称(MainPager 单一数据源),空串兜底头像首字「我」;伴侣昵称直读 CoupleStore;
  *      pageVisible = selectedTab == 3(MainPager 传入,targetPage 翻转即翻转,驱动进页无条件滚底)
  * 事件:发送文本/贴纸 → ChatStore.send(POST 成功才入列清输入,失败 toast 保留输入);心愿卡来自
@@ -245,8 +245,9 @@ fun ChatPage(
     }
     val messages = ChatStore.messages
     // Q3 拖拽收键盘(2026-10-16):键盘开着时手指拖列表 → clearFocus 收键盘(微信语义)。
-    // 观察器挂列表容器(见 LazyColumn modifier),被动不消费事件;程序化滚底(scrollToItem
-    // 只写原生偏移)不产生任何指针事件,天然不误伤发送/进页/贴底跟随滚底(铁律13)
+    // 观察器已单源化 components.dragDismissKeyboard(挂 LazyColumn modifier,被动不消费事件);
+    // focusManager 本页仍用于主动收键盘动作(pickImage/长按撤回开浮层/图片气泡开大图)。
+    // 程序化滚底(scrollToItem 只写原生偏移)不产生任何指针事件,天然不误伤跟随滚底(铁律13)
     val focusManager = LocalFocusManager.current
 
     // M15 仅选图(pickImages,零网络):guard 选图中/上传中 → clearFocus 收键盘 → getModule 判空
@@ -544,38 +545,9 @@ fun ChatPage(
             // 消息列表(§2)
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth()
-                    // Q3 拖拽收键盘:被动手势观察器(微信语义,键盘开着拖列表即收)。
-                    // 三个不可妥协点(2.29 源码锤实):①全程不调 change.consume()——Compose
-                    // 侧消费移动才会 preventTouch 阻断原生触摸,不消费 = 原生滚动/惯性/子项
-                    // 点击/下拉刷新全部无感;②pass 一律 Initial + requireUnconsumed=false,
-                    // 位移读 positionChangeIgnoreConsumed()——原生层接管滚动后事件带预消费
-                    // 标记,普通 positionChange() 对已消费事件返回 Zero 会检测失灵;③竖向
-                    // 位移越 touchSlop 且竖向占优(dy>dx)才收——横滑翻页由 MainPager 切 Tab
-                    // 的 clearFocus 承接,轻点气泡/按钮不越 slop 不收。key=focusManager(页内
-                    // 稳定实例;勿用逐帧变化值做 key,重组会重启手势协程)。手势 handler 内
-                    // 勿用 withTimeoutOrNull(2.29 该函数是 no-op 存根)
-                    .pointerInput(focusManager) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(
-                                requireUnconsumed = false,
-                                pass = PointerEventPass.Initial,
-                            )
-                            var dx = 0f
-                            var dy = 0f
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                if (!change.pressed) break
-                                val delta = change.positionChangeIgnoreConsumed()
-                                dx += abs(delta.x)
-                                dy += abs(delta.y)
-                                if (dy > viewConfiguration.touchSlop && dy > dx) {
-                                    focusManager.clearFocus()
-                                    break
-                                }
-                            }
-                        }
-                    },
+                    // Q3 拖拽收键盘(微信语义,键盘开着拖列表即收):被动手势观察器已单源化到
+                    // components.dragDismissKeyboard(铁律13④ 三不可妥协点与 key 约定见组件注释)
+                    .dragDismissKeyboard(),
                 state = listState,
                 // M10/M12 F6:全屏浮层(大图/撤回确认)开着时关列表滚动(遮罩只吃 tap 不吃拖拽,拖列表会穿透到浮层下层)
                 userScrollEnabled = imagePreviewUrl.isEmpty() && recallTargetId.isEmpty(),
@@ -633,7 +605,13 @@ fun ChatPage(
                                 },
                             )
                         } else if (ChatStore.initialLoaded) {
-                            ChatEmptyHint(modifier = Modifier.fillMaxWidth().padding(top = 48.dp))
+                            // 空态收编 components.AppEmptyHint(circled 形态:56dp brandStart 10% 圆 +
+                            // Chat 图标 24dp;标题归一为组件 14sp TextSecondary 档)
+                            AppEmptyHint(
+                                AppIconType.Chat,
+                                "还没有悄悄话,发一句吧",
+                                modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                            )
                         }
                     }
                 }
@@ -681,43 +659,21 @@ fun ChatPage(
                             .padding(top = topPad),
                     ) {
                         if (showDayDivider) {
-                            // 日期分隔条:整宽居中胶囊。三层写法(2026-10-17 二轮真机反馈定稿):
-                            // ①外层 Box(fillMaxWidth)+contentAlignment=Center 容器居中(ColumnScope.align
-                            // 的 ParentData 通道真机不可靠);②背景+padding 挂内层 Box、Text 作子节点——
-                            // 背景直挂 Text 会落在原生 TextView 上(可能被拉宽,文字 start 偏左不居中),
-                            // 全 App 真机验证过的胶囊(贴纸/发送/重试)全是背景挂 Box 写法,勿再直挂 Text
-                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Box(
-                                    modifier = Modifier
-                                        .background(AppTheme.TextTertiary.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
-                                        .padding(horizontal = 10.dp, vertical = 3.dp),
-                                ) {
-                                    Text(
-                                        chatDayLabel(msg.createTime),
-                                        fontSize = 10.sp,
-                                        color = AppTheme.TextSecondary,
-                                    )
-                                }
-                            }
+                            // 日期分隔条:整宽居中胶囊(AppDateCapsule 单源:三层安全写法铁律 14/15,
+                            // 视觉常数 TextTertiary 12% 底 + 9dp 圆角 + 横 10/竖 3 + 10sp 与原件逐字一致)
+                            AppDateCapsule(chatDayLabel(msg.createTime))
                             Spacer(modifier = Modifier.height(6.dp))
                         }
                         if (msg.recalled) {
-                            // M12 墓碑行:整行替换为居中胶囊灰条(同日期分隔条胶囊语言,alpha 0.10 底),
-                            // 不画头像/气泡/时间行;上方日期分隔条照常保留。三层写法同日期条(外层
-                            // 容器居中 + 背景挂内层 Box、Text 作子节点,勿背景直挂 Text)
-                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Box(
-                                    modifier = Modifier
-                                        .background(AppTheme.TextTertiary.copy(alpha = 0.10f), RoundedCornerShape(9.dp))
-                                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                                ) {
-                                    Text(
-                                        if (msg.isMine) "你撤回了一条消息" else "对方撤回了一条消息",
-                                        fontSize = 11.sp,
-                                        color = AppTheme.TextTertiary,
-                                    )
-                                }
-                            }
+                            // M12 墓碑行:整行替换为居中胶囊灰条(alpha 0.10 底 + 11sp TextTertiary +
+                            // 竖 4dp,AppDateCapsule 参数对齐原件),不画头像/气泡/时间行;上方日期分隔条照常保留
+                            AppDateCapsule(
+                                if (msg.isMine) "你撤回了一条消息" else "对方撤回了一条消息",
+                                bgAlpha = 0.10f,
+                                fontSize = 11.sp,
+                                textColor = AppTheme.TextTertiary,
+                                verticalPadding = 4.dp,
+                            )
                         } else {
                             // M12 长按撤回:仅自己发的消息且在 2 分钟窗内可长按(else 分支已排除
                             // recalled;超窗在屏消息长按无反应、服务端权威兜底,不做定时驱逐);
@@ -852,22 +808,21 @@ fun ChatPage(
                     .padding(horizontal = AppTheme.PageHPadding)
                     .padding(
                         top = 4.dp,
-                        bottom = max(
-                            86.dp + navBarSafePaddingDp(),
-                            keyboardHeight.dp + navBarSafePaddingDp() + 12.dp,
-                        ),
+                        // 输入条 bottom 避让公式单源化(max(rest 86dp, 键盘高 + navBar + 12dp),
+                        // 与原件逐字一致;⚠ 键盘 height 不含导航栏区域的补偿已在组件内收口)
+                        bottom = inputBarBottomPaddingDp(keyboardHeight),
                     ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // M10 图片入口:36dp 轻量 ghost 钮(与 44dp brand 渐变发送钮区分主次);
+                // M10 图片入口:36dp 轻量 ghost 钮(与 44dp brand 渐变发送钮区分主次;
+                // AppGhostIconButton 透明底与 clickable 同节点铁律⑤);
                 // guard 选图中/上传中拦重复点击(pickImage 内也拦,双保险)
-                Box(
-                    modifier = Modifier.size(36.dp)
-                        .clickable { if (!imagePicking && !imageUploading) pickImage() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(AppIconType.Image, AppTheme.TextSecondary, Modifier.size(20.dp))
-                }
+                AppGhostIconButton(
+                    AppIconType.Image,
+                    onClick = { if (!imagePicking && !imageUploading) pickImage() },
+                    size = 36.dp,
+                    iconSize = 20.dp,
+                )
                 Spacer(modifier = Modifier.width(6.dp))
                 Box(
                     modifier = Modifier.weight(1f)
@@ -956,23 +911,6 @@ private fun LazyListState.isNearBottom(): Boolean {
     val info = layoutInfo
     val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
     return !canScrollForward || lastVisible >= info.totalItemsCount - 2
-}
-
-/** 空态引导:软色图标圆底 + 一句文案(与 TodoPage 空态同款视觉,§6) */
-@Composable
-private fun ChatEmptyHint(modifier: Modifier = Modifier) {
-    val theme = ThemeStore.current
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            modifier = Modifier.size(56.dp)
-                .background(theme.brandStart.copy(alpha = 0.1f), RoundedCornerShape(28.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIcon(AppIconType.Chat, theme.brandStart, Modifier.size(24.dp))
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("还没有悄悄话,发一句吧", color = AppTheme.TextTertiary, fontSize = 13.sp)
-    }
 }
 
 /**
@@ -1230,14 +1168,13 @@ private fun ChatImagePreviewBar(
         Spacer(modifier = Modifier.width(10.dp))
         Text("发送后 2 分钟内可长按撤回", color = AppTheme.TextTertiary, fontSize = 11.sp) // M12 文案回改(D9)
         Spacer(modifier = Modifier.weight(1f))
-        // ✕ 取消:清预览条
-        Box(
-            modifier = Modifier.size(30.dp)
-                .clickable(onClick = onCancel),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIcon(AppIconType.Close, AppTheme.TextTertiary, Modifier.size(18.dp))
-        }
+        // ✕ 取消:清预览条(AppGhostIconButton 单源,30dp/TextTertiary/18dp 与原件一致)
+        AppGhostIconButton(
+            AppIconType.Close,
+            onClick = onCancel,
+            tint = AppTheme.TextTertiary,
+            iconSize = 18.dp,
+        )
         Spacer(modifier = Modifier.width(6.dp))
         // 发送胶囊:上传中/发送中降透明禁用
         Box(

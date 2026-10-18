@@ -9,7 +9,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.foundation.background
-import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Row
@@ -23,12 +22,10 @@ import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.lazy.itemsIndexed
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
-import com.tencent.kuikly.compose.material3.CircularProgressIndicator
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
-import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
@@ -36,18 +33,21 @@ import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
-import com.zyc.love_baby.components.AppGradientHeader
-import com.zyc.love_baby.components.AppHeaderTitle
+import com.zyc.love_baby.components.AppDateCapsule
+import com.zyc.love_baby.components.AppEmptyHint
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppLoadFailed
+import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.MessageInfo
-import com.zyc.love_baby.features.chat.chatDayIndex
-import com.zyc.love_baby.features.chat.chatDayLabelFriendly
-import com.zyc.love_baby.features.chat.chatHHmm
+import com.zyc.love_baby.state.chatDayIndex
+import com.zyc.love_baby.state.chatDayLabelFriendly
+import com.zyc.love_baby.state.chatHHmm
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.MessageApi
 import com.zyc.love_baby.state.SessionStore
@@ -60,7 +60,7 @@ import kotlinx.coroutines.launch
  * 用法:我的页统计卡「心愿」/心情页心愿墙「已送的心愿 ›」RouterModule.openPage 打开;
  *      返回键/closePage 返回。独立二级页(GalleryPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:MessageApi.wishList(kind=2 只读视图,服务端按 id 倒序、快照四字段全量);
- *      ChatTime(chatDayIndex/chatDayLabelFriendly/chatHHmm);AppState(colorFromHex/appIconFromName);
+ *      TimeKit(chatDayIndex/chatDayLabelFriendly/chatHHmm);AppState(colorFromHex/appIconFromName);
  *      RouterModule(返回);ThemeStore(独立页主题自持)
  * 事件:返回钮 closePage;失败态「重试」重拉
  * 功能:
@@ -119,25 +119,26 @@ internal fun WishTimelinePage(pager: Pager) {
     Column(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         LazyColumn(modifier = Modifier.weight(1f).fillMaxSize()) {
             item {
-                AppGradientHeader {
-                    Box(
-                        modifier = Modifier.size(38.dp)
-                            .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                            .clickable {
-                                pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AppIcon(AppIconType.ChevronLeft, Color.White, Modifier.size(20.dp))
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    AppHeaderTitle("心愿单", "我们许过的每一个小心愿")
-                }
+                AppSubPageHeader(
+                    "心愿单",
+                    "我们许过的每一个小心愿",
+                    onBack = {
+                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    },
+                )
             }
             when {
-                loading -> item { TimelineLoading() }
-                loadFailed -> item { TimelineLoadFailed { load() } }
-                wishes.isEmpty() -> item { WishEmptyHint() }
+                loading -> item { AppLoading() }
+                loadFailed -> item { AppLoadFailed { load() } }
+                wishes.isEmpty() -> item {
+                    AppEmptyHint(
+                        AppIconType.Heart,
+                        "还没有送出过心愿",
+                        modifier = Modifier.padding(top = 64.dp),
+                        hint = "去心愿墙挑一个,悄悄送出去吧",
+                        iconSize = 26.dp,
+                    )
+                }
                 else -> itemsIndexed(
                     wishes,
                     key = { _, w -> w.id },
@@ -156,15 +157,8 @@ internal fun WishTimelinePage(pager: Pager) {
                             .padding(top = if (showDayDivider) 10.dp else 12.dp),
                     ) {
                         if (showDayDivider) {
-                            // 日期条:单节点(背景+文字同节点,无 clickable),整宽居中胶囊(ChatPage 同款)
-                            Text(
-                                chatDayLabelFriendly(wish.createTime),
-                                fontSize = 10.sp,
-                                color = AppTheme.TextSecondary,
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                                    .background(AppTheme.TextTertiary.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
-                                    .padding(horizontal = 10.dp, vertical = 3.dp),
-                            )
+                            // 日期条:AppDateCapsule 单源(components 三层居中写法;ChatPage 同款胶囊视觉)
+                            AppDateCapsule(chatDayLabelFriendly(wish.createTime))
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                         WishTimelineCard(wish)
@@ -226,63 +220,4 @@ private fun WishTimelineCard(msg: MessageInfo) {
     }
 }
 
-/** 空态引导:软色心形圆底 + 两行文案(语气对齐既有页面空态) */
-@Composable
-private fun WishEmptyHint() {
-    val theme = ThemeStore.current
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier.size(56.dp)
-                .background(theme.brandStart.copy(alpha = 0.1f), RoundedCornerShape(28.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIcon(AppIconType.Heart, theme.brandStart, Modifier.size(26.dp))
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("还没有送出过心愿", color = AppTheme.TextSecondary, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text("去心愿墙挑一个,悄悄送出去吧", color = AppTheme.TextTertiary, fontSize = 11.sp)
-    }
-}
-
-/** 时间线加载中:居中转圈(两时间线页共用) */
-@Composable
-internal fun TimelineLoading() {
-    Box(modifier = Modifier.fillMaxWidth().padding(top = 72.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(28.dp),
-            color = ThemeStore.current.brandStart,
-            strokeWidth = 3.dp,
-        )
-    }
-}
-
-/** 时间线加载失败:一句文案 + 重试胶囊(两时间线页共用;ChatLoadError 同语义分家,不造假空态) */
-@Composable
-internal fun TimelineLoadFailed(onRetry: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 72.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text("加载失败了,网络开小差了", color = AppTheme.TextSecondary, fontSize = 13.sp)
-        Spacer(modifier = Modifier.height(14.dp))
-        Box(
-            modifier = Modifier.background(
-                    ThemeStore.current.brandStart.copy(alpha = 0.12f),
-                    RoundedCornerShape(16.dp),
-                )
-                .clickable { onRetry() }
-                .padding(horizontal = 18.dp, vertical = 8.dp),
-        ) {
-            Text(
-                "重试",
-                color = ThemeStore.current.brandStart,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-    }
-}
+/** 空态引导已收编 components.AppEmptyHint(圆底 Heart 形态,iconSize=26 同原私版) */

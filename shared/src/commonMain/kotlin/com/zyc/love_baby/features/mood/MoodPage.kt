@@ -46,6 +46,7 @@ import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconTile
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppPrimaryButton
 import com.zyc.love_baby.components.AppSectionTitle
 import com.zyc.love_baby.components.AppSelectableCard
 import com.zyc.love_baby.components.AppTag
@@ -493,20 +494,18 @@ private fun MoodCalendarCard(
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        // 记录按钮(recordMood 乐观+失败回滚,toast 由回调收口;同日重复记=服务端覆盖写,§4)
-        Box(
-            modifier = Modifier.fillMaxWidth()
-                .background(theme.brandBrush, RoundedCornerShape(22.dp))
-                .clickable { onRecord() }
-                .padding(vertical = 11.dp),
-            contentAlignment = Alignment.Center,
+        // 记录按钮(components/AppPrimaryButton 单源收编,原内联渐变钮逐值对齐:R22/13sp/
+        // 高约 40dp;submitting=recording 在飞拦点击 + 文案切「记录中…」,recordMood 乐观+
+        // 失败回滚与 toast 收口仍走 onRecord 回调,同日重复记=服务端覆盖写 §4)
+        AppPrimaryButton(
+            text = "记录今天的心情",
+            submitting = recording,
+            busyText = "记录中…",
+            height = 40.dp,
+            corner = 22.dp,
+            fontSize = 13.sp,
         ) {
-            Text(
-                if (recording) "记录中…" else "记录今天的心情",
-                color = Color.White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            onRecord()
         }
     }
 }

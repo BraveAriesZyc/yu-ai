@@ -11,8 +11,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
-import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
-import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
@@ -31,20 +29,15 @@ import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.foundation.text.maxLength
 import com.tencent.kuikly.compose.material3.Text
-import com.tencent.kuikly.compose.material3.pullToRefreshItem
 import com.tencent.kuikly.compose.material3.rememberPullToRefreshState
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
-import com.tencent.kuikly.compose.ui.input.pointer.PointerEventPass
-import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
-import com.tencent.kuikly.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
-import com.tencent.kuikly.compose.ui.unit.max
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
@@ -55,27 +48,27 @@ import com.zyc.love_baby.onSizeChangedDp
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.components.AppCheckbox
 import com.zyc.love_baby.components.AppConfirmOverlay
-import com.zyc.love_baby.components.AppGradientHeader
-import com.zyc.love_baby.components.AppHeaderTitle
+import com.zyc.love_baby.components.AppEmptyHint
+import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppLoadFailed
+import com.zyc.love_baby.components.AppPullRefreshItem
+import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
-import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.components.dragDismissKeyboard
+import com.zyc.love_baby.components.inputBarBottomPaddingDp
 import com.zyc.love_baby.data.model.WishInfo
-import com.zyc.love_baby.features.chat.chatDayLabelFriendly
-import com.zyc.love_baby.features.chat.chatHHmm
+import com.zyc.love_baby.state.chatDayLabelFriendly
+import com.zyc.love_baby.state.chatHHmm
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
-import com.zyc.love_baby.features.mood.TimelineLoadFailed
-import com.zyc.love_baby.features.mood.TimelineLoading
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.WishApi
 import com.zyc.love_baby.state.SessionStore
-import com.zyc.love_baby.state.nowEpochMs
-import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -83,10 +76,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /** 文本长度上限(与服务端 AppWishCreateReqVO @Length(max=64) 对齐;maxLength 原生层拒绝 + take 兜底) */
 private const val WISH_INPUT_MAX_LENGTH = 64
-
-// 下拉刷新指示器最短可见时长(三页同值:MomentPage/ChatPage/WishListPage,注释互引):
-// 本地服务端往返几十 ms,不设下限则「刷新中…」一闪而过,用户无法确认刷新是否发生
-private const val REFRESH_MIN_VISIBLE_MS = 600L
 
 // 历史区折叠预览条数(2026-10-18 重构):已完成默认只显最近 N 条,其余收进「展开更早的 X 条」
 // ——历史不喧宾夺主,进页视口直达待点亮区才是行动项
@@ -97,7 +86,8 @@ private const val WISH_DONE_PREVIEW_COUNT = 3
  * 用法:我的页「恋爱清单」菜单 RouterModule.openPage 打开;返回键 closePage。
  *      独立二级页(MomentPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:WishApi/WishInfo(页内自持不进 AppState,D-19g——页销毁即弃,登出/解绑零 reset 接线);
- *      AppCheckbox(勾选);chat.chatDayLabelFriendly(完成时间文案);mood.TimelineLoading/LoadFailed;
+ *      AppCheckbox(勾选);chat.chatDayLabelFriendly(完成时间文案);components.AppLoading/AppLoadFailed
+ *      (原 mood.Timeline 同款,收编单源);
  *      couple 组 toast;RouterModule(返回)
  * 事件:返回钮 closePage;点行卡片/勾选框 → 详情弹框(创建/完成时间 + 操作;2026-10-17 交互修订:
  *      完成与取消完成一律经弹框确认,防误点亮——完成会自动发庆祝消息);弹框 [已完成]/[取消完成]
@@ -361,20 +351,16 @@ internal fun WishListPage(pager: Pager) {
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AppGradientHeader {
-                Box(
-                    modifier = Modifier.size(38.dp)
-                        .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                        .clickable {
-                            pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(AppIconType.ChevronLeft, Color.White, Modifier.size(20.dp))
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                AppHeaderTitle("恋爱清单", "把想一起做的事,一个个点亮")
-                Spacer(modifier = Modifier.weight(1f))
+            // 二级页头单源化 AppSubPageHeader(38dp 白 25% 圆返回钮 + Spacer10 + 标题列,
+            // 与原件同构;原标题列与尾计数之间的 weight(1f) Spacer 已由 AppHeaderTitle 内建
+            // weight(1f) 等价承接——标题恒左对齐、计数恒贴右,视觉不变)
+            AppSubPageHeader(
+                "恋爱清单",
+                "把想一起做的事,一个个点亮",
+                onBack = {
+                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                },
+            ) {
                 // 空表不显「0/0 已完成」(2026-10-18 重构:空态显计数是无意义噪音)
                 if (wishes.isNotEmpty()) {
                     AppTag(
@@ -390,31 +376,9 @@ internal fun WishListPage(pager: Pager) {
             }
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth()
-                    // Q3 拖拽收键盘(TodoPage 同款被动观察器,三个不可妥协点见铁律13④):
-                    // ①全程不消费事件(原生滚动/行点击无感)②Initial pass + 读忽略消费标记的位移
-                    // ③竖向越 touchSlop 且竖向占优才收。key=focusManager 页内稳定实例
-                    .pointerInput(focusManager) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(
-                                requireUnconsumed = false,
-                                pass = PointerEventPass.Initial,
-                            )
-                            var dx = 0f
-                            var dy = 0f
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                if (!change.pressed) break
-                                val delta = change.positionChangeIgnoreConsumed()
-                                dx += abs(delta.x)
-                                dy += abs(delta.y)
-                                if (dy > viewConfiguration.touchSlop && dy > dx) {
-                                    focusManager.clearFocus()
-                                    break
-                                }
-                            }
-                        }
-                    },
+                    // Q3 拖拽收键盘(TodoPage 同款,微信语义):被动观察器已单源化到
+                    // components.dragDismissKeyboard(铁律13④ 三不可妥协点见组件注释)
+                    .dragDismissKeyboard(),
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 // 删除确认/详情弹框开着时关列表滚动(F6:遮罩 clickable 不吃拖拽,背景列表原生
@@ -422,39 +386,33 @@ internal fun WishListPage(pager: Pager) {
                 userScrollEnabled = deleteTarget == null && detailTarget == null,
             ) {
                 // 下拉刷新(官方 pullToRefreshItem 须为首个 item,MomentPage 先例):重拉全量。
-                // 最短驻留(2026-10-17 真机反馈「松手立马恢复原状,不知道好没好」):本地服务端
-                // 几十 ms 即回,「刷新中…」一闪而过——不足 REFRESH_MIN_VISIBLE_MS 补齐再收;
-                // 失败 toast(成功不 toast,清单自己会更新,肉眼可辨)
-                pullToRefreshItem(
-                    state = pullState,
-                    onRefresh = {
-                        refreshing = true
-                        scope.launch {
-                            val t0 = nowEpochMs()
-                            val ok = fetchFirst()
-                            val elapsed = nowEpochMs() - t0
-                            if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
-                            if (!ok) toastCouple(pager, "刷新失败，请重试")
-                            refreshing = false
-                        }
-                    },
-                    scrollState = listState,
-                ) { _, isRefreshing, _ ->
-                    Text(
-                        if (isRefreshing) "刷新中…" else "下拉刷新",
-                        color = AppTheme.TextTertiary,
-                        fontSize = 12.sp,
-                    )
-                }
+                // 最短驻留 + 失败 toast 已收口在 AppPullRefreshItem(components,三页单源,
+                // REFRESH_MIN_VISIBLE_MS=600L 同常数;成功不 toast,清单自己会更新,肉眼可辨)
+                AppPullRefreshItem(
+                    pullState = pullState,
+                    listState = listState,
+                    scope = scope,
+                    setRefreshing = { refreshing = it },
+                    pager = pager,
+                    onRefresh = { fetchFirst() },
+                )
                 when {
                     loading -> item {
-                        TimelineLoading()
+                        AppLoading()
                     }
                     loadFailed -> item {
-                        TimelineLoadFailed(onRetry = { refresh() })
+                        AppLoadFailed(onRetry = { refresh() })
                     }
                     wishes.isEmpty() -> item {
-                        WishEmptyHint(modifier = Modifier.fillMaxWidth().padding(top = 48.dp))
+                        // 空态收编 components.AppEmptyHint(circled=false 裸 icon 形态:
+                        // Flag TextTertiary 44dp + 13sp TextSecondary 标题,与原件逐字一致)
+                        AppEmptyHint(
+                            AppIconType.Flag,
+                            "还没有心愿,许一个吧",
+                            modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                            circled = false,
+                            iconSize = 44.dp,
+                        )
                     }
                 }
                 // 「已点亮」历史区(2026-10-18 重构):组头 + 折叠的最近记录 + 展开钮。
@@ -541,9 +499,13 @@ internal fun WishListPage(pager: Pager) {
                 item {
                     Spacer(
                         modifier = Modifier.height(
-                            max(
-                                32.dp + inputBarHeight + navBarSafePaddingDp(),
-                                keyboardHeight.dp + navBarSafePaddingDp() + 32.dp + inputBarHeight,
+                            // 尾 Spacer 让位公式单源化(收起 = 32dp 呼吸 + 条高 + navBar,键盘弹起 =
+                            // 键盘高 + navBar + 32dp 呼吸 + 条高;rest/extra 均为「32dp + 条高」
+                            // 显式传参,与原件逐字一致)
+                            inputBarBottomPaddingDp(
+                                keyboardHeight,
+                                rest = 32.dp + inputBarHeight,
+                                extra = 32.dp + inputBarHeight,
                             ),
                         ),
                     )
@@ -553,8 +515,9 @@ internal fun WishListPage(pager: Pager) {
 
         // 底部添加条(悬浮浮岛;2026-10-18 修独立页几何——原照抄 TodoPage 的 86dp 收起让位,
         // 那是给 MainPager 浮岛底栏留的,本页为 @Page 二级页无底栏,收起应贴底只留呼吸 12dp
-        // +系统导航栏安全区;键盘避让公式保留 TodoPage 定稿:键盘 height 不含导航栏区域,
-        // 须叠加 navBarSafePaddingDp 补齐,弹起 bottom = 键盘高+navBar+12。
+        // +系统导航栏安全区;键盘避让公式保留 TodoPage 定稿,已单源化
+        // components.inputBarBottomPaddingDp(rest=12dp 显式传参,键盘分支 = 键盘高+navBar+12
+        // 与原件逐字一致)。
         // 2026-10-18 层级修:必须组合在两弹框之前——Kuikly 后组合者在上,原排最后导致
         // 弹框灰幕盖不住输入条(真机实证),调序后遮罩盖住输入条且触摸被灰幕吃掉)
         Row(
@@ -562,12 +525,7 @@ internal fun WishListPage(pager: Pager) {
                 .padding(horizontal = AppTheme.PageHPadding)
                 // 回写条体实际高度(不含 bottom padding)驱动尾 Spacer 让位
                 .onSizeChangedDp { inputBarHeight = it.height.dp }
-                .padding(
-                    bottom = max(
-                        12.dp + navBarSafePaddingDp(),
-                        keyboardHeight.dp + navBarSafePaddingDp() + 12.dp,
-                    ),
-                )
+                .padding(bottom = inputBarBottomPaddingDp(keyboardHeight, rest = 12.dp))
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -861,23 +819,6 @@ private fun WishDetailOverlay(
                 }
             }
         }
-    }
-}
-
-/** 空态:旗帜图标 + 引导文案 */
-@Composable
-private fun WishEmptyHint(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        AppIcon(AppIconType.Flag, AppTheme.TextTertiary, Modifier.size(44.dp))
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            "还没有心愿,许一个吧",
-            color = AppTheme.TextSecondary,
-            fontSize = 13.sp,
-        )
     }
 }
 

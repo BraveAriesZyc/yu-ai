@@ -9,24 +9,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.foundation.background
-import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
-import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.lazy.items
 import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
-import com.tencent.kuikly.compose.material3.pullToRefreshItem
 import com.tencent.kuikly.compose.material3.rememberPullToRefreshState
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
@@ -41,26 +39,18 @@ import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.components.AppFilterChipRow
-import com.zyc.love_baby.components.AppGradientHeader
-import com.zyc.love_baby.components.AppHeaderTitle
-import com.zyc.love_baby.components.AppIcon
-import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppLoadFailed
+import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppPillChip
+import com.zyc.love_baby.components.AppPullRefreshItem
+import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.data.model.InspirationInfo
-import com.zyc.love_baby.features.couple.toastCouple
-import com.zyc.love_baby.features.mood.TimelineLoadFailed
-import com.zyc.love_baby.features.mood.TimelineLoading
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.InspirationApi
-import com.zyc.love_baby.state.nowEpochMs
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-// 下拉刷新指示器最短可见时长(MomentPage/ChatPage/WishListPage 同值,注释互引):
-// 本地服务端往返几十 ms,不设下限则「刷新中…」一闪而过,用户无法确认刷新是否发生
-private const val REFRESH_MIN_VISIBLE_MS = 600L
 
 /**
  * InspirationPage — 约会灵感页(@Page 注册名 "inspirationPage",M17):分类 chips + 灵感卡列表
@@ -68,7 +58,8 @@ private const val REFRESH_MIN_VISIBLE_MS = 600L
  *      返回键 closePage;独立二级页(WishListPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:InspirationApi/InspirationInfo(页内自持不进 AppState,D-19g——页销毁即弃);
  *      AppFilterChipRow(分类 chips,components 通用件,M17 本页需求同源抽离);
- *      AppTag(卡片分类标签);mood.TimelineLoading/LoadFailed;couple.toastCouple;RouterModule
+ *      AppPullRefreshItem(下拉刷新收口,components 三页单源);AppTag(卡片分类标签);
+ *      components.AppLoading/AppLoadFailed;RouterModule
  * 事件:返回钮 closePage;chips onSelect 切分类(id 序);头部「换一换」本地随机打乱当前分类;
  *      下拉刷新重拉全量(官方 pullToRefreshItem 须为首个 item,MomentPage 先例)
  * 功能:
@@ -76,7 +67,7 @@ private const val REFRESH_MIN_VISIBLE_MS = 600L
  *    展示列表 display 单独收口 recomputeDisplay(shuffle)——切分类保持 id 序,「换一换」
  *    对当前分类 filtered.shuffled();分类动态聚合(distinct 首现序),首枚「全部」
  *  - 加载/失败/空态复用 mood 域组件(fetchFirst 口径同 WishListPage:loadFailed 仅空表才置,
- *    刷新失败保留原列表;最短驻留 REFRESH_MIN_VISIBLE_MS 同三页);失败 toast
+ *    刷新失败保留原列表;最短驻留收口在 AppPullRefreshItem,三页同值);失败 toast
  *  - 卡片:标题 Bold + 分类标签(brand 12% 透底)+ 描述;title 空(运营未填)整卡只渲染描述
  */
 @Page("inspirationPage", supportInLocal = true)
@@ -146,29 +137,22 @@ internal fun InspirationPage(pager: Pager) {
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AppGradientHeader {
-                Box(
-                    modifier = Modifier.size(38.dp)
-                        .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                        .clickable {
-                            pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(AppIconType.ChevronLeft, Color.White, Modifier.size(20.dp))
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                AppHeaderTitle("约会灵感", "周末去哪儿玩")
-                Spacer(modifier = Modifier.weight(1f))
+            AppSubPageHeader(
+                "约会灵感",
+                "周末去哪儿玩",
+                onBack = {
+                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                },
+            ) {
                 // 「换一换」(本地随机打乱当前分类,灵感页专属趣味;空表无意义隐藏)
                 if (display.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier.background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                            .clickable { recomputeDisplay(shuffle = true) }
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                    ) {
-                        Text("换一换", color = Color.White, fontSize = 11.sp)
-                    }
+                    AppPillChip(
+                        "换一换",
+                        bg = Color.White.copy(alpha = 0.25f),
+                        corner = 12.dp,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        fontSize = 11.sp,
+                    ) { recomputeDisplay(shuffle = true) }
                 }
             }
             // 分类 chips 固定区(M20 粘顶:原 LazyColumn 内 item 随内容滚走,挪出列表=滚动恒定粘顶;
@@ -192,31 +176,19 @@ internal fun InspirationPage(pager: Pager) {
                 state = listState,
             ) {
                 // 下拉刷新(官方 pullToRefreshItem 须为首个 item,MomentPage 先例):重拉全量。
-                // 最短驻留 + 失败 toast(三页同款,REFRESH_MIN_VISIBLE_MS 注释互引)
-                pullToRefreshItem(
-                    state = pullState,
-                    onRefresh = {
-                        refreshing = true
-                        scope.launch {
-                            val t0 = nowEpochMs()
-                            val ok = fetchFirst()
-                            val elapsed = nowEpochMs() - t0
-                            if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
-                            if (!ok) toastCouple(pager, "刷新失败，请重试")
-                            refreshing = false
-                        }
-                    },
-                    scrollState = listState,
-                ) { _, isRefreshing, _ ->
-                    Text(
-                        if (isRefreshing) "刷新中…" else "下拉刷新",
-                        color = AppTheme.TextTertiary,
-                        fontSize = 12.sp,
-                    )
-                }
+                // 最短驻留 + 失败 toast 已收口在 AppPullRefreshItem(components,三页单源,
+                // REFRESH_MIN_VISIBLE_MS=600L 同常数;成功不 toast,数据自己会更新,肉眼可辨)
+                AppPullRefreshItem(
+                    pullState = pullState,
+                    listState = listState,
+                    scope = scope,
+                    setRefreshing = { refreshing = it },
+                    pager = pager,
+                    onRefresh = { fetchFirst() },
+                )
                 when {
-                    loading -> item { TimelineLoading() }
-                    loadFailed -> item { TimelineLoadFailed(onRetry = {
+                    loading -> item { AppLoading() }
+                    loadFailed -> item { AppLoadFailed(onRetry = {
                         loading = true
                         scope.launch { fetchFirst(); loading = false }
                     }) }

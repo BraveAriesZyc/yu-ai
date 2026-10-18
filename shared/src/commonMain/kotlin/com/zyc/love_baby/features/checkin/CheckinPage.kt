@@ -34,18 +34,16 @@ import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
-import com.zyc.love_baby.components.AppGradientHeader
-import com.zyc.love_baby.components.AppHeaderTitle
-import com.zyc.love_baby.components.AppIcon
-import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppLoadFailed
+import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppMonthNav
+import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.CheckinInfo
 import com.zyc.love_baby.data.model.CheckinSummaryInfo
 import com.zyc.love_baby.features.couple.toastCoupleResult
-import com.zyc.love_baby.features.mood.TimelineLoadFailed
-import com.zyc.love_baby.features.mood.TimelineLoading
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.state.SessionStore
 import com.zyc.love_baby.state.CheckinStore
@@ -145,29 +143,22 @@ internal fun CheckinPage(pager: Pager) {
         Column(
             modifier = Modifier.fillMaxSize().background(theme.bg),
         ) {
-            AppGradientHeader {
-                Box(
-                    modifier = Modifier.size(38.dp)
-                        .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(19.dp))
-                        .clickable {
-                            pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(AppIconType.ChevronLeft, Color.White, Modifier.size(20.dp))
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                AppHeaderTitle("每日打卡", "一起坚持的小浪漫")
-            }
+            AppSubPageHeader(
+                "每日打卡",
+                "一起坚持的小浪漫",
+                onBack = {
+                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                },
+            )
             when {
                 loading -> Box(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     contentAlignment = Alignment.Center,
-                ) { TimelineLoading() }
+                ) { AppLoading() }
                 loadFailed -> Box(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     contentAlignment = Alignment.Center,
-                ) { TimelineLoadFailed { load() } }
+                ) { AppLoadFailed { load() } }
                 else -> Column(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 ) {
@@ -310,19 +301,13 @@ private fun CheckinCalendarCard(
             .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
             .padding(16.dp),
     ) {
-        // 年月导航 + 图例
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MonthNavArrow(AppIconType.ChevronLeft, onPrev)
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                "${year}年${month}月",
-                color = AppTheme.TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            MonthNavArrow(AppIconType.ChevronRight, onNext)
-        }
+        // 年月导航(AppMonthNav 单源,原 15sp Bold/30dp 透明底 18dp 箭头 = 组件默认+iconSize 覆写)+ 图例
+        AppMonthNav(
+            label = "${year}年${month}月",
+            onPrev = onPrev,
+            onNext = onNext,
+            iconSize = 18.dp,
+        )
         Spacer(modifier = Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -442,19 +427,6 @@ private fun PartnerRingDot() {
             modifier = Modifier.size(5.dp)
                 .background(AppTheme.CardBg, RoundedCornerShape(3.dp)),
         )
-    }
-}
-
-/** 月份切换箭头钮(透明底与 clickable 同节点,铁律⑤;MoodPage.MonthNavButton 同款) */
-@Composable
-private fun MonthNavArrow(icon: AppIconType, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier.size(30.dp)
-            .background(Color.Transparent, RoundedCornerShape(15.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        AppIcon(icon, AppTheme.TextSecondary, Modifier.size(18.dp))
     }
 }
 

@@ -1,38 +1,15 @@
 package com.zyc.love_baby.features.auth
 
-import com.tencent.kuikly.compose.foundation.layout.Column
-import com.tencent.kuikly.compose.foundation.layout.Spacer
-import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
-import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
-import com.tencent.kuikly.compose.foundation.layout.height
-import com.tencent.kuikly.compose.foundation.layout.padding
-import com.tencent.kuikly.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.tencent.kuikly.compose.foundation.layout.Box
-import com.tencent.kuikly.compose.foundation.background
-import com.tencent.kuikly.compose.foundation.clickable
-import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
-import com.tencent.kuikly.compose.material3.Text
-import com.tencent.kuikly.compose.ui.Alignment
-import com.tencent.kuikly.compose.ui.Modifier
-import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
-import com.tencent.kuikly.compose.ui.text.font.FontWeight
-import com.tencent.kuikly.compose.ui.unit.dp
-import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.setTimeout
-import com.zyc.love_baby.components.AppIcon
-import com.zyc.love_baby.components.AppIconType
-import com.zyc.love_baby.components.AppTheme
-import com.zyc.love_baby.components.ThemeStore
-import com.zyc.love_baby.components.navBarSafePaddingDp
-import com.zyc.love_baby.components.statusBarPaddingDp
+import com.zyc.love_baby.components.AppBrandIntroScreen
 import com.zyc.love_baby.state.SessionStore
 
 /**
@@ -74,63 +51,25 @@ internal fun GatePanel(pager: Pager) {
         pager.setTimeout(0) { panel = target }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(ThemeStore.current.brandBrush)
-            .clickable { },
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(statusBarPaddingDp() + 40.dp))
-            GateHeader()
-            Spacer(modifier = Modifier.height(26.dp))
-            // 三面板纯条件渲染切换(子视图整体销毁,无残留;铁律④禁 Crossfade)
-            when (panel) {
-                AuthPanel.LOGIN -> LoginPanel(
-                    pager = pager,
-                    onGoRegister = { switchPanel(AuthPanel.REGISTER) },
-                    onGoReset = { switchPanel(AuthPanel.RESET) },
-                )
-                AuthPanel.REGISTER -> RegisterPanel(
-                    pager = pager,
-                    onBackToLogin = { switchPanel(AuthPanel.LOGIN) },
-                )
-                AuthPanel.RESET -> ResetPanel(
-                    pager = pager,
-                    onBackToLogin = { switchPanel(AuthPanel.LOGIN) },
-                )
-            }
-            Spacer(modifier = Modifier.height(24.dp + navBarSafePaddingDp()))
+    // 品牌引导壳(components/AppBrandIntroScreen 单源):brandBrush 全屏底 + hero 头
+    // (64dp 白 30% 圆 + Heart + 26sp 标题 + 13sp 白 85% 副标题)+ statusBar+40 顶留白 +
+    // 26/24+navBar 上下间距,与原自绘骨架(含已删 GateHeader)逐值同构;三面板表单走 content 槽
+    AppBrandIntroScreen(title = "宝贝 & 我", subtitle = "登录后开启你们的小世界") {
+        // 三面板纯条件渲染切换(子视图整体销毁,无残留;铁律④禁 Crossfade)
+        when (panel) {
+            AuthPanel.LOGIN -> LoginPanel(
+                pager = pager,
+                onGoRegister = { switchPanel(AuthPanel.REGISTER) },
+                onGoReset = { switchPanel(AuthPanel.RESET) },
+            )
+            AuthPanel.REGISTER -> RegisterPanel(
+                pager = pager,
+                onBackToLogin = { switchPanel(AuthPanel.LOGIN) },
+            )
+            AuthPanel.RESET -> ResetPanel(
+                pager = pager,
+                onBackToLogin = { switchPanel(AuthPanel.LOGIN) },
+            )
         }
-    }
-}
-
-@Composable
-private fun GateHeader() {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-            .padding(horizontal = AppTheme.PageHPadding),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // 半透明白底圆 + 心形白 icon(与 MinePage 头像同款画法)
-        Box(
-            modifier = Modifier.size(64.dp)
-                .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(32.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIcon(AppIconType.Heart, Color.White, Modifier.size(30.dp))
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-        Text(
-            "宝贝 & 我",
-            color = Color.White,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            "登录后开启你们的小世界",
-            color = Color.White.copy(alpha = 0.85f),
-            fontSize = 13.sp,
-        )
     }
 }

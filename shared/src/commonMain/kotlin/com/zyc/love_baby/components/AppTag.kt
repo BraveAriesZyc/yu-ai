@@ -8,6 +8,7 @@ import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
+import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.Dp
 import com.tencent.kuikly.compose.ui.unit.TextUnit
 import com.tencent.kuikly.compose.ui.unit.dp
@@ -18,7 +19,8 @@ import com.tencent.kuikly.compose.ui.unit.sp
  * 用法:AppTag("日常", bgColor = tagColor.copy(alpha = 0.12f), textColor = tagColor)
  * 依赖:无
  * 事件:无(需要点击时外层包 clickable Box)
- * 功能:待办分类标签/头部计数胶囊/状态小标签通用;字号与内边距可调
+ * 功能:待办分类标签/头部计数胶囊/状态小标签通用;字号与内边距可调;fontWeight 透传
+ *      (默认 null 不加粗,存量调用零影响)
  */
 @Composable
 fun AppTag(
@@ -30,12 +32,13 @@ fun AppTag(
     corner: Dp = 5.dp,
     hPadding: Dp = 6.dp,
     vPadding: Dp = 2.dp,
+    fontWeight: FontWeight? = null,
 ) {
     Box(
         modifier = modifier
             .background(bgColor, RoundedCornerShape(corner))
             .padding(horizontal = hPadding, vertical = vPadding),
     ) {
-        Text(text, color = textColor, fontSize = fontSize)
+        Text(text, color = textColor, fontSize = fontSize, fontWeight = fontWeight)
     }
 }
