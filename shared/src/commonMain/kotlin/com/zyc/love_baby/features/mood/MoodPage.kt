@@ -70,6 +70,7 @@ import com.zyc.love_baby.state.moodCategories
 import com.zyc.love_baby.state.moodRecordColor
 import com.zyc.love_baby.state.monthParts
 import com.zyc.love_baby.state.monthShift
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -104,6 +105,7 @@ fun MoodPage(
     onGoChat: () -> Unit,
     onOpenManage: () -> Unit,
     listScrollEnabled: Boolean = true,
+    pageVisible: Boolean = false, // M19:5s 静默轮询门控(MainPager 下传;常驻 Tab 离页须停)
 ) {
     val theme = ThemeStore.current
     val scope = rememberCoroutineScope()
@@ -129,6 +131,17 @@ fun MoodPage(
     LaunchedEffect(CoupleStore.foregroundTick) {
         if (CoupleStore.foregroundTick > 0 && CoupleStore.bindState == CoupleBindState.BOUND) {
             today = currentDate(pager)
+        }
+    }
+
+    // 5s 静默轮询(M19,§7.4 对账先例 wish/moment):本页是 HorizontalPager 常驻 Tab,轮询必须
+    // pageVisible 门控(离页取消)。仅当月对账(fetchSilentMood 内守卫:翻历史月不打扰/切月
+    // 竞态重查/相等跳过);先 delay 再拉(首拉由上方 bindState effect 负责,不重复),失败静默
+    LaunchedEffect(pageVisible, CoupleStore.bindState) {
+        if (!pageVisible || CoupleStore.bindState != CoupleBindState.BOUND) return@LaunchedEffect
+        while (true) {
+            delay(5_000L)
+            MoodStore.fetchSilentMood(pager)
         }
     }
 

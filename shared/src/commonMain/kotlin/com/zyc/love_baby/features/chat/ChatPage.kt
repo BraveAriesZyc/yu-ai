@@ -581,20 +581,26 @@ fun ChatPage(
                 userScrollEnabled = imagePreviewUrl.isEmpty() && recallTargetId.isEmpty(),
             ) {
                 // 最短驻留(2026-10-17 真机反馈「松手立马恢复原状,不知道好没好」,三页同款:
-                // MomentPage/WishListPage):本地服务端几十 ms 即回,「刷新中…」一闪而过——
-                // 不足 REFRESH_MIN_VISIBLE_MS 补齐再收;失败 toast(增量拉失败原本完全静默)
+                // MomentPage/WishListPage):本地服务端几十 ms 即回,「加载中…」一闪而过——
+                // 不足 REFRESH_MIN_VISIBLE_MS 补齐再收;失败 toast(历史拉失败原本完全静默)。
+                // M19 语义正位:顶部=最旧消息端,下拉=加载更早历史(原下拉拉增量在顶部几乎恒空,
+                // 拉新靠 WS+5s 轮询+回前台既有通道);前插后滚动零改动(Kuikly LazyList 首可见项
+                // 按 key 重锚,铁律13③,2.29 源码核实——手动 scrollToItem 反而会把历史藏到视口上方)
                 pullToRefreshItem(
                     state = pullState,
                     onRefresh = {
                         refreshing = true
                         scope.launch {
                             val t0 = nowEpochMs()
-                            val result = ChatStore.loadIncrement(pager)
-                            val ok = result is ApiResult.Ok
+                            val noMore = !ChatStore.hasMore
+                            val ok = noMore || ChatStore.loadHistory(pager) is ApiResult.Ok
                             if (ok) loadFailed = false
                             val elapsed = nowEpochMs() - t0
                             if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
-                            if (!ok) toastCouple(pager, "刷新失败，请重试")
+                            when {
+                                noMore -> toastCouple(pager, "没有更早的消息了")
+                                !ok -> toastCouple(pager, "加载失败，请重试")
+                            }
                             refreshing = false
                         }
                     },
@@ -602,9 +608,9 @@ fun ChatPage(
                 ) { progress, isRefreshing, _ ->
                     Text(
                         when {
-                            isRefreshing -> "刷新中…"
-                            progress >= 1f -> "松手刷新"
-                            else -> "下拉刷新"
+                            isRefreshing -> "加载中…"
+                            progress >= 1f -> "松手加载"
+                            else -> "下拉加载更早"
                         },
                         color = AppTheme.TextTertiary,
                         fontSize = 12.sp,

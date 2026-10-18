@@ -342,8 +342,10 @@ internal fun MainPageImpl(pager: BasePager) {
                     deleteTargetId = todoDeleteTargetId,
                     onSetDeleteTarget = { todoDeleteTargetId = it },
                     listScrollEnabled = !overlayActive,
+                    pageVisible = selectedTab == 1, // M19:5s 静默轮询门控(常驻 Tab 离页须停)
                 )
-                2 -> MoodPage(pager, onGoChat = goChat, onOpenManage = openMoodManage, listScrollEnabled = !overlayActive)
+                // M19:pageVisible 门控 5s 静默轮询(仅当月对账,离页停)
+                2 -> MoodPage(pager, onGoChat = goChat, onOpenManage = openMoodManage, listScrollEnabled = !overlayActive, pageVisible = selectedTab == 2)
                 3 -> ChatPage(
                     pager,
                     myNickname = profile?.nickname.orEmpty(),
@@ -618,16 +620,18 @@ internal fun MainPageImpl(pager: BasePager) {
             }
         }
 
-        // 聊天页停留轮询(M3 实施修正,§7.4;F14 退避同构):设计原触发点(进页/下拉/本端发送)不含
-        // 停留期间自动刷新,对方发消息须切 Tab 才可见——补 5s 静默增量轮询收口此体验缺口。
-        // 仅 BOUND 且停留聊天 Tab(3)时运行,selectedTab 翻转即取消/重启;loadIncrement 幂等
-        // (lastId 游标 + Store 层 pull 串行 + 追加去重),与切 Tab 首组合拉取并发亦安全;
-        // 失败静默(只读降级,§11);连败 3 次进退避 60s→120s→300s(封顶)继续重试而非暂停退出
-        // (F14:与上方 couple 轮询同构,轮询永不永久死亡,用户停留等回复不静默断流),
-        // 任一次成功即回 5s 常规间隔;回前台(foregroundTick 入 key)effect 重启立即恢复常规节奏;
-        // 先 delay 再拉(进页首拉由页面内 effect 负责,不重复)
-        if (selectedTab == 3 && SessionStore.isLoggedIn && CoupleStore.bindState == CoupleBindState.BOUND) {
-            LaunchedEffect(selectedTab, CoupleStore.foregroundTick) {
+        // 全局心跳轮询(M3 停留轮询的 M19 全局化,§7.4;F14 退避同构):原仅停留聊天 Tab(3)时
+        // 5s 增量拉取;M19 起放宽为登录+BOUND 任意 Tab 常驻——红点(unreadCount)全 Tab 消费、
+        // WS 断线退避期不再停摆:循环体内按当前页分派,聊天页走增量拉取(含 markRead 尾钩子),
+        // 其他页走 refreshUnread 轻 GET(只刷红点,不打消息列表)。⚠ 分派须循环体内新鲜读
+        // pagerState.targetPage——组合期 selectedTab 一次性求值,闭包引用是陈旧值。
+        // effect key 不含 selectedTab:切 Tab 不再杀循环/重置退避(顺带改善 F14 节奏);
+        // loadIncrement 幂等(lastId 游标 + Store 层 pull 串行 + 追加去重),与切 Tab 首组合拉取
+        // 并发亦安全;失败静默(只读降级,§11);连败 3 次进退避 60s→120s→300s(封顶)继续重试
+        // 而非暂停退出(轮询永不永久死亡),任一次成功即回 5s 常规间隔;回前台(foregroundTick 入 key)
+        // effect 重启立即恢复常规节奏;先 delay 再拉(进页首拉由页面内 effect 负责,不重复)
+        if (SessionStore.isLoggedIn && CoupleStore.bindState == CoupleBindState.BOUND) {
+            LaunchedEffect(CoupleStore.foregroundTick) {
                 var failures = 0
                 var backoffStep = -1 // -1 = 5s 常规间隔;≥0 = POLL_BACKOFF_STEPS_MS 下标
                 while (true) {
@@ -641,9 +645,13 @@ internal fun MainPageImpl(pager: BasePager) {
                         },
                     )
                     // WS 触发器断线自愈(D-16):每轮顺手 ensure(幂等,握手轻量无风暴)——
-                    // 网络闪断后 5s 内重连,恢复即时推送;本 effect 生命周期即重连节奏,零新增并发结构
+                    // 网络闪断后 5s 内重连,恢复即时推送;自愈范围从「仅聊天 Tab」扩到任意 Tab
                     ChatPushStore.connect(pager)
-                    val result = ChatStore.loadIncrement(pager)
+                    val result = if (pagerState.targetPage == 3) {
+                        ChatStore.loadIncrement(pager)
+                    } else {
+                        ChatStore.refreshUnread(pager)
+                    }
                     if (result is ApiResult.Ok) {
                         failures = 0
                         backoffStep = -1 // 成功即回常规节奏(F8 退避恢复)

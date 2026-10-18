@@ -236,6 +236,22 @@ internal object TodoStore {
     val doneCount: Int get() = todos.count { it.done }
     val pendingCount: Int get() = todos.count { !it.done }
 
+    /** 写在飞标志(M19 轮询守卫):toggle/delete/add 乐观窗口内置位,fetchSilent 跳过本轮防抹写态
+     *  (WishListPage F2 同形);必须收口在 Store——delete 由 MainPager.submitTodoDelete 发起,页级标志盖不住 */
+    private var opInFlight = false
+
+    /** TodoInfo 列表 → TodoItem 列表(loadAll/fetchSilent 共用映射:tag/color 空值兜底默认) */
+    private fun toTodoItems(infos: List<TodoInfo>): List<TodoItem> = infos.map { info ->
+        TodoItem(
+            id = info.id,
+            title = info.title,
+            tag = info.tag.ifEmpty { TODO_DEFAULT_TAG },
+            tagColor = colorFromHex(info.color.ifEmpty { TODO_DEFAULT_COLOR_HEX }),
+            done = info.done,
+            createTime = info.createTime,
+        )
+    }
+
     /**
      * 全量拉取(§7.4 拉取触发点):服务端按 create_time asc,id asc 排序,端上整表覆盖(不重排)。
      * 失败静默——只读降级,旧数据可见(§11),toast 交给「写失败」场景
@@ -243,67 +259,94 @@ internal object TodoStore {
     suspend fun loadAll(pager: Pager): ApiResult {
         val result = TodoApi.list(pager)
         if (result is ApiResult.Ok) {
-            todos = TodoInfo.listFrom(result.dataArray).map { info ->
-                TodoItem(
-                    id = info.id,
-                    title = info.title,
-                    tag = info.tag.ifEmpty { TODO_DEFAULT_TAG },
-                    tagColor = colorFromHex(info.color.ifEmpty { TODO_DEFAULT_COLOR_HEX }),
-                    done = info.done,
-                    createTime = info.createTime,
-                )
-            }
+            todos = toTodoItems(TodoInfo.listFrom(result.dataArray))
+        }
+        return result
+    }
+
+    /**
+     * 5s 静默轮询(M19,TodoPage pageVisible 门控):服务端真值整表对账,data class 相等跳过落态
+     * (纯省重组,同 WishListPage/MomentPage 先例);写在飞跳过本轮(F2:防轮询回包抹乐观态/
+     * 未回包新增),下轮自愈;失败静默(§11)
+     */
+    suspend fun fetchSilent(pager: Pager): ApiResult {
+        if (opInFlight) return ApiResult.Ok(JSONObject())
+        val result = TodoApi.list(pager)
+        if (result is ApiResult.Ok) {
+            val fresh = toTodoItems(TodoInfo.listFrom(result.dataArray))
+            if (fresh != todos) todos = fresh
         }
         return result
     }
 
     /**
      * 勾选/取消:乐观翻转 → update 五字段全量上送(last-write,§7.4 D-6)→ 失败回滚 + 调用方 toast。
-     * 成功不回填 update 回包:乐观态即端上最新值,回包仅作确认;并发覆盖由下次 loadAll 校准。
+     * 成功不回填 update 回包:乐观态即端上最新值,回包仅作确认;并发覆盖由轮询/下次 loadAll 校准。
      * 目标不存在(id 已被对端删)直接幂等返回 Ok,不请求不 toast
      */
     suspend fun toggle(pager: Pager, id: String): ApiResult {
         val target = todos.firstOrNull { it.id == id } ?: return ApiResult.Ok(JSONObject())
         val snapshot = todos
-        todos = todos.map { if (it.id == id) it.copy(done = !it.done) else it }
-        val updated = todos.first { it.id == id }
-        val result = TodoApi.update(pager, id, updated.title, updated.done, updated.tag, colorToHex(updated.tagColor))
-        if (result !is ApiResult.Ok) {
-            todos = snapshot
+        opInFlight = true
+        try {
+            todos = todos.map { if (it.id == id) it.copy(done = !it.done) else it }
+            val updated = todos.first { it.id == id }
+            val result = TodoApi.update(pager, id, updated.title, updated.done, updated.tag, colorToHex(updated.tagColor))
+            if (result !is ApiResult.Ok) {
+                todos = snapshot
+            }
+            return result
+        } finally {
+            opInFlight = false
         }
-        return result
     }
 
     /** 删除:乐观移除 → delete 失败回滚 + 调用方 toast(§7.4 写穿透失败即回滚) */
     suspend fun delete(pager: Pager, id: String): ApiResult {
         val snapshot = todos
-        todos = todos.filter { it.id != id }
-        val result = TodoApi.delete(pager, id)
-        if (result !is ApiResult.Ok) {
-            todos = snapshot
+        opInFlight = true
+        try {
+            todos = todos.filter { it.id != id }
+            val result = TodoApi.delete(pager, id)
+            if (result !is ApiResult.Ok) {
+                todos = snapshot
+            }
+            return result
+        } finally {
+            opInFlight = false
         }
-        return result
     }
 
     /**
      * 新增:create 成功后用回包(含服务端 id)追加;失败不落任何本地态(调用方 toast,无脏数据,§7.4)。
-     * 不做乐观插入:id 必须来自服务端(LazyColumn key 去重/后续 update/delete 都靠它)
+     * 不做乐观插入:id 必须来自服务端(LazyColumn key 去重/后续 update/delete 都靠它)。
+     * tag/colorHex 默认参(M19 标签选择 UI):既有调用零破坏,TodoPage 传选中标签
      */
-    suspend fun add(pager: Pager, title: String): ApiResult {
-        val result = TodoApi.create(pager, title, TODO_DEFAULT_TAG, TODO_DEFAULT_COLOR_HEX)
-        if (result is ApiResult.Ok) {
-            TodoInfo.from(result.data)?.let { info ->
-                todos = todos + TodoItem(
-                    id = info.id,
-                    title = info.title.ifEmpty { title },
-                    tag = info.tag.ifEmpty { TODO_DEFAULT_TAG },
-                    tagColor = colorFromHex(info.color.ifEmpty { TODO_DEFAULT_COLOR_HEX }),
-                    done = info.done,
-                    createTime = info.createTime,
-                )
+    suspend fun add(
+        pager: Pager,
+        title: String,
+        tag: String = TODO_DEFAULT_TAG,
+        colorHex: String = TODO_DEFAULT_COLOR_HEX,
+    ): ApiResult {
+        opInFlight = true
+        try {
+            val result = TodoApi.create(pager, title, tag, colorHex)
+            if (result is ApiResult.Ok) {
+                TodoInfo.from(result.data)?.let { info ->
+                    todos = todos + TodoItem(
+                        id = info.id,
+                        title = info.title.ifEmpty { title },
+                        tag = info.tag.ifEmpty { tag },
+                        tagColor = colorFromHex(info.color.ifEmpty { colorHex }),
+                        done = info.done,
+                        createTime = info.createTime,
+                    )
+                }
             }
+            return result
+        } finally {
+            opInFlight = false
         }
-        return result
     }
 
     /** 登出/换号清内存(MainPager 接线调用),防上会话待办残留 */
@@ -728,6 +771,28 @@ internal object MoodStore {
         return result
     }
 
+    /** 记录写在飞标志(M19 轮询守卫):recordMood 乐观占位期间 fetchSilentMood 跳过本轮防抹占位(F2 同形) */
+    private var moodWriteInFlight = false
+
+    /**
+     * 5s 静默轮询(M19,MoodPage pageVisible 门控):仅展示月 == 当月才拉(翻历史月不打扰);
+     * 不推 monthReqSeq——乱序防护靠落态前重查 displayMonth == 捕获月(期间已切月,过期回包不落);
+     * moodRecords 相等跳过落态(纯省重组);选项字典不进轮询(写穿透 + 切 Tab 补拉自足);
+     * 失败静默(§11)
+     */
+    suspend fun fetchSilentMood(pager: Pager): ApiResult {
+        if (moodWriteInFlight) return ApiResult.Ok(JSONObject())
+        val month = displayMonth
+        if (month.isEmpty() || month != currentDate(pager).take(7)) return ApiResult.Ok(JSONObject())
+        val result = MoodApi.list(pager, month)
+        if (result is ApiResult.Ok) {
+            if (month != displayMonth) return result // 落态前重查:期间已切月,过期回包不落
+            val rows = MoodRecordInfo.listFrom(result.dataArray)
+            if (rows != moodRecords) moodRecords = rows
+        }
+        return result
+    }
+
     /**
      * 新增选项(§7.4 写穿透):服务端先,回包(含服务端 id)才落态——照 TodoStore.add,防脏 key
      * (选项 id 是记录心情/删除的回传键,必须服务端权威)。回包解析失败(id 空判无效)不落态但按
@@ -781,11 +846,16 @@ internal object MoodStore {
             moodRecords = moodRecords.filterNot { it.userId == SessionStore.userId && it.moodDate == today } +
                 MoodRecordInfo("", SessionStore.userId, today, 0, option.id, option.label, option.emoji, option.colorHex, nowEpochMs())
         }
-        val result = MoodApi.record(pager, optionId)
-        if (result !is ApiResult.Ok) {
-            moodRecords = snapshot
+        moodWriteInFlight = true
+        try {
+            val result = MoodApi.record(pager, optionId)
+            if (result !is ApiResult.Ok) {
+                moodRecords = snapshot
+            }
+            return result
+        } finally {
+            moodWriteInFlight = false
         }
-        return result
     }
 
     /** 登出/换号/解绑清内存(MainPager 接线调用);字典随清——couple 私有,换绑定重新播种 */
@@ -842,6 +912,11 @@ internal object ChatStore {
     var unreadCount by mutableIntStateOf(0)
         private set
 
+    /** 是否还有更早历史可拉(M19 下拉加载):历史回包条数 < 单页 limit = 到头;覆盖拉(resync/首拉)
+     *  丢弃已前插历史回「最近一页」窗口,hasMore 随窗口复位可重拉 */
+    var hasMore by mutableStateOf(true)
+        private set
+
     /** 聊天页可见态(ChatPage effect 上报,M11):true=停留本页,pull 落态走 markRead;false=走 refreshUnread */
     private var chatVisible = false
 
@@ -883,10 +958,54 @@ internal object ChatStore {
     }
 
     /**
-     * 增量拉取(§7.4:切 Tab/下拉刷新):lastId 起服务端扫 id > lastId 升序返回,追加去重;
+     * 增量拉取(§7.4:切 Tab/回前台/5s 轮询):lastId 起服务端扫 id > lastId 升序返回,追加去重;
      * 首屏尚未成功拉到时(初拉失败的重试路径)退化按首屏覆盖拉,防本地乱序拼接
      */
     suspend fun loadIncrement(pager: Pager): ApiResult = pull(pager, overwrite = !initialLoaded)
+
+    /**
+     * 历史前插(M19 下拉加载更早):取当前最小消息 id 作 beforeId,拉 id < beforeId 更早一页
+     * (服务端倒序取正序回),prepend 去重合并。与增量/覆盖拉共用 pullMutex(防并发撕裂);
+     * 不碰 lastId(历史 id 恒小于游标,D-12 不受影响)。
+     * 滚动零改动:Kuikly LazyList 首可见项按 key 重锚(铁律13③,2.29 源码核实),贴顶时首可见项
+     * 是索引基 key 的 pullToRefreshItem/顶部 Spacer,前插不位移,更早消息自然出现在视口下方
+     */
+    suspend fun loadHistory(pager: Pager): ApiResult {
+        if (!hasMore) return ApiResult.Ok(JSONObject())
+        if (!initialLoaded) return ApiResult.Ok(JSONObject())
+        val result = pullMutex.withLock {
+            val beforeId = messages.mapNotNull { it.id.toLongOrNull() }.minOrNull()
+            if (beforeId == null) {
+                // 空列表:无可前翻游标,置 hasMore 防重复打请求(有消息后 reset 覆盖拉会复位)
+                hasMore = false
+                ApiResult.Ok(JSONObject())
+            } else {
+                val listResult = MessageApi.list(pager, beforeId = beforeId.toString())
+                if (listResult is ApiResult.Ok) {
+                    val infos = MessageInfo.listFrom(listResult.dataArray)
+                    if (infos.size < MessageApi.LIST_LIMIT) hasMore = false
+                    prependDedupe(infos.map { toMsg(it) })
+                }
+                listResult
+            }
+        }
+        // 与 pull 同款锁外钩子:历史前插不产生新未读(全是更早消息),但 syncReadState 幂等无害
+        if (result is ApiResult.Ok) {
+            syncReadState(pager)
+        }
+        return result
+    }
+
+    /** 历史前插去重(M19):fresh 恒为更早消息;合并后按 id 数值序稳定排序(appendDedupe orderedMerge 同语义) */
+    private fun prependDedupe(list: List<ChatMsg>) {
+        if (list.isEmpty()) return
+        val known = HashSet<String>(messages.size + list.size)
+        messages.forEach { known.add(it.id) }
+        val fresh = ArrayList<ChatMsg>(list.size)
+        list.forEach { if (known.add(it.id)) fresh.add(it) }
+        if (fresh.isEmpty()) return
+        messages = (fresh + messages).sortedBy { it.id.toLongOrNull() ?: Long.MIN_VALUE }
+    }
 
     private suspend fun pull(pager: Pager, overwrite: Boolean): ApiResult {
         val result = pullMutex.withLock {
@@ -903,6 +1022,9 @@ internal object ChatStore {
                         infos.maxOfOrNull { it.id.toLongOrNull() ?: Long.MIN_VALUE } ?: Long.MIN_VALUE
                     val localNewer = messages.filter { (it.id.toLongOrNull() ?: Long.MIN_VALUE) > maxServerId }
                     messages = serverMsgs + localNewer
+                    // 覆盖后回到「最近一页」窗口:已前插历史被丢弃(M12 resync 既有语义),hasMore
+                    // 随窗口复位可重拉(条数满页=可能还有更早;不足页=已到头)
+                    hasMore = infos.size >= MessageApi.LIST_LIMIT
                 } else {
                     // 增量走归位合并:本端 send 不推游标后,回包含自己已入列条目(dedupe 掉)与对方并发迟到
                     // 的低 id 条目——后者须按 id 数值序插回正确位置,尾插会让时序错乱
@@ -978,6 +1100,7 @@ internal object ChatStore {
         messages = emptyList()
         lastId = ""
         initialLoaded = false
+        hasMore = true
         unreadCount = 0
         markedCursor = ""
         chatVisible = false // 停留本页解绑→重绑场景由 ChatPage bindState effect 重断言(A4)
@@ -1083,8 +1206,9 @@ internal object ChatStore {
         }
     }
 
-    /** GET unread:回读服务端真值(红点唯一事实源);失败静默保留旧值,不 toast(只读降级 §11) */
-    private suspend fun refreshUnread(pager: Pager) {
+    /** GET unread:回读服务端真值(红点唯一事实源);失败静默保留旧值,不 toast(只读降级 §11)。
+     *  M19 起 MainPager 全局心跳在非聊天 Tab 直接调本函数(轻 GET 维持红点全 Tab 消费) */
+    suspend fun refreshUnread(pager: Pager) {
         val result = MessageApi.unread(pager)
         if (result is ApiResult.Ok) {
             unreadCount = result.data.optInt("unread", 0)

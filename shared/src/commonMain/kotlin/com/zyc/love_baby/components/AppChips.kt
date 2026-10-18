@@ -36,17 +36,21 @@ fun AppFilterChipRow(
 ) {
     LazyRow(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(labels.size) { i ->
-            AppFilterChip(labels[i], selected = i == selectedIndex) { onSelect(i) }
+            // onClick 显式具名(M19 加 selectedColor 默认参后,尾随 lambda 会绑去 selectedColor)
+            AppFilterChip(labels[i], selected = i == selectedIndex, onClick = { onSelect(i) })
         }
     }
 }
 
-/** 单枚筛选胶囊:选中 brandStart 实底白字 Bold / 未选浅灰底灰字(MoodOptionChip 同源视觉) */
+/** 单枚筛选胶囊:选中实底白字 Bold(底色默认 brandStart,M19 起可用 selectedColor 覆盖——
+ *  待办五标签彩 chip)/ 未选浅灰底灰字(MoodOptionChip 同源视觉)。两态同走 background(color=)
+ *  单色重载(铁律⑦:color/brush 重载禁混用,选中覆盖色也走纯色不转 brush) */
 @Composable
 fun AppFilterChip(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    selectedColor: Color? = null, // null = 主题主色(既有调用零破坏)
 ) {
     Text(
         label,
@@ -55,7 +59,7 @@ fun AppFilterChip(
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
         modifier = Modifier
             .background(
-                if (selected) ThemeStore.current.brandStart else Color(0xFFF5F6FA),
+                if (selected) (selectedColor ?: ThemeStore.current.brandStart) else Color(0xFFF5F6FA),
                 RoundedCornerShape(12.dp),
             )
             .clickable(onClick = onClick)

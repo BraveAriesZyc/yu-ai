@@ -28,6 +28,7 @@ import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.lazy.LazyListState
+import com.tencent.kuikly.compose.foundation.lazy.LazyRow
 import com.tencent.kuikly.compose.foundation.lazy.items
 import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
@@ -49,6 +50,7 @@ import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
 import com.zyc.love_baby.components.AppCheckbox
+import com.zyc.love_baby.components.AppFilterChip
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
@@ -63,15 +65,35 @@ import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.TODO_DEFAULT_COLOR_HEX
+import com.zyc.love_baby.state.colorFromHex
 import com.zyc.love_baby.state.TodoItem
 import com.zyc.love_baby.state.TodoStore
 import kotlin.math.abs
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** 文本长度上限(与服务端 AppTodoCreateReqVO @Length(max=64) 对齐;maxLength 原生层拒绝 + take 兜底) */
 private const val TODO_INPUT_MAX_LENGTH = 64
+
+/** 静默轮询间隔(M19):与 ChatStore.POLL_INTERVAL_MS/wish/moment 同款 5s 对账节奏 */
+private const val TODO_POLL_INTERVAL_MS = 5_000L
+
+/**
+ * 五标签值域与配色(M19 标签选择 UI):值域照 LoveTodoDO.java:65 注释定稿(家庭/恋爱/健康/生活/随手记),
+ * server 只存不校验(客户端字典,铁律⑥);色值端上定(纯视觉零迁移)——家庭橙/恋爱粉/健康绿/生活蓝紫/
+ * 随手记粉(默认,= TODO_DEFAULT_COLOR_HEX 对齐);web 管理后台 tag 列已展示文本,零配套改动
+ */
+private val TODO_TAGS = listOf("家庭", "恋爱", "健康", "生活", "随手记")
+private val TODO_TAG_COLORS = mapOf(
+    "家庭" to "#F97316",
+    "恋爱" to "#FF6B81",
+    "健康" to "#34C77B",
+    "生活" to "#6C7BFF",
+    "随手记" to "#FF8FA3",
+)
 
 /**
  * TodoPage — 待办页:主题渐变头部 + 分段过滤 + 清单卡片 + 底部添加输入条(M3 服务端同步版)
@@ -98,10 +120,13 @@ fun TodoPage(
     deleteTargetId: String = "",
     onSetDeleteTarget: (String) -> Unit = {},
     listScrollEnabled: Boolean = true,
+    pageVisible: Boolean = false, // M19:5s 静默轮询门控(MainPager 下传;常驻 Tab 离页须停)
 ) {
     val theme = ThemeStore.current
     var inputText by remember { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
+    // 选中标签下标(M19,默认「随手记」= lastIndex):添加时传 tag+色,TodoStore.add 默认参兜底
+    var selectedTagIndex by remember { mutableStateOf(TODO_TAGS.lastIndex) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     // 软键盘高度(dp,KeyboardParams.height),0 = 收起;驱动输入条 bottom 与列表尾 Spacer 顶起
@@ -129,6 +154,18 @@ fun TodoPage(
     LaunchedEffect(CoupleStore.bindState) {
         if (CoupleStore.bindState != CoupleBindState.BOUND) return@LaunchedEffect
         TodoStore.loadAll(pager)
+    }
+
+    // 5s 静默轮询(M19,§7.4 对账先例 wish/moment):本页是 HorizontalPager 常驻 Tab(冷启动即
+    // 全组合),轮询必须 pageVisible 门控——离页 LaunchedEffect 取消,不像独立 @Page 天然
+    // 「组合即活动」。先 delay 再拉(首拉由上方 bindState effect 负责,不重复);Store 层
+    // fetchSilent 自带写在飞守卫与相等跳过,失败静默(§11)
+    LaunchedEffect(pageVisible, CoupleStore.bindState) {
+        if (!pageVisible || CoupleStore.bindState != CoupleBindState.BOUND) return@LaunchedEffect
+        while (true) {
+            delay(TODO_POLL_INTERVAL_MS)
+            TodoStore.fetchSilent(pager)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
@@ -230,17 +267,18 @@ fun TodoPage(
                         )
                     }
                 }
-                // 尾部 Spacer:给悬浮输入条让位(闭键常数 150 = 输入条上缘 86+44 再 +20
-                // 呼吸,新增滚底后新条目完整露出输入条上方;原 100 恰让位不足,新条目下缘
-                // 落输入条带内被遮一截)。键盘弹起同步长高(键盘高+navBar+70 = 顶起输入条
-                // 上缘 56 + 14 呼吸),滚底的新条目完整落在键盘/输入条上方(2026-10-16
-                // 对齐聊天页避让几何;收起归零自动回落,lazy 滚动 clamp 自动保持贴底)
+                // 尾部 Spacer:给悬浮输入条让位(闭键常数 188 = 输入条上缘 86+44 再 +20 呼吸
+                // + M19 chips 带约 38dp[chip 高 ~29+间距 8];原 150 恰让位不足,新条目下缘
+                // 落输入条带内被遮一截)。键盘弹起同步长高(键盘高+navBar+108 = 顶起输入条
+                // 上缘 56+14 呼吸+chips 带 38),滚底的新条目完整落在键盘/输入条上方
+                // (2026-10-16 对齐聊天页避让几何,M19 随 chips 行同步 +38;收起归零自动回落,
+                // lazy 滚动 clamp 自动保持贴底;真机校准点)
                 item {
                     Spacer(
                         modifier = Modifier.height(
                             max(
-                                150.dp + navBarSafePaddingDp(),
-                                keyboardHeight.dp + navBarSafePaddingDp() + 70.dp,
+                                188.dp + navBarSafePaddingDp(),
+                                keyboardHeight.dp + navBarSafePaddingDp() + 108.dp,
                             ),
                         ),
                     )
@@ -253,8 +291,10 @@ fun TodoPage(
         // (聊天页反编译核实同款)——不含导航栏区域,键盘实际顶边比它高出一条 navBar,
         // 须再叠加 navBarSafePaddingDp() 补齐,否则输入框下缘被导航栏区域上方的键盘盖住
         // 一条;弹起时 bottom 切到「键盘高 + navBar + 12dp」顶到键盘上方,收起回调归零
-        // 恢复浮岛常数(悬浮浮岛与聊天页流内顶起等观感)
-        Row(
+        // 恢复浮岛常数(悬浮浮岛与聊天页流内顶起等观感)。
+        // M19:外包 Column 加标签 chips 行(LazyRow——5 枚 3 字 ≈347dp 超窄屏可用宽,横滑兜底);
+        // bottom 浮岛常数搬 Column 整体,输入 Row 几何原样内嵌
+        Column(
             modifier = Modifier.align(Alignment.BottomCenter)
                 .padding(horizontal = AppTheme.PageHPadding)
                 .padding(
@@ -264,64 +304,86 @@ fun TodoPage(
                     ),
                 )
                 .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier.weight(1f)
-                    .background(AppTheme.CardBg, RoundedCornerShape(22.dp)),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                TextField(
-                    value = inputText,
-                    onValueChange = { inputText = it.take(TODO_INPUT_MAX_LENGTH) },
-                    placeholder = "想做点什么?",
-                    autoFocus = false,
-                    placeholderColor = AppTheme.TextTertiary,
-                    textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 13.sp),
-                    maxLines = 3, // 长文本限 3 行竖向生长,不在 22dp 胶囊里无限撑高(2026-10-16 F15 对齐聊天页)
-                    keyboardHeightChange = onKeyboardHeightChange, // 写键盘高度:输入条顶起 + 尾 Spacer 长高
-                    modifier = Modifier.fillMaxWidth()
-                        // 单行≈44dp 与添加钮等高(22dp 胶囊圆角恰为高之半,原 6dp 压成 ~30dp
-                        // 矮墩圆角被钳制)+ 触达舒适;3 行时自然长高,底部锚定向上生长
-                        .padding(horizontal = 14.dp, vertical = 13.dp)
-                        .maxLength(TODO_INPUT_MAX_LENGTH), // 原生层拒绝超限输入,与 take 兜底双保险
-                )
+            // 五标签选择行(M19):默认「随手记」(= TODO_DEFAULT_TAG,既有数据零意外);
+            // 选中 chip 底色用该标签专属色(AppFilterChip.selectedColor 覆盖),所见即所得
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(TODO_TAGS.size) { i ->
+                    AppFilterChip(
+                        TODO_TAGS[i],
+                        selected = i == selectedTagIndex,
+                        onClick = { selectedTagIndex = i },
+                        selectedColor = colorFromHex(TODO_TAG_COLORS[TODO_TAGS[i]] ?: TODO_DEFAULT_COLOR_HEX),
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(10.dp))
-            // 添加按钮(POST 成功才清输入:失败保留文案可重试,无脏数据 §7.4)
-            AppIconButton(
-                AppIconType.Plus,
-                onClick = {
-                    val text = inputText.trim()
-                    if (text.isNotEmpty() && !adding) {
-                        adding = true
-                        scope.launch {
-                            val result = TodoStore.add(pager, text)
-                            adding = false
-                            if (result is ApiResult.Ok) {
-                                inputText = ""
-                                // 新待办滚到可见(2026-10-16,对齐聊天页 P3a 同源):
-                                // TodoStore.add 恒追加列表尾(服务端 create_time asc 同序),
-                                // 长列表下不滚 = 「加了没反应」。「已完成」过滤不含新
-                                // (未完成)条目,滚了也看不到,跳过。先 awaitMeasured 等
-                                // 含新条目的 measure 落地再 snap 滚到尾 Spacer 下标(铁律13:
-                                // 过早 scrollToItem 撞 stale totalItemsCount 越界守卫被静默
-                                // 吞;尾部天然 clamp 贴底,键盘开着时新条目完整露出)
-                                if (TodoStore.filter != 2) {
-                                    // 日期分组后 item 数 = 行数 + 组头数:滚底目标改数 entries
-                                    // (尾 Spacer 下标 = entries.size;只数行会少算新条目触发的组头)
-                                    val itemCount = buildTodoEntries(visibleTodos()).size
-                                    listState.awaitMeasured(itemCount + 1)
-                                    listState.scrollToItem(itemCount)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f)
+                        .background(AppTheme.CardBg, RoundedCornerShape(22.dp)),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    TextField(
+                        value = inputText,
+                        onValueChange = { inputText = it.take(TODO_INPUT_MAX_LENGTH) },
+                        placeholder = "想做点什么?",
+                        autoFocus = false,
+                        placeholderColor = AppTheme.TextTertiary,
+                        textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 13.sp),
+                        maxLines = 3, // 长文本限 3 行竖向生长,不在 22dp 胶囊里无限撑高(2026-10-16 F15 对齐聊天页)
+                        keyboardHeightChange = onKeyboardHeightChange, // 写键盘高度:输入条顶起 + 尾 Spacer 长高
+                        modifier = Modifier.fillMaxWidth()
+                            // 单行≈44dp 与添加钮等高(22dp 胶囊圆角恰为高之半,原 6dp 压成 ~30dp
+                            // 矮墩圆角被钳制)+ 触达舒适;3 行时自然长高,底部锚定向上生长
+                            .padding(horizontal = 14.dp, vertical = 13.dp)
+                            .maxLength(TODO_INPUT_MAX_LENGTH), // 原生层拒绝超限输入,与 take 兜底双保险
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                // 添加按钮(POST 成功才清输入:失败保留文案可重试,无脏数据 §7.4)
+                AppIconButton(
+                    AppIconType.Plus,
+                    onClick = {
+                        val text = inputText.trim()
+                        if (text.isNotEmpty() && !adding) {
+                            adding = true
+                            scope.launch {
+                                val result = TodoStore.add(
+                                    pager,
+                                    text,
+                                    TODO_TAGS[selectedTagIndex],
+                                    TODO_TAG_COLORS[TODO_TAGS[selectedTagIndex]] ?: TODO_DEFAULT_COLOR_HEX,
+                                )
+                                adding = false
+                                if (result is ApiResult.Ok) {
+                                    inputText = ""
+                                    // 新待办滚到可见(2026-10-16,对齐聊天页 P3a 同源):
+                                    // TodoStore.add 恒追加列表尾(服务端 create_time asc 同序),
+                                    // 长列表下不滚 = 「加了没反应」。「已完成」过滤不含新
+                                    // (未完成)条目,滚了也看不到,跳过。先 awaitMeasured 等
+                                    // 含新条目的 measure 落地再 snap 滚到尾 Spacer 下标(铁律13:
+                                    // 过早 scrollToItem 撞 stale totalItemsCount 越界守卫被静默
+                                    // 吞;尾部天然 clamp 贴底,键盘开着时新条目完整露出)
+                                    if (TodoStore.filter != 2) {
+                                        // 日期分组后 item 数 = 行数 + 组头数:滚底目标改数 entries
+                                        // (尾 Spacer 下标 = entries.size;只数行会少算新条目触发的组头)
+                                        val itemCount = buildTodoEntries(visibleTodos()).size
+                                        listState.awaitMeasured(itemCount + 1)
+                                        listState.scrollToItem(itemCount)
+                                    }
+                                } else {
+                                    toastCoupleResult(pager, result)
                                 }
-                            } else {
-                                toastCoupleResult(pager, result)
                             }
                         }
-                    }
-                },
-                iconSize = 22.dp,
-            )
+                    },
+                    iconSize = 22.dp,
+                )
+            }
         }
     }
 }

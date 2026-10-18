@@ -16,7 +16,8 @@ import com.zyc.love_baby.data.model.MessageSendWishesReq
  * 事件:无(会话消息统一落 state/ChatStore;partnerReply 本地假回复由 §7.4 增量拉取整体替换)
  * 功能:
  *  - list 增量拉取:lastId 空串 = 首屏(服务端按 id 倒序取 limit 条后正序返回);有 lastId = 顺序扫
- *    id > lastId 升序返回(§5.2,走 idx_couple_time);limit 固定 50(服务端默认 50、上限 200)
+ *    id > lastId 升序返回(§5.2,走 idx_couple_time);beforeId>0 = 历史前翻(M19,优先于 lastId);
+ *    limit 固定 50(服务端默认 50、上限 200)
  *  - send 文本悄悄话 / send-wishes 心愿消息(快照式四字段,服务端不校验 wish 归属,§5.2):
  *    回包 = 落库后的单个消息 VO,Store 用它替换本地临时消息并推进 lastId
  *  - ⚠ 查询参数直接拼 URL 而非走 core param 通道(同 MoodApi 注记):lastId 为纯数字字符串或空串
@@ -45,10 +46,12 @@ internal object MessageApi {
     /**
      * 增量拉取:data 为数组(ApiResult.Ok.dataArray),服务端恒升序返回。
      * @param lastId 空串 = 首屏取最近一页;否则返回 id > lastId 的增量(Store 层以服务端最新消息 id 传入)
+     * @param beforeId 历史前翻游标(M19 下拉加载更早):取 id 小于该值的更早一页,服务端正序返回;
+     *        >0 时优先于 lastId(两游标语义不同向);空串 = 服务端按 0 处理不启用
      * @param limit 每页条数,默认 [LIST_LIMIT]
      */
-    suspend fun list(pager: Pager, lastId: String = "", limit: Int = LIST_LIMIT): ApiResult =
-        HttpClient.request(pager, "$PATH_LIST?lastId=$lastId&limit=$limit", isPost = false)
+    suspend fun list(pager: Pager, lastId: String = "", limit: Int = LIST_LIMIT, beforeId: String = ""): ApiResult =
+        HttpClient.request(pager, "$PATH_LIST?lastId=$lastId&beforeId=$beforeId&limit=$limit", isPost = false)
 
     /**
      * 心愿时间线:kind=2 只读视图,服务端按 id 倒序(最新在前)返回,快照四字段(content/wishKey/color/icon)
