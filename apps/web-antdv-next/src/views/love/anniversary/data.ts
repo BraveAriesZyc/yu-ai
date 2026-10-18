@@ -60,6 +60,7 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
       field: 'emoji',
       title: '图标',
       minWidth: 80,
+      formatter: ({ cellValue }) => cellValue || '-', // M18 空值兜底
     },
     {
       field: 'annivDate',

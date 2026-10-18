@@ -79,7 +79,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
               icon: ACTION_ICON.DELETE,
               auth: ['love:anniversary:delete'],
               popConfirm: {
-                title: `${$t('ui.actionMessage.deleteConfirm', [row.title])}删除后不可恢复。`,
+                title: `${$t('ui.actionMessage.deleteConfirm', [row.title])}删除后 App 端不再展示（数据库留档可追溯）。`,
                 confirm: handleDelete.bind(null, row),
               },
             },

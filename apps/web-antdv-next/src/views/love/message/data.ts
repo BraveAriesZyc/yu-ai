@@ -125,6 +125,13 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
       formatter: ({ cellValue }) => AUDIT_STATUS_MAP[cellValue] ?? '-',
     },
     {
+      // M18 补透出(M12 墓碑列):已撤回行 content 留档,审计时肉眼区分「撤回灰条」与原文
+      field: 'recalled',
+      title: '撤回',
+      minWidth: 90,
+      formatter: ({ cellValue }) => (cellValue ? '已撤回' : '-'),
+    },
+    {
       field: 'createTime',
       title: '创建时间',
       minWidth: 180,

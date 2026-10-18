@@ -24,6 +24,8 @@ export namespace LoveMessageApi {
     icon?: string;
     /** 审核状态：0=待审 / 1=通过 / 2=命中；首期恒为 1 */
     auditStatus: number;
+    /** 是否已撤回（M12 墓碑列，撤回不删行、content 留档审计；M18 补透出） */
+    recalled?: boolean;
     createTime: string;
   }
 }

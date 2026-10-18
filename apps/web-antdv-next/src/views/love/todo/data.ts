@@ -69,6 +69,7 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
       field: 'tag',
       title: '标签',
       minWidth: 100,
+      formatter: ({ cellValue }) => cellValue || '-', // M18 空值兜底(待办可无标签)
     },
     {
       field: 'color',

@@ -69,10 +69,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
       <template #color="{ row }">
         <div class="flex items-center gap-2">
           <span
-            :style="{ backgroundColor: row.color }"
+            :style="{ backgroundColor: row.color || 'transparent' }"
             class="inline-block h-3 w-3 rounded"
           ></span>
-          {{ row.color }}
+          {{ row.color || '-' }}
         </div>
       </template>
       <template #actions="{ row }">

@@ -12,6 +12,8 @@ export namespace LoveMomentApi {
     userId: number;
     /** 图片 URL（infra 文件服务上传返回的完整地址，本体留档 infra_file 不级联删） */
     imageUrl: string;
+    /** 多图 URL JSON 数组文本（M15 二期，≤9 张；imageUrl 恒为首图冗余；M18 补透出） */
+    imageUrls?: string;
     /** 配文（可选一句话，≤64 字，空串 = 无配文） */
     text: string;
     /** 创建时间 */

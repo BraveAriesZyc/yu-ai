@@ -21,6 +21,12 @@ export function useGridFormSchema(): VbenFormSchema[] {
       component: 'RangePicker',
       componentProps: {
         ...getRangePickerDefaultProps(),
+        // M18 修复:服务端 checkinDate 是 LocalDate[](@DateTimeFormat yyyy-MM-dd),
+        // 默认 valueFormat 'YYYY-MM-DD HH:mm:ss' 必 400——覆写为纯日期(仓内 fms/closing 先例);
+        // showTime: false 关掉默认带出的时间选择列(纯日期口径下是零影响的死控件)
+        format: 'YYYY-MM-DD',
+        valueFormat: 'YYYY-MM-DD',
+        showTime: false,
         placeholder: ['开始日期', '结束日期'],
       },
     },

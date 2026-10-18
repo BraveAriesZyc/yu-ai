@@ -2,6 +2,7 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { z } from '#/adapter/form';
+import { getRangePickerDefaultProps } from '#/utils';
 
 /** 类型选项（1=情话 / 2=约会灵感），本期零字典，本地映射 */
 const kindOptions = [
@@ -114,6 +115,17 @@ export function useGridFormSchema(): VbenFormSchema[] {
         placeholder: '请选择状态',
         allowClear: true,
         options: statusOptions,
+      },
+    },
+    {
+      // M18 补齐:服务端 LoveInspirationPageReqVO 自带 createTime(LocalDateTime[])筛选,
+      // 原搜索表单漏暴露,运营无法按时间定位种子/编辑记录
+      fieldName: 'createTime',
+      label: '创建时间',
+      component: 'RangePicker',
+      componentProps: {
+        ...getRangePickerDefaultProps(),
+        placeholder: ['开始时间', '结束时间'],
       },
     },
   ];
