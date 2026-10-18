@@ -93,7 +93,7 @@ internal fun MoodOptionManageOverlay(
     val focusManager = LocalFocusManager.current
     fun dismiss() {
         focusManager.clearFocus()
-        // 卸载迟一拍(机制详见 ProfileEditOverlay.dismiss):clearFocus 的原生 blur 走 setTimeout
+        // 卸载迟一拍(机制详见 features.profile.FieldInputOverlay.dismiss):clearFocus 的原生 blur 走 setTimeout
         // 批处理异步落地,onDismiss 同回合执行会让浮层卸载与 blur 竞速——持焦输入框带焦点被移除
         // 时焦点转给待办页输入框,Pager 滚去露出它=主界面乱滚(2026-10-18 ProfileEditOverlay
         // 真机复现同源)。onDismiss 推迟一拍入同一 MessageQueue,按入队序必然排在 blur 之后,

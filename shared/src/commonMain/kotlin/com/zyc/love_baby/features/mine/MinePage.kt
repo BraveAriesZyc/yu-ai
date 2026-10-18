@@ -70,7 +70,7 @@ import kotlinx.coroutines.launch
  *      「解绑」→ onUnbindClick();「退出登录」→ onLogoutClick()(动作由 MainPager 收口)
  * 功能:
  *  - 资料区(§7.7):昵称/头像展示由 profile 参数给定;资料编辑收进详情页(2026-10-18 用户裁决:
- *    右上角「编辑」改「详情」跳 profilePage,编辑浮层 ProfileEditOverlay 在详情页页内自持)
+ *    右上角「编辑」改「详情」跳 profilePage,详情页 QQ 式行内编辑,各行点击直接改)
  *  - 情侣空间卡:已绑定时展示伴侣昵称/绑定时间 + 解绑入口(二次确认浮层在 MainPager);
  *    未绑定时本页被 BindingGuide 整屏覆盖不可达,故不设未绑定分支
  */
@@ -219,8 +219,8 @@ private fun HeaderWithStats(pager: Pager, profile: UserProfile?) {
                     subtitleSize = 12.sp,
                 )
             }
-            // 详情入口(2026-10-18 用户裁决:右上角「编辑」改「详情」跳资料详情页,资料编辑
-            // 收进详情页头部「编辑」胶囊开 ProfileEditOverlay;MainPager 根级编辑浮层同轮拆除)
+            // 详情入口(2026-10-18 用户裁决:右上角「编辑」改「详情」跳资料详情页,详情页
+            // QQ 式行内编辑各行点击直接改;MainPager 根级编辑浮层同轮拆除)
             Box(
                 modifier = Modifier.background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
                     .clickable { openProfilePage(pager, PROFILE_WHO_MINE) }
