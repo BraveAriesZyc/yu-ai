@@ -81,7 +81,7 @@ internal fun openProfilePage(pager: Pager, who: String) {
 
 /**
  * ProfilePage — 用户资料详情页(@Page "profilePage"):我/TA 一页两用(2026-10-18,M16 起带编辑)
- * 用法:openProfilePage(pager, who) 四入口(聊天页双头像/我的页资料区/情侣空间卡/首页头像);
+ * 用法:openProfilePage(pager, who) 五入口(聊天页双头像/我的页资料区+右上角「详情」/情侣空间卡/首页头像);
  *      返回钮 closePage。独立二级页骨架照 WishListPage.kt:122-139(WishListPager 同款壳)
  * 依赖:StatsStore/CoupleStore/AnniversaryStore/CheckinStore(全局 Store 只读);
  *      UserApi.getUser(mine 自拉权威真值)/WishApi.list(贡献数端上聚合,页内自持不进 AppState

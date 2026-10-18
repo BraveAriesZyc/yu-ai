@@ -58,18 +58,19 @@ import kotlinx.coroutines.launch
 
 /**
  * MinePage — 我的页:主题渐变头部 + 悬浮统计(恋爱数据) + 情侣空间卡(M2) + 主题外观切换 + 设置分组
- * 用法:MinePage(pager, profile, onEditProfile, onUnbindClick, onLogoutClick)。M3(F6,§7.7)起本页无浮层/无拉取:
- *      profile 由 MainPager 提升持有并拉取(user/get),「编辑」「解绑」「退出登录」仅回调上报,浮层统一挂在
+ * 用法:MinePage(pager, profile, onUnbindClick, onLogoutClick)。M3(F6,§7.7)起本页无浮层/无拉取:
+ *      profile 由 MainPager 提升持有并拉取(user/get),「解绑」「退出登录」仅回调上报,浮层统一挂在
  *      MainPageImpl 根 Box(后于底栏组合,盖住底栏且遮罩挡触摸)——浮层陷入本页 LazyColumn 时
  *      滚动项仍可穿透点击,且被底栏压住,均需根级承载
  * 依赖:ThemeStore/AppIcons/components 通用组件;RouterModule(打开组件列表页);
  *      UserProfile(MainPager 回填);CoupleStore/BoundPartnerCard(情侣空间,M2)
  * 事件:主题圆点点击 → ThemeStore.switch + persist;「组件列表」→ openPage("componentList");
  *      「帮助与客服」→ 复制客服微信号 + toast(页内自持);「关于我们」→ onAboutClick()(信息卡
- *      MineAboutOverlay 挂 MainPager 根);「编辑」→ onEditProfile();「解绑」→ onUnbindClick();
- *      「退出登录」→ onLogoutClick()(动作由 MainPager 收口)
+ *      MineAboutOverlay 挂 MainPager 根);右上角「详情」/资料区整块 → openProfilePage(mine);
+ *      「解绑」→ onUnbindClick();「退出登录」→ onLogoutClick()(动作由 MainPager 收口)
  * 功能:
- *  - 资料区(§7.7):昵称/头像展示由 profile 参数给定,编辑浮层在 MainPager(user/update 写穿透)
+ *  - 资料区(§7.7):昵称/头像展示由 profile 参数给定;资料编辑收进详情页(2026-10-18 用户裁决:
+ *    右上角「编辑」改「详情」跳 profilePage,编辑浮层 ProfileEditOverlay 在详情页页内自持)
  *  - 情侣空间卡:已绑定时展示伴侣昵称/绑定时间 + 解绑入口(二次确认浮层在 MainPager);
  *    未绑定时本页被 BindingGuide 整屏覆盖不可达,故不设未绑定分支
  */
@@ -77,7 +78,6 @@ import kotlinx.coroutines.launch
 internal fun MinePage(
     pager: Pager,
     profile: UserProfile?,
-    onEditProfile: () -> Unit,
     onUnbindClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onAboutClick: () -> Unit = {},
@@ -85,7 +85,7 @@ internal fun MinePage(
 ) {
     // 根容器收背景(浮层在 MainPager 根 Box,需盖住整页;背景与 LazyColumn 原本同色,视觉无变化)
     Box(modifier = Modifier.fillMaxSize().background(ThemeStore.current.bg)) {
-        // userScrollEnabled:浮层(编辑/解绑/退出,MainPager 根级)开着时关本页列表滚动——
+        // userScrollEnabled:浮层(解绑/退出/关于等 MainPager 根级)开着时关本页列表滚动——
         // Kuikly 遮罩的 clickable 只吃 tap 不吃拖拽,背景 LazyColumn 原生滚动仍收事件
         // (2026-10-17 真机实证「浮层开着还能滚背景」),官方开关是最干净的阻断通道
         LazyColumn(modifier = Modifier.fillMaxSize(), userScrollEnabled = listScrollEnabled) {
@@ -93,7 +93,6 @@ internal fun MinePage(
                 HeaderWithStats(
                     pager = pager,
                     profile = profile,
-                    onEditClick = onEditProfile,
                 )
             }
             item {
@@ -181,19 +180,19 @@ private fun openWishTimeline(pager: Pager) {
     }
 }
 
-/** 头部:资料区(§7.7)读 profile 参数回填昵称与首字头像;「编辑」回调 onEditClick;
- *  统计卡「心愿」列可点进心愿时间线页(需 pager 路由,未绑定时点击不响应) */
+/** 头部:资料区(§7.7)读 profile 参数回填昵称与首字头像;右上角「详情」钮与资料区整块
+ *  同跳资料详情页(profilePage);统计卡「心愿」列可点进心愿时间线页(需 pager 路由,未绑定时点击不响应) */
 @Composable
-private fun HeaderWithStats(pager: Pager, profile: UserProfile?, onEditClick: () -> Unit) {
+private fun HeaderWithStats(pager: Pager, profile: UserProfile?) {
     val nickname = profile?.nickname?.trim().orEmpty()
     Box(modifier = Modifier.fillMaxWidth()) {
         // 渐变头部
         AppGradientHeader(height = 138.dp, topSpacing = 20.dp) {
             // 头像(双层圆环):avatar 非空走远程图(AppAvatar 圆角裁切,加载中半透白底透出
-            // 充当占位),空走首字(文件服务里程碑,上传链路见 MainPager.submitAvatarUpload)
+            // 充当占位),空走首字(文件服务里程碑,上传链路在详情页 uploadAvatarAndUpdate)
             // 资料区整块可点进资料详情页(2026-10-18 profilePage 入口):头像+昵称包内层 Row,
-            // 「编辑」钮保持兄弟独立热区(仍开昵称编辑浮层,链路不动);副标题接真 bindDays
-            //(原写死「520 天」假数据,主界面必 BOUND bindDays>0)
+            // 右上角「详情」钮保持兄弟独立热区(2026-10-18 用户裁决由「编辑」改跳详情页,
+            // 编辑浮层收进详情页);副标题接真 bindDays(原写死「520 天」假数据,主界面必 BOUND bindDays>0)
             Row(
                 modifier = Modifier.weight(1f)
                     .clickable { openProfilePage(pager, PROFILE_WHO_MINE) },
@@ -220,13 +219,14 @@ private fun HeaderWithStats(pager: Pager, profile: UserProfile?, onEditClick: ()
                     subtitleSize = 12.sp,
                 )
             }
-            // 编辑入口
+            // 详情入口(2026-10-18 用户裁决:右上角「编辑」改「详情」跳资料详情页,资料编辑
+            // 收进详情页头部「编辑」胶囊开 ProfileEditOverlay;MainPager 根级编辑浮层同轮拆除)
             Box(
                 modifier = Modifier.background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
-                    .clickable { onEditClick() }
+                    .clickable { openProfilePage(pager, PROFILE_WHO_MINE) }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
             ) {
-                Text("编辑", color = Color.White, fontSize = 12.sp)
+                Text("详情", color = Color.White, fontSize = 12.sp)
             }
         }
         // 悬浮统计卡(统计真数据化:三项全真,StatsStore 由 MainPager 拉取,数值变化写穿透后刷新)。

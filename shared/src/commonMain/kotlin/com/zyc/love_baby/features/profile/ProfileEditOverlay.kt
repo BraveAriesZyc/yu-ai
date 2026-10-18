@@ -53,15 +53,14 @@ import kotlin.coroutines.suspendCoroutine
 
 /**
  * ProfileEditOverlay — 完整资料编辑浮层(M16 真机反馈合并轮,2026-10-18):
- * 头像 + 昵称 + 性别 + 生日(滚轮) + 个性签名 **一处编辑**,两域共用——
- * ① ProfilePage(独立 @Page 页内自持挂载,数据源=页内自拉 profile);
- * ② MainPager 我的页「编辑」入口(F6 根级挂载,数据源=MainPager 单一持有的 profile,
- *    替代原 NicknameEditOverlay 昵称+头像两字段旧浮层——用户裁决「编辑收口一处,
- *    不该东一个西一个」)。
+ * 头像 + 昵称 + 性别 + 生日(滚轮) + 个性签名 **一处编辑**;唯一挂载点=ProfilePage
+ * (独立 @Page 页内自持挂载,数据源=页内自拉 profile)。原 MainPager 我的页「编辑」
+ * 根级挂载(F6)随 2026-10-18「右上角改详情」裁决拆除——我的页编辑入口收进详情页,
+ * MainPager 不再持有编辑浮层(替代原 NicknameEditOverlay 的合并语义不变)。
  * 用法:挂调用方根 Box 最后(灰幕盖底栏语义);上传通道 onAvatarClick 上报 + uploading
- *      外部传入(与旧浮层同款),全链路走 uploadAvatarAndUpdate(须在浮层外的页面级
- *      scope 调,浮层关闭不取消上传);成功回填经 onSaved(昵称/性别/生日/签名)与
- *      onAvatarSaved(URL) 双回调
+ *      外部传入,全链路走 uploadAvatarAndUpdate(须在浮层外的页面级 scope 调,浮层关闭
+ *      不取消上传);字段回填经 onSaved(昵称/性别/生日/签名)回调,头像回填由调用方
+ *      在 onAvatarClick 的 pageScope 协程内 profile.copy(avatar=URL) 完成
  * 依赖:features.couple.BindInputField/BindPrimaryButton/toastCouple/toastCoupleResult;
  *      components.AppDatePickerOverlay(生产在用的三列滚轮日期选择器,
  *      挂本浮层灰幕 Box 内最后=后组合者在上,覆盖编辑卡);
@@ -76,6 +75,11 @@ import kotlin.coroutines.suspendCoroutine
  *  - 美化轮(2026-10-18 二轮,真机反馈):标题行右上 Close 关闭钮+性别改双卡(SexCard:
  *    AppIcons 新增 GenderFemale/GenderMale Canvas 图标,选中 brand 渐变白字白图标+白圆
  *    Check 角标,未选灰底)+生日行右侧 ChevronRight 箭头+头像徽章「+」换 Plus 图标
+ *  - 美化三轮(同日,用户再提美观度):删「性别/生日/个性签名」三个独立 label——Column
+ *    CenterHorizontally 下短 label 居中与拉满控件错位,且与昵称 placeholder 模式两套混表单;
+ *    统一走自解释(性别双卡图标+文字/生日空值「点击设置生日」/签名 placeholder),净省约
+ *    68dp 缓解键盘遮挡下半屏;卡片边距 32→28(卡更宽)+圆角 20→24+头像 72→80dp,
+ *    间距节奏统一 12(控件间)/18(保存前)
  */
 
 /** 上传进行中/保存中都不放走遮罩点击,防丢视觉反馈;生日子滚轮开着时编辑遮罩点击被其全屏层截获 */
@@ -176,11 +180,11 @@ internal fun ProfileEditOverlay(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 32.dp)
+            modifier = Modifier.padding(horizontal = 28.dp)
                 .fillMaxWidth()
-                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
+                .background(AppTheme.CardBg, RoundedCornerShape(24.dp))
                 .clickable { } // 空 clickable 吞点击防透传
-                .padding(horizontal = 20.dp, vertical = 20.dp),
+                .padding(horizontal = 20.dp, vertical = 22.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // 标题行:居中标题 + 右上关闭钮(26dp 圆灰底 Close 图标;保存中拦点击防丢态)
@@ -210,25 +214,25 @@ internal fun ProfileEditOverlay(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            // 头像区(自 NicknameEditOverlay 迁入,视觉零变化):72dp 大头像 + 右下「+」徽章
+            // 头像区(自 NicknameEditOverlay 迁入,美化三轮 72→80dp):大头像 + 右下「+」徽章
             // + 居中提示,整块可点上报 onAvatarClick(选图/压缩/直传/写回全在 uploadAvatarAndUpdate);
             // 上传中蒙半透明黑 + 文案切换 + 拦点击防重复发起
             Column(
                 modifier = Modifier.clickable { if (!uploading) onAvatarClick() },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(modifier = Modifier.size(72.dp)) {
+                Box(modifier = Modifier.size(80.dp)) {
                     AppAvatar(
                         currentNickname.trim().take(1).ifEmpty { "爱" },
-                        size = 72.dp,
+                        size = 80.dp,
                         bgBrush = ThemeStore.current.brandBrush,
-                        fontSize = 24.sp,
+                        fontSize = 26.sp,
                         avatarUrl = currentAvatar,
                     )
                     if (uploading) {
                         Box(
                             modifier = Modifier.fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(36.dp)),
+                                .background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(40.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text("…", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -258,16 +262,12 @@ internal fun ProfileEditOverlay(
                 placeholder = "昵称",
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Text("性别", color = AppTheme.TextSecondary, fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
                 SexCard("女", AppIconType.GenderFemale, draftSex == 0, Modifier.weight(1f)) { draftSex = 0 }
                 Spacer(modifier = Modifier.width(10.dp))
                 SexCard("男", AppIconType.GenderMale, draftSex == 1, Modifier.weight(1f)) { draftSex = 1 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text("生日", color = AppTheme.TextSecondary, fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(8.dp))
             // 生日行:只读点击行(视觉对齐 BindInputField 灰底 48dp),点击弹三列滚轮——
             // M16 真机反馈弃 yyyy 文本输入,复用纪念日页生产在用、已抽到 components 的 AppDatePickerOverlay
             Row(
@@ -284,7 +284,7 @@ internal fun ProfileEditOverlay(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    draftBirthday.trim().ifEmpty { "未设置" },
+                    draftBirthday.trim().ifEmpty { "点击设置生日" },
                     color = if (draftBirthday.trim().isEmpty()) AppTheme.TextTertiary else AppTheme.TextPrimary,
                     fontSize = 15.sp,
                 )
@@ -292,14 +292,12 @@ internal fun ProfileEditOverlay(
                 AppIcon(AppIconType.ChevronRight, Color(0xFFC8CCD8), Modifier.size(15.dp))
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text("个性签名", color = AppTheme.TextSecondary, fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(8.dp))
             BindInputField(
                 value = draftSignature,
                 onValueChange = { draftSignature = it.take(100) },
                 placeholder = "一句话介绍自己",
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
             // submitting 文案由 BindPrimaryButton 自管(内置「请稍候…」,调用方传值会被覆盖)
             BindPrimaryButton(text = "保 存", submitting = saving) { save() }
         }

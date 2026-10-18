@@ -36,8 +36,6 @@ import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.features.mine.LogoutConfirmOverlay
 import com.zyc.love_baby.features.mine.MineAboutOverlay
-import com.zyc.love_baby.features.profile.ProfileEditOverlay
-import com.zyc.love_baby.features.profile.uploadAvatarAndUpdate
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.AuthApi
 import com.zyc.love_baby.network.UserApi
@@ -78,8 +76,9 @@ import kotlinx.coroutines.launch
  *  - 登录门:未登录时 GatePanel 整树条件渲染盖住五 Tab(SessionStore,§7.3)
  *  - 绑定门(M2):已登录未绑定(含启动校准的未知态)时 BindingPanel 整树条件渲染(§7.3 三态状态机);
  *    登录态翻转拉 couple/get 校准 CoupleStore,已绑定后低频轮询感知对方绑定/解绑(§7.4)
- *  - 浮层宿主(F6,§7.7):解绑确认/昵称编辑浮层挂本页根 Box 且后于底栏组合 → 盖住底栏、
- *    遮罩挡触摸,打开期间底栏不可误触;MinePage 只回调上报不再自持浮层
+ *  - 浮层宿主(F6,§7.7):解绑确认/退出确认/心情字典管理/关于信息卡等浮层挂本页根 Box
+ *    且后于底栏组合 → 盖住底栏、遮罩挡触摸,打开期间底栏不可误触;MinePage 只回调上报
+ *    不再自持浮层(资料编辑 2026-10-18 收进 profilePage 详情页,根级编辑浮层已拆除)
  *  - 绑定清场(F5,D-11):bindState 翻 UNBOUND(主动解绑/被动感知)即清 Chat/Todo/Mood 三 Store,
  *    重绑后上一段关系的数据与游标不残留、消息流从零开始
  *  - 调试:PROFILE_RECOMPOSITION 置 true 用官方重组分析器定位卡顿
@@ -176,23 +175,21 @@ internal fun MainPageImpl(pager: BasePager) {
     // 做快照观察(NodeCoordinator.updateLayerParameters 的 observeReads),翻转帧仅重算胶囊层
     // 参数写原生 transform:零重组/零重测/零动画帧
     val pillPosition: () -> Float = remember { { pagerState.targetPage.toFloat() } }
-    // 我的页资料(F6,§7.7 状态提升):MainPager 单一持有,MinePage 展示、昵称浮层回填皆走此值;
+    // 我的页资料(F6,§7.7 状态提升):MainPager 单一持有,MinePage/首页展示消费此值
+    // (资料编辑 2026-10-18 收进 profilePage 详情页,页内自拉自回填,本层不再挂编辑浮层);
     // 拉取失败静默保留现值(只读降级,§11)
     var profile by remember { mutableStateOf<UserProfile?>(null) }
-    // 浮层状态(F6):MinePage「编辑」「解绑」「退出登录」仅回调上报,浮层在本根 Box 渲染;
+    // 浮层状态(F6):MinePage「解绑」「退出登录」仅回调上报,浮层在本根 Box 渲染;
     // 心情字典管理浮层(M3.5)同款——MoodPage 选择器「＋」回调上报
     var showUnbindConfirm by remember { mutableStateOf(false) }
-    var showProfileEdit by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showMoodManage by remember { mutableStateOf(false) }
     // 「关于我们」信息卡(M18 死入口接轻功能):MinePage 菜单行回调打开,纯展示零网络
     var showMineAbout by remember { mutableStateOf(false) }
     var unbindSubmitting by remember { mutableStateOf(false) }
     var logoutSubmitting by remember { mutableStateOf(false) }
-    // 头像上传进行中(文件服务里程碑):浮层头像行文案切换 + 拦重复发起(原生模块 inFlight 外的 UI 层判重)
-    var avatarUploading by remember { mutableStateOf(false) }
     // M12 聊天页两枚全屏浮层状态提升(2026-10-17 二轮修复):大图预览/撤回确认挂本根 Box 底栏
-    // 之后(与解绑/昵称/登出/心情管理四浮层同语言:黑幕盖住底栏、遮罩挡触摸、底栏压暗可见不可点)
+    // 之后(与本文件其余根级浮层同语言:黑幕盖住底栏、遮罩挡触摸、底栏压暗可见不可点)
     // ——页内挂载在 Pager 子树 z 序盖不住浮岛底栏,首轮「浮层开着底栏不组合」真机反馈生硬弃用。
     // ChatPage 经值+回写双通道读写,提交函数 submitChatRecall 随浮层同迁于此
     var chatImagePreviewUrl by remember { mutableStateOf("") }
@@ -208,7 +205,7 @@ internal fun MainPageImpl(pager: BasePager) {
     // 背景/横滑切页」)——LazyColumn/LazyVerticalGrid/HorizontalPager 均有官方 userScrollEnabled
     // 开关,浮层任一开着即全关,是最干净的阻断通道(遮罩拦截方案在 Kuikly 原生视图层不成立)
     val overlayActive =
-        showUnbindConfirm || showProfileEdit || showLogoutConfirm || showMoodManage ||
+        showUnbindConfirm || showLogoutConfirm || showMoodManage ||
             chatImagePreviewUrl.isNotEmpty() || chatRecallTargetId.isNotEmpty() ||
             todoDeleteTargetId.isNotEmpty() || showMineAbout
     // Tab 跳转统一走 scrollToPage 瞬时直达(底栏点切/首页快捷入口/心情页「去悄悄话」),胶囊由
@@ -224,13 +221,12 @@ internal fun MainPageImpl(pager: BasePager) {
     val goTo: (Int) -> Unit = remember { { tab: Int -> scope.launch { pagerState.scrollToPage(tab) } } }
     // 各页回调同款 remember(理由同上):翻转帧/浮层开关帧不再级联五页 body 重执行
     val goChat = remember { { goTo(3) } }
-    val openProfileEdit = remember { { showProfileEdit = true } }
     val openUnbindConfirm = remember { { showUnbindConfirm = true } }
     val openLogoutConfirm = remember { { showLogoutConfirm = true } }
     val openMoodManage = remember { { showMoodManage = true } }
 
     // 资料拉取(§7.7):userId 变化时重拉(冷启动进入/换号防御);此处一次 GET 换 MainPager
-    // 单一数据源,昵称编辑回填/解绑浮层伴侣名展示不再跨组件同步
+    // 单一数据源,五页展示(首页/我的页昵称头像)/解绑浮层伴侣名展示不再跨组件同步
     LaunchedEffect(SessionStore.userId) {
         if (SessionStore.userId.isEmpty()) {
             profile = null
@@ -274,18 +270,8 @@ internal fun MainPageImpl(pager: BasePager) {
         }
     }
 
-    // 头像上传(F6 收口):全链路(getUser 热身/FileModule.pickAndUpload 直传/user/update
-    // 写穿透)已收口 features.profile.uploadAvatarAndUpdate(合并轮迁出,ProfilePage 域同款
-    // 复用);本函数仅持有页面级防重入 + scope + profile 回填(浮层关闭不取消上传)
-    fun submitAvatarUpload() {
-        if (avatarUploading) return
-        avatarUploading = true
-        scope.launch {
-            val fileUrl = uploadAvatarAndUpdate(pager)
-            avatarUploading = false
-            if (fileUrl != null) profile = profile?.copy(avatar = fileUrl)
-        }
-    }
+    // 头像上传(F6 收口)已随根级编辑浮层拆除迁走:唯一入口=profilePage 详情页「编辑」,
+    // 上传链路 uploadAvatarAndUpdate 由 ProfilePage 页级 scope 持有(浮层关闭不取消上传)
 
     // 待办删除提交(M18,确认浮层回调):成功静默(列表写穿透消失即反馈,与删前口径一致),
     // 失败关浮层 + toast;在飞防重复提交
@@ -359,7 +345,6 @@ internal fun MainPageImpl(pager: BasePager) {
                 else -> MinePage(
                     pager = pager,
                     profile = profile,
-                    onEditProfile = openProfileEdit,
                     onUnbindClick = openUnbindConfirm,
                     onLogoutClick = openLogoutConfirm,
                     onAboutClick = { showMineAbout = true },
@@ -419,32 +404,6 @@ internal fun MainPageImpl(pager: BasePager) {
                 submitting = unbindSubmitting,
                 onConfirm = { submitUnbind() },
                 onDismiss = { if (!unbindSubmitting) showUnbindConfirm = false },
-            )
-        }
-
-        // 资料编辑浮层(F6 根级挂载,合并轮换 ProfileEditOverlay 完整版:头像/昵称/性别/
-        // 生日滚轮/签名一处编辑):user/update 写穿透,成功才回填 profile,失败 toast 保留
-        // 原值(§7.4 失败即回滚语义,不做乐观更新)
-        if (showProfileEdit) {
-            ProfileEditOverlay(
-                pager = pager,
-                currentNickname = profile?.nickname.orEmpty(),
-                currentAvatar = profile?.avatar.orEmpty(),
-                currentSex = profile?.sex,
-                currentBirthday = profile?.birthday.orEmpty(),
-                currentSignature = profile?.signature.orEmpty(),
-                uploading = avatarUploading,
-                onDismiss = { showProfileEdit = false },
-                onSaved = { newNickname, newSex, newBirthday, newSignature ->
-                    profile = (profile ?: UserProfile(SessionStore.userId, "", newNickname, "")).copy(
-                        nickname = newNickname,
-                        sex = newSex,
-                        birthday = newBirthday,
-                        signature = newSignature,
-                    )
-                    showProfileEdit = false
-                },
-                onAvatarClick = { submitAvatarUpload() },
             )
         }
 
