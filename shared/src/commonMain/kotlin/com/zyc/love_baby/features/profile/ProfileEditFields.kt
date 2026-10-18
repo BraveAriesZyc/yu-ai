@@ -139,8 +139,9 @@ private fun SexPickerRow(label: String, selected: Boolean, enabled: Boolean, onC
  * 依赖:features.couple.BindInputField(48dp 容器定高+内容居中,全仓输入框统一模式);
  *      base.setTimeout(dismiss 收口)
  * 事件:灰幕/取消 → dismiss(saving 拦);确认 → onSave(draft.trim())
- * 功能:预填现值+右下字数计数 x/maxLength;居中偏上放置(TopCenter+padding top 92dp,
- *      键盘纯遮挡模型下半屏被盖,上半安全);字数上限 take 截断
+ * 功能:预填现值+右下字数计数 x/maxLength;垂直居中略偏上(Center:键盘收 bottom=140 静态
+ *      补偿,键盘起 bottom=键盘高+navBar+12 动态顶升躲键盘遮挡——纯居中/静态 140 在矮屏
+ *      会压键盘顶缘);字数上限 take 截断
  */
 @Composable
 internal fun FieldInputOverlay(
@@ -154,6 +155,7 @@ internal fun FieldInputOverlay(
     onDismiss: () -> Unit,
 ) {
     var draft by remember { mutableStateOf(initialValue) }
+    var keyboardHeight by remember { mutableStateOf(0f) } // 键盘高度(dp,KeyboardParams.height),0=收起
     val focusManager = LocalFocusManager.current
 
     // dismiss 收口(铁律 16,ProfileEditOverlay 同款简化):先清焦再推后一拍卸载——compose
@@ -169,11 +171,20 @@ internal fun FieldInputOverlay(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.45f))
             .clickable { if (!saving) dismiss() },
-        contentAlignment = Alignment.TopCenter,
+        // 垂直居中略偏上:键盘收时 bottom=140 静态补偿(视觉中心比屏中心高 70dp,半强换算
+        // bottom/2);键盘纯遮挡模型窗口不 resize,top 92dp 顶置被真机否决「没有居中」,
+        // 静态 140 在 ≤720dp 矮屏上键盘弹起会盖住按钮行(对抗验证 major)——键盘起切动态
+        // bottom=键盘高+navBar+12,卡片整体居中于键盘上方可见区(800dp 屏净空+149/640dp +69)
+        contentAlignment = Alignment.Center,
     ) {
+        // Kuikly padding 无 top+horizontal 混合 named 重载,链两个已知重载等价
+        val bottomPad = if (keyboardHeight > 0f) {
+            keyboardHeight.dp + navBarSafePaddingDp() + 12.dp
+        } else {
+            140.dp
+        }
         Column(
-            // Kuikly padding 无 top+horizontal 混合 named 重载,链两个已知重载等价
-            modifier = Modifier.padding(top = 92.dp)
+            modifier = Modifier.padding(bottom = bottomPad)
                 .padding(horizontal = 28.dp)
                 .fillMaxWidth()
                 .background(AppTheme.CardBg, RoundedCornerShape(24.dp))
@@ -186,6 +197,7 @@ internal fun FieldInputOverlay(
                 value = draft,
                 onValueChange = { draft = it.take(maxLength) },
                 placeholder = placeholder,
+                keyboardHeightChange = { params -> keyboardHeight = params.height },
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(

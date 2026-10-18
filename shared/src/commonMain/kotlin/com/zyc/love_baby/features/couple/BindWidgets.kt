@@ -26,6 +26,7 @@ import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
+import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.Button
 import com.zyc.love_baby.TextField
 import com.zyc.love_baby.base.BridgeModule
@@ -172,6 +173,7 @@ internal fun BindInputField(
     placeholder: String,
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
+    keyboardHeightChange: (KeyboardParams) -> Unit = {}, // 透传键盘高度回调(默认空,存量调用方零改动)
 ) {
     Row(
         modifier = modifier.fillMaxWidth()
@@ -189,6 +191,7 @@ internal fun BindInputField(
             autoFocus = false,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 15.sp),
+            keyboardHeightChange = keyboardHeightChange,
         )
     }
 }

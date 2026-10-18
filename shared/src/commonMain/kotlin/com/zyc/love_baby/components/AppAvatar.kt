@@ -30,7 +30,8 @@ import com.tencent.kuikly.compose.ui.unit.sp
  * 功能:
  *  - 颜色/渐变统一归一成一个 Brush,背景节点常驻(纯色 = 同色渐变,视觉一致),
  *    避免 bgColor/bgBrush 分支增删背景节点造成原生残留属性
- *  - avatarUrl 非空:背景圆上叠远程图(圆角裁切,fitCenter 等比);
+ *  - avatarUrl 非空:背景圆上叠远程图(圆角裁切,Crop 中心裁满——上传链路 centerInside
+ *    不裁方,非方图 Fit 会 letterbox 露底色带,2026-10-18 改 Crop;全仓调用点均圆形头像展示);
  *    加载中/失败时 painter 空绘,背景圆透出充当占位——背景节点不分支,只切内层内容
  *  - 5 套主题下白色半透明底头像均可用;聊天气泡小头像传 size = 34.dp
  */
@@ -59,7 +60,7 @@ fun AppAvatar(
                 modifier = Modifier.fillMaxSize().clip(shape),
                 painter = rememberAsyncImagePainter(avatarUrl),
                 contentDescription = null,
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.Crop,
             )
         } else {
             Text(text, color = textColor, fontSize = fontSize, fontWeight = FontWeight.Bold)

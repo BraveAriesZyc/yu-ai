@@ -540,12 +540,18 @@ private fun ProfileHeader(
             // 大头像舞台:品牌渐变外环 + 白底内圆(AppAvatar 圆角裁切,加载中/失败内圆底透出)。
             // mine 页(onAvatarClick != null):透明全尺寸热区层点头像任意位置即发起选图上传
             // (QQ 式;无背景纯 clickable 热区,BoundPartnerCard Row 链插同款),组合序
-            // AppAvatar → 热区 → 角标 → 上传蒙层(后者在上);角标=灰磨砂圆+白图片 icon
+            // 外环 → AppAvatar → 热区 → 角标 → 上传蒙层(后者在上);角标=灰磨砂圆+白图片 icon
+            // ⚠ 舞台本体无背景:QQ 式角标骑在头像圆边上,若住进外环的圆角背景容器,
+            // 圆外部分会被原生轮廓裁掉(2026-10-18 真机反馈,M15 三轮透明圆角同源)——
+            // 外环圆独立成无子节点背景层,AppAvatar/角标作舞台直接子节点
             Box(
-                modifier = Modifier.size(96.dp)
-                    .background(theme.brandBrush, RoundedCornerShape(48.dp)),
+                modifier = Modifier.size(96.dp),
                 contentAlignment = Alignment.Center,
             ) {
+                Box(
+                    modifier = Modifier.size(96.dp)
+                        .background(theme.brandBrush, RoundedCornerShape(48.dp)),
+                )
                 AppAvatar(
                     nickname.take(1),
                     size = 88.dp,
@@ -560,12 +566,16 @@ private fun ProfileHeader(
                             .clickable { onAvatarClick() },
                     )
                     // 角标(三层:外定位内背景 icon 子节点,铁律 14/15):28dp 灰磨砂圆
-                    // (半透明黑 35% 模拟毛玻璃质感)+ 14dp 白图片 icon
+                    // (半透明黑 35% 模拟毛玻璃质感)+ 14dp 白图片 icon。⚠ 自带 clickable:
+                    // 有背景视图盖在无背景热区之上会吞掉落点(铁律 7 命中测试以背景为准,
+                    // AppCheckbox 环内孔同款),角标是头像上最像按钮的区域必须挂同一回调
+                    // (嵌套 clickable 内层消费,不会双触发)
                     Box(
                         modifier = Modifier.align(Alignment.BottomEnd)
                             .padding(3.dp)
                             .size(28.dp)
-                            .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                            .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                            .clickable { onAvatarClick() },
                         contentAlignment = Alignment.Center,
                     ) {
                         AppIcon(AppIconType.Image, Color.White, Modifier.size(14.dp))
