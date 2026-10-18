@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.love.service.user;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.love.controller.app.user.vo.AppUserProfileRespVO;
@@ -27,6 +28,7 @@ import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeC
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.AUTH_LOGIN_USER_DISABLED;
 import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.USER_PROFILE_BIRTHDAY_INVALID;
+import static cn.iocoder.yudao.module.love.enums.ErrorCodeConstants.USER_PROFILE_SEX_INVALID;
 
 /**
  * 用户资料 Service 实现类
@@ -81,6 +83,11 @@ public class UserProfileServiceImpl implements UserProfileService {
                 throw exception(USER_PROFILE_BIRTHDAY_INVALID);
             }
         }
+        // sex 值域收口（M18）：仅 0=女/1=男，其余拒绝（0=女 1=男 NULL=未设置，与系统字典相反；
+        // 原无校验，任意 int 直写 DB）
+        if (reqVO.getSex() != null && reqVO.getSex() != 0 && reqVO.getSex() != 1) {
+            throw exception(USER_PROFILE_SEX_INVALID);
+        }
         loveUserMapper.updateById(new LoveUserDO().setId(user.getId())
                 .setNickname(reqVO.getNickname())
                 .setAvatar(reqVO.getAvatar())
@@ -106,7 +113,10 @@ public class UserProfileServiceImpl implements UserProfileService {
         // 在一起天数：bind_time 当天记第 1 天（between=0 → 1），与纪念日惯例一致（第 520 天时 between=519）
         stats.setBindDays((int) ChronoUnit.DAYS.between(
                 couple.getBindTime().toLocalDate(), LocalDate.now()) + 1);
-        stats.setMessageCount(messageMapper.selectCount(LoveMessageDO::getCoupleId, couple.getId()));
+        // M18:排除已撤回墓碑行(recalled 标记不删行),消息数与端上列表口径一致
+        stats.setMessageCount(messageMapper.selectCount(new LambdaQueryWrapper<LoveMessageDO>()
+                .eq(LoveMessageDO::getCoupleId, couple.getId())
+                .eq(LoveMessageDO::getRecalled, false)));
         // 心愿口径 = kind=2 子集（我的页统计卡「心愿」消费；messageCount 仍为全部消息含文本）
         stats.setWishCount(messageMapper.selectCountWishes(couple.getId()));
         stats.setTodoCount(todoMapper.selectCount(LoveTodoDO::getCoupleId, couple.getId()));

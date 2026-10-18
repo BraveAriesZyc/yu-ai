@@ -7,15 +7,24 @@ import cn.iocoder.yudao.module.love.controller.admin.user.vo.LoveUserPageReqVO;
 import cn.iocoder.yudao.module.love.controller.admin.user.vo.LoveUserRespVO;
 import cn.iocoder.yudao.module.love.controller.admin.user.vo.LoveUserUpdateReqVO;
 import cn.iocoder.yudao.module.love.dal.dataobject.couple.LoveCoupleDO;
+import cn.iocoder.yudao.module.love.dal.dataobject.anniversary.LoveAnniversaryDO;
+import cn.iocoder.yudao.module.love.dal.dataobject.checkin.LoveCheckinDO;
 import cn.iocoder.yudao.module.love.dal.dataobject.message.LoveMessageDO;
 import cn.iocoder.yudao.module.love.dal.dataobject.mood.LoveMoodRecordDO;
 import cn.iocoder.yudao.module.love.dal.dataobject.todo.LoveTodoDO;
 import cn.iocoder.yudao.module.love.dal.dataobject.user.LoveUserDO;
+import cn.iocoder.yudao.module.love.dal.dataobject.wish.LoveWishDO;
+import cn.iocoder.yudao.module.love.dal.dataobject.moment.LoveMomentDO;
+import cn.iocoder.yudao.module.love.dal.mysql.anniversary.AnniversaryMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.checkin.CheckinMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.couple.LoveCoupleMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.message.MessageMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.moment.LoveMomentLikeMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.moment.MomentMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.mood.MoodRecordMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.todo.TodoMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.user.LoveUserMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.wish.WishMapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +57,16 @@ public class LoveAdminUserServiceImpl implements LoveAdminUserService {
     private MoodRecordMapper moodRecordMapper;
     @Resource
     private MessageMapper messageMapper;
+    @Resource
+    private AnniversaryMapper anniversaryMapper;
+    @Resource
+    private CheckinMapper checkinMapper;
+    @Resource
+    private MomentMapper momentMapper;
+    @Resource
+    private WishMapper wishMapper;
+    @Resource
+    private LoveMomentLikeMapper loveMomentLikeMapper;
 
     @Override
     public PageResult<LoveUserRespVO> getUserPage(LoveUserPageReqVO pageReqVO) {
@@ -99,6 +118,15 @@ public class LoveAdminUserServiceImpl implements LoveAdminUserService {
                 .and(w -> w.eq(LoveMessageDO::getSenderId, id)
                         .or()
                         .eq(LoveMessageDO::getReceiverId, id)));
+        // M18 级联补全（原缺四域：删用户后其纪念日/打卡/瞬间/心愿悬空残留）：
+        anniversaryMapper.delete(LoveAnniversaryDO::getOwnerId, id); // 其创建的纪念日（owner_id = 该用户）
+        checkinMapper.delete(LoveCheckinDO::getUserId, id); // 其打卡记录（user_id = 该用户）
+        momentMapper.delete(LoveMomentDO::getUserId, id); // 其相册瞬间（user_id = 该用户）
+        wishMapper.delete(LoveWishDO::getUserId, id); // 其心愿（user_id = 该用户）
+        // moment_like 显式 SQL 物理删（对抗审查 M18 修正：走 wrapper 的 delete 被 @TableLogic
+        // 改写成逻辑删，墓碑行会占死 uk_moment_user；unlike 同款显式 SQL 口径）：清该用户全部
+        // 点赞行为数据，防给伴侣瞬间的点赞残留致 likeCount 虚高（伴侣瞬间仍留对方点赞）
+        loveMomentLikeMapper.deleteByUserId(id);
         // 4. 物理解绑 couple（物理 DELETE，LoveCoupleDO 无 @TableLogic，D-11）：
         //    对方端轮询 couple/get 得 1_003_004_003 → 端上切回绑定引导态；
         //    被删用户本人端上：业务收口查不到 love_user 行 → 1_003_005_002 → 清会话回 Gate

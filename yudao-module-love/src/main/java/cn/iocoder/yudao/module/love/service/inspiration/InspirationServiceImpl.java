@@ -53,7 +53,11 @@ public class InspirationServiceImpl implements InspirationService {
         if (quotes.isEmpty()) {
             return buildFallbackVO();
         }
-        // 换一句 = 排除今日句随机（池 >1 时必换；池仅 1 条时返回它本身——语义上无句可换）
+        // 换一句 = 排除今日句随机（池 >1 时必换；池仅 1 条时返回它本身——语义上无句可换）。
+        // M18 修复：池剩 1 条时 nextInt(0) 抛 IllegalArgumentException → 500，先早退
+        if (quotes.size() == 1) {
+            return buildQuoteVO(quotes.get(0));
+        }
         long todayIndex = LocalDate.now().toEpochDay() % quotes.size();
         int randomIndex = ThreadLocalRandom.current().nextInt(quotes.size() - 1);
         if (randomIndex >= todayIndex) {

@@ -26,6 +26,9 @@ public class LoveMomentRespVO {
     @Schema(description = "图片完整 URL", requiredMode = Schema.RequiredMode.REQUIRED)
     private String imageUrl;
 
+    @Schema(description = "多图 URL JSON 数组（M15 二期，≤9 张；imageUrl 恒为首图冗余；M18 补透出）")
+    private String imageUrls;
+
     @Schema(description = "配文", example = "今天的晚霞")
     private String text;
 

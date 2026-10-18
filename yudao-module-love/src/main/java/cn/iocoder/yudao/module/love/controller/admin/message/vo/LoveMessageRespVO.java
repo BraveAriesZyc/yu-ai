@@ -22,7 +22,7 @@ public class LoveMessageRespVO {
             requiredMode = Schema.RequiredMode.REQUIRED, example = "2")
     private Long receiverId;
 
-    @Schema(description = "消息类型（1 文本悄悄话 / 2 心愿消息）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @Schema(description = "消息类型（1 文本悄悄话 / 2 心愿消息 / 3 图片消息）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer kind;
 
     @Schema(description = "文本内容，或心愿文案快照", example = "晚安")
@@ -40,6 +40,10 @@ public class LoveMessageRespVO {
     @Schema(description = "审核状态（0 待审 / 1 通过 / 2 命中；首期恒为 1，§12.3）",
             requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer auditStatus;
+
+    @Schema(description = "是否已撤回（M12 墓碑列，撤回不删行、content 留档审计；M18 补透出）",
+            requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
+    private Boolean recalled;
 
     @Schema(description = "创建时间", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime createTime;

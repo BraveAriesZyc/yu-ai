@@ -118,6 +118,9 @@ public interface ErrorCodeConstants {
 
     ErrorCode USER_PROFILE_BIRTHDAY_INVALID = new ErrorCode(1_003_010_000, "生日格式非法");
 
+    /** M18：sex 值域收口，仅 0=女/1=男（0=女 1=男 NULL=未设置，与系统字典语义相反） */
+    ErrorCode USER_PROFILE_SEX_INVALID = new ErrorCode(1_003_010_001, "性别取值非法");
+
     // ========== 恋爱灵感 模块 1-003-011-xxx（M17 追加） ==========
     /**
      * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。灵感是全局共享的运营内容

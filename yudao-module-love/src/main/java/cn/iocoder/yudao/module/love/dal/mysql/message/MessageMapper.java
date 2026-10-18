@@ -87,7 +87,9 @@ public interface MessageMapper extends BaseMapperX<LoveMessageDO> {
     default Long selectCountWishes(Long coupleId) {
         return selectCount(new LambdaQueryWrapper<LoveMessageDO>()
                 .eq(LoveMessageDO::getCoupleId, coupleId)
-                .eq(LoveMessageDO::getKind, LoveMessageDO.KIND_WISH));
+                .eq(LoveMessageDO::getKind, LoveMessageDO.KIND_WISH)
+                // M18:排除已撤回墓碑行(recalled 标记不删行),与端上心愿列表口径一致
+                .eq(LoveMessageDO::getRecalled, false));
     }
 
     /**

@@ -51,6 +51,16 @@ public interface LoveMomentLikeMapper extends BaseMapperX<LoveMomentLikeDO> {
                                   @Param("coupleId") Long coupleId);
 
     /**
+     * 按用户物理删全部赞行（admin 删用户级联，M18 对抗审查修正）
+     *
+     * 必须显式 SQL：走 MP wrapper 的 delete 会被 @TableLogic 改写成 UPDATE deleted = 1，
+     * 而本表 unlike 物理删 → deleted 恒 0，墓碑行会永久占用 uk_moment_user 位（重绑重赞撞 1062）。
+     * 不带 couple 条件：用户加入过的 couple 可能已被级联物理解绑，按 user_id 全清行为数据
+     */
+    @Delete("DELETE FROM love_moment_like WHERE user_id = #{userId}")
+    int deleteByUserId(@Param("userId") Long userId);
+
+    /**
      * 批量取一页瞬间的全部赞行（likeCount 组装源，Java 侧 groupingBy 计数）
      *
      * 调用方保证 momentIds 非空（getMomentList 空 moments 早退，避免 IN () 语法错）

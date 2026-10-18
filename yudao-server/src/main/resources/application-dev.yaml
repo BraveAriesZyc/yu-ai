@@ -222,3 +222,10 @@ justauth:
     type: REDIS
     prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
     timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
+
+--- #################### love 情侣模块配置 ####################
+
+love:
+  auth:
+    # 万能验证码:留空=禁用(M18 收口,原代码写死 888888 恒开;配置才启用,仅 local 打开,生产严禁配置)
+    master-code: ''
