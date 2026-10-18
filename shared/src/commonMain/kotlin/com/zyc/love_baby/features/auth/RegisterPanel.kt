@@ -27,7 +27,8 @@ import com.zyc.love_baby.state.SessionStore
 import kotlinx.coroutines.launch
 
 /**
- * RegisterPanel — 注册面板:手机号 + 验证码 + 密码(密码注册,短信码校验 §5.2)
+ * RegisterPanel — 注册面板:手机号 + 密码 + 验证码(密码注册,短信码校验 §5.2;验证码置末位,
+ *      2026-10-18 用户要求——先定密码再收验证码,与常见注册流一致)
  * 用法:GatePanel 内组合(「去注册」进入);成功落 SessionStore 回主功能,响应无会话字段则退回登录面板
  * 依赖:AuthWidgets 各小件;AuthApi.register/sendSmsCode;SessionStore
  * 事件:onBackToLogin 回登录面板;注册成功翻 SessionStore.isLoggedIn → Gate 整树卸载
@@ -55,9 +56,10 @@ internal fun RegisterPanel(
 
     fun submit() {
         if (submitting) return
+        // 校验序跟随字段视觉序(手机号→密码→验证码),toast 提示与从上往下填的直觉一致
         if (!validateMobileOrToast(mobile, pager)) return
-        if (!validateCodeOrToast(code, pager)) return
         if (!validatePasswordOrToast(password, pager)) return
+        if (!validateCodeOrToast(code, pager)) return
         focusManager.clearFocus()
         submitting = true
         scope.launch {
@@ -102,6 +104,13 @@ internal fun RegisterPanel(
         )
         Spacer(modifier = Modifier.height(12.dp))
         AuthFieldCard(
+            value = password,
+            onValueChange = { password = it },
+            placeholder = "设置密码(至少 $PASSWORD_MIN_LENGTH 位)",
+            keyboardType = KeyboardType.Password,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        AuthFieldCard(
             value = code,
             onValueChange = { code = it },
             placeholder = "验证码",
@@ -111,13 +120,6 @@ internal fun RegisterPanel(
                 launchSendSmsCode(scope, pager, mobile) { countdown = SMS_CODE_COUNTDOWN_SECONDS }
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        AuthFieldCard(
-            value = password,
-            onValueChange = { password = it },
-            placeholder = "设置密码(至少 $PASSWORD_MIN_LENGTH 位)",
-            keyboardType = KeyboardType.Password,
-        )
         Spacer(modifier = Modifier.height(18.dp))
         AuthPrimaryButton(
             text = "注 册",

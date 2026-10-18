@@ -24,7 +24,8 @@ import com.zyc.love_baby.network.AuthApi
 import kotlinx.coroutines.launch
 
 /**
- * ResetPanel — 重置密码面板:手机号 + 验证码 + 新密码(复用 SmsCodeApi scene=1 §5.2)
+ * ResetPanel — 重置密码面板:手机号 + 新密码 + 验证码(复用 SmsCodeApi scene=1 §5.2;
+ *      验证码置末位与 RegisterPanel 同构,2026-10-18 用户要求)
  * 用法:GatePanel 内组合(「忘记密码?」进入);成功 toast 后退回登录面板用新密码登录
  * 依赖:AuthWidgets 各小件;AuthApi.resetPassword/sendSmsCode
  * 事件:onBackToLogin 回登录面板;重置不产生登录态(不动 SessionStore)
@@ -48,9 +49,10 @@ internal fun ResetPanel(
 
     fun submit() {
         if (submitting) return
+        // 校验序跟随字段视觉序(手机号→密码→验证码),toast 提示与从上往下填的直觉一致
         if (!validateMobileOrToast(mobile, pager)) return
-        if (!validateCodeOrToast(code, pager)) return
         if (!validatePasswordOrToast(password, pager)) return
+        if (!validateCodeOrToast(code, pager)) return
         focusManager.clearFocus()
         submitting = true
         scope.launch {
@@ -88,6 +90,13 @@ internal fun ResetPanel(
         )
         Spacer(modifier = Modifier.height(12.dp))
         AuthFieldCard(
+            value = password,
+            onValueChange = { password = it },
+            placeholder = "新密码(至少 $PASSWORD_MIN_LENGTH 位)",
+            keyboardType = KeyboardType.Password,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        AuthFieldCard(
             value = code,
             onValueChange = { code = it },
             placeholder = "验证码",
@@ -97,13 +106,6 @@ internal fun ResetPanel(
                 launchSendSmsCode(scope, pager, mobile) { countdown = SMS_CODE_COUNTDOWN_SECONDS }
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        AuthFieldCard(
-            value = password,
-            onValueChange = { password = it },
-            placeholder = "新密码(至少 $PASSWORD_MIN_LENGTH 位)",
-            keyboardType = KeyboardType.Password,
-        )
         Spacer(modifier = Modifier.height(18.dp))
         AuthPrimaryButton(
             text = "重置密码",
