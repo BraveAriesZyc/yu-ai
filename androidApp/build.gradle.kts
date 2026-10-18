@@ -44,7 +44,7 @@ android {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("release")
             // ⚠️ 占位域名,上线前替换为真实 HTTPS 地址(D-4 上线清单项)
-            buildConfigField("String", "API_BASE_URL", "\"https://api.lovebaby.example.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://love.shattered-dream.top\"")
         }
     }
     // AGP 8 默认关闭 BuildConfig;KRUncaughtExceptionHandlerAdapter 引用了 BuildConfig.DEBUG

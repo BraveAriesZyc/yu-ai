@@ -16,7 +16,7 @@ import com.tencent.kuikly.core.pager.Pager
 internal object ApiConfig {
 
     /** 默认基地址:仅兜底(Android 模拟器直跑用;真机/正式包由宿主 createPageData 注入 apiBaseUrl 覆盖) */
-    const val DEFAULT_BASE_URL = "http://10.0.2.2:48080"
+    const val DEFAULT_BASE_URL = "https://love.shattered-dream.top"
 
     /** OAuth2 client,§5.2 约定恒为 couple-app */
     const val CLIENT_ID = "couple-app"
