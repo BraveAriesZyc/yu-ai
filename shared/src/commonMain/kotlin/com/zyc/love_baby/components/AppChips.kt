@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
+import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.lazy.LazyRow
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
@@ -44,7 +45,9 @@ fun AppFilterChipRow(
 
 /** 单枚筛选胶囊:选中实底白字 Bold(底色默认 brandStart,M19 起可用 selectedColor 覆盖——
  *  待办五标签彩 chip)/ 未选浅灰底灰字(MoodOptionChip 同源视觉)。两态同走 background(color=)
- *  单色重载(铁律⑦:color/brush 重载禁混用,选中覆盖色也走纯色不转 brush) */
+ *  单色重载(铁律⑦:color/brush 重载禁混用,选中覆盖色也走纯色不转 brush)。
+ *  三层胶囊写法(铁律 14/15,M20 修复:背景直挂 Text 落原生 TextView 块元素文字不居中)——
+ *  外层 Box 挂点击热区 → 内层 Box 载 background+padding → Text 作子节点 */
 @Composable
 fun AppFilterChip(
     label: String,
@@ -52,17 +55,21 @@ fun AppFilterChip(
     onClick: () -> Unit,
     selectedColor: Color? = null, // null = 主题主色(既有调用零破坏)
 ) {
-    Text(
-        label,
-        color = if (selected) Color.White else AppTheme.TextSecondary,
-        fontSize = 13.sp,
-        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-        modifier = Modifier
-            .background(
-                if (selected) (selectedColor ?: ThemeStore.current.brandStart) else Color(0xFFF5F6FA),
-                RoundedCornerShape(12.dp),
+    Box(modifier = Modifier.clickable(onClick = onClick)) {
+        Box(
+            modifier = Modifier
+                .background(
+                    if (selected) (selectedColor ?: ThemeStore.current.brandStart) else Color(0xFFF5F6FA),
+                    RoundedCornerShape(12.dp),
+                )
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+        ) {
+            Text(
+                label,
+                color = if (selected) Color.White else AppTheme.TextSecondary,
+                fontSize = 13.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-    )
+        }
+    }
 }
