@@ -1,13 +1,13 @@
 package cn.iocoder.yudao.module.love.controller.app.auth.vo;
 
 import cn.iocoder.yudao.framework.common.validation.Mobile;
+import cn.iocoder.yudao.module.love.framework.validation.Password;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.validator.constraints.Length;
 
 @Schema(description = "用户 App - 手机号 + 密码注册 Request VO")
 @Data
@@ -23,7 +23,7 @@ public class AppAuthRegisterReqVO {
 
     @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "a123456")
     @NotEmpty(message = "密码不能为空")
-    @Length(min = 4, max = 16, message = "密码长度为 4-16 位")
+    @Password
     private String password;
 
     @Schema(description = "短信验证码", requiredMode = Schema.RequiredMode.REQUIRED, example = "9999")

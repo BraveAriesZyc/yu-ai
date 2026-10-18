@@ -760,3 +760,86 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('灵感新增', 'love:inspiration:create', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('灵感编辑', 'love:inspiration:update', 3, 3, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('灵感删除', 'love:inspiration:delete', 3, 4, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+-- M20 段：上线准备批 索引补齐（8 条普通索引，纯追加可重放——STATISTICS 判重 + PREPARE，M15 段同款模板）
+-- 纯索引 DDL 与新代码无先后依赖；收益锚点 = M18 删用户级联 OR 两侧/user_id/owner_id 与 admin 筛选（明细见提交说明）
+-- ============================================================================
+
+-- love_message.idx_couple_kind
+SET @m20_idx := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_message' AND INDEX_NAME = 'idx_couple_kind');
+SET @m20_ddl := IF(@m20_idx = 0,
+    'ALTER TABLE `love_message` ADD INDEX `idx_couple_kind`(`couple_id` ASC, `kind` ASC) USING BTREE',
+    'SELECT 1');
+PREPARE m20_stmt FROM @m20_ddl;
+EXECUTE m20_stmt;
+DEALLOCATE PREPARE m20_stmt;
+
+-- love_message.idx_sender_id
+SET @m20_idx := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_message' AND INDEX_NAME = 'idx_sender_id');
+SET @m20_ddl := IF(@m20_idx = 0,
+    'ALTER TABLE `love_message` ADD INDEX `idx_sender_id`(`sender_id` ASC) USING BTREE',
+    'SELECT 1');
+PREPARE m20_stmt FROM @m20_ddl;
+EXECUTE m20_stmt;
+DEALLOCATE PREPARE m20_stmt;
+
+-- love_message.idx_receiver_id
+SET @m20_idx := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_message' AND INDEX_NAME = 'idx_receiver_id');
+SET @m20_ddl := IF(@m20_idx = 0,
+    'ALTER TABLE `love_message` ADD INDEX `idx_receiver_id`(`receiver_id` ASC) USING BTREE',
+    'SELECT 1');
+PREPARE m20_stmt FROM @m20_ddl;
+EXECUTE m20_stmt;
+DEALLOCATE PREPARE m20_stmt;
+
+-- love_moment.idx_user_id
+SET @m20_idx := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_moment' AND INDEX_NAME = 'idx_user_id');
+SET @m20_ddl := IF(@m20_idx = 0,
+    'ALTER TABLE `love_moment` ADD INDEX `idx_user_id`(`user_id` ASC) USING BTREE',
+    'SELECT 1');
+PREPARE m20_stmt FROM @m20_ddl;
+EXECUTE m20_stmt;
+DEALLOCATE PREPARE m20_stmt;
+
+-- love_wish.idx_user_id
+SET @m20_idx := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_wish' AND INDEX_NAME = 'idx_user_id');
+SET @m20_ddl := IF(@m20_idx = 0,
+    'ALTER TABLE `love_wish` ADD INDEX `idx_user_id`(`user_id` ASC) USING BTREE',
+    'SELECT 1');
+PREPARE m20_stmt FROM @m20_ddl;
+EXECUTE m20_stmt;
+DEALLOCATE PREPARE m20_stmt;
+
+-- love_moment_like.idx_user_id
+SET @m20_idx := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_moment_like' AND INDEX_NAME = 'idx_user_id');
+SET @m20_ddl := IF(@m20_idx = 0,
+    'ALTER TABLE `love_moment_like` ADD INDEX `idx_user_id`(`user_id` ASC) USING BTREE',
+    'SELECT 1');
+PREPARE m20_stmt FROM @m20_ddl;
+EXECUTE m20_stmt;
+DEALLOCATE PREPARE m20_stmt;
+
+-- love_todo.idx_owner_id
+SET @m20_idx := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_todo' AND INDEX_NAME = 'idx_owner_id');
+SET @m20_ddl := IF(@m20_idx = 0,
+    'ALTER TABLE `love_todo` ADD INDEX `idx_owner_id`(`owner_id` ASC) USING BTREE',
+    'SELECT 1');
+PREPARE m20_stmt FROM @m20_ddl;
+EXECUTE m20_stmt;
+DEALLOCATE PREPARE m20_stmt;
+
+-- love_anniversary.idx_owner_id
+SET @m20_idx := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_anniversary' AND INDEX_NAME = 'idx_owner_id');
+SET @m20_ddl := IF(@m20_idx = 0,
+    'ALTER TABLE `love_anniversary` ADD INDEX `idx_owner_id`(`owner_id` ASC) USING BTREE',
+    'SELECT 1');
+PREPARE m20_stmt FROM @m20_ddl;
+EXECUTE m20_stmt;
+DEALLOCATE PREPARE m20_stmt;
