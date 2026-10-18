@@ -19,6 +19,7 @@ import com.tencent.kuikly.core.render.android.adapter.KuiklyRenderAdapterManager
 import com.tencent.kuikly.core.render.android.css.ktx.toMap
 import com.tencent.kuikly.core.render.android.expand.KuiklyRenderViewBaseDelegatorDelegate
 import com.tencent.kuikly.core.render.android.expand.KuiklyRenderViewBaseDelegator
+import com.tencent.kuikly.core.render.android.expand.component.KRTextFieldView
 import com.zyc.love_baby.adapter.KRColorParserAdapter
 import com.zyc.love_baby.adapter.KRFontAdapter
 import com.zyc.love_baby.adapter.KRImageAdapter
@@ -31,6 +32,7 @@ import com.zyc.love_baby.module.KRFileModule
 import com.zyc.love_baby.module.KRNotificationModule
 import com.zyc.love_baby.module.KRShareModule
 import com.zyc.love_baby.module.KRWebSocketModule
+import com.zyc.love_baby.view.KRDefaultTypefaceTextFieldView
 import org.json.JSONObject
 
 class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorDelegate {
@@ -161,7 +163,14 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
     override fun registerExternalRenderView(kuiklyRenderExport: IKuiklyRenderExport) {
         super.registerExternalRenderView(kuiklyRenderExport)
         with(kuiklyRenderExport) {
-
+            // 密码框占位符字体修复:同名覆盖内置 KRTextFieldView(本 hook 由框架在内置注册之后
+            // 回调,viewExportCreator 同名后写覆盖,2.29 时序见 KRDefaultTypefaceTextFieldView 头注释;
+            // softInputMode() 取 delegate 默认,与内置注册 KRTextFieldView(context, delegate.softInputMode()) 同参)。
+            // ⚠ 位置传参:renderViewExport 末位 shadowExportCreator 是可空函数参,尾随 lambda 会绑
+            // 到它上(renderViewExportCreator 漏参编译错),lambda 必须按位置传(toNative 回调/pickAndUpload 同款坑)
+            renderViewExport(KRTextFieldView.VIEW_NAME, { context ->
+                KRDefaultTypefaceTextFieldView(context, softInputMode())
+            })
         }
     }
 
