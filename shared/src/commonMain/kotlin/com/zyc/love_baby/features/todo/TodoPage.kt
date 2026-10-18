@@ -125,8 +125,9 @@ fun TodoPage(
     val theme = ThemeStore.current
     var inputText by remember { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
-    // 选中标签下标(M19,默认「随手记」= lastIndex):添加时传 tag+色,TodoStore.add 默认参兜底
-    var selectedTagIndex by remember { mutableStateOf(TODO_TAGS.lastIndex) }
+    // 选中标签下标(M20 升级「筛选+新增一体」,原 M19 纯新增选择器):0=「全部」(列表全显,新增
+    // 不打标签),>0=筛 TODO_TAGS[i-1] 且新增待办自动打该标签;默认「全部」(进页看全量,筛选器心智)
+    var selectedTagIndex by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     // 软键盘高度(dp,KeyboardParams.height),0 = 收起;驱动输入条 bottom 与列表尾 Spacer 顶起
@@ -142,7 +143,12 @@ fun TodoPage(
         { params: KeyboardParams -> keyboardHeight = params.height }
     }
     val todos = TodoStore.todos
-    val filtered = visibleTodos()
+    // M20 标签维度过滤(叠加在完成状态三态 visibleTodos() 之上,两筛选正交)。
+    // 页内局部函数:添加滚底回调必须新鲜重算,勿复用组合期 filtered val(陈旧闭包)
+    fun withTagFilter(source: List<TodoItem>): List<TodoItem> =
+        if (selectedTagIndex == 0) source
+        else source.filter { it.tag == TODO_TAGS[selectedTagIndex - 1] }
+    val filtered = withTagFilter(visibleTodos())
     // 日期分组条目(2026-10-17 三域查看):变天插组头,三态过滤视图统一生效
     val entries = buildTodoEntries(filtered)
 
@@ -237,6 +243,7 @@ fun TodoPage(
                         TodoEmptyHint(
                             text = when {
                                 todos.isEmpty() -> "还没有待办,添加一条吧"
+                                selectedTagIndex > 0 && filtered.isEmpty() -> "这个分类还没有待办"
                                 TodoStore.filter == 1 -> "都做完啦,好好休息一下吧"
                                 else -> "还没有完成的待办"
                             },
@@ -305,15 +312,17 @@ fun TodoPage(
                 )
                 .fillMaxWidth(),
         ) {
-            // 五标签选择行(M19):默认「随手记」(= TODO_DEFAULT_TAG,既有数据零意外);
-            // 选中 chip 底色用该标签专属色(AppFilterChip.selectedColor 覆盖),所见即所得
+            // 标签筛选行(M20 升级「筛选+新增一体」,原 M19 纯新增选择器):首枚「全部」恒品牌色,
+            // 具体标签选中底色用专属色(AppFilterChip.selectedColor 覆盖);点具体标签=列表筛
+            // 该分类 + 新增待办自动打该标签;「全部」态新增 tag 空串(server 列可空,行上不显标签)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(TODO_TAGS.size) { i ->
+                items(TODO_TAGS.size + 1) { i ->
                     AppFilterChip(
-                        TODO_TAGS[i],
+                        if (i == 0) "全部" else TODO_TAGS[i - 1],
                         selected = i == selectedTagIndex,
                         onClick = { selectedTagIndex = i },
-                        selectedColor = colorFromHex(TODO_TAG_COLORS[TODO_TAGS[i]] ?: TODO_DEFAULT_COLOR_HEX),
+                        selectedColor = if (i == 0) null
+                            else colorFromHex(TODO_TAG_COLORS[TODO_TAGS[i - 1]] ?: TODO_DEFAULT_COLOR_HEX),
                     )
                 }
             }
@@ -352,11 +361,13 @@ fun TodoPage(
                         if (text.isNotEmpty() && !adding) {
                             adding = true
                             scope.launch {
+                                val addTag = if (selectedTagIndex == 0) "" else TODO_TAGS[selectedTagIndex - 1]
                                 val result = TodoStore.add(
                                     pager,
                                     text,
-                                    TODO_TAGS[selectedTagIndex],
-                                    TODO_TAG_COLORS[TODO_TAGS[selectedTagIndex]] ?: TODO_DEFAULT_COLOR_HEX,
+                                    addTag,
+                                    if (addTag.isEmpty()) TODO_DEFAULT_COLOR_HEX
+                                    else TODO_TAG_COLORS[addTag] ?: TODO_DEFAULT_COLOR_HEX,
                                 )
                                 adding = false
                                 if (result is ApiResult.Ok) {
@@ -371,7 +382,7 @@ fun TodoPage(
                                     if (TodoStore.filter != 2) {
                                         // 日期分组后 item 数 = 行数 + 组头数:滚底目标改数 entries
                                         // (尾 Spacer 下标 = entries.size;只数行会少算新条目触发的组头)
-                                        val itemCount = buildTodoEntries(visibleTodos()).size
+                                        val itemCount = buildTodoEntries(withTagFilter(visibleTodos())).size
                                         listState.awaitMeasured(itemCount + 1)
                                         listState.scrollToItem(itemCount)
                                     }
@@ -509,12 +520,15 @@ private fun TodoRow(todo: TodoItem, onToggle: () -> Unit, onDelete: () -> Unit) 
                 fontSize = 14.sp,
                 fontWeight = if (todo.done) FontWeight.Normal else FontWeight.Medium,
             )
-            Spacer(modifier = Modifier.height(5.dp))
-            AppTag(
-                todo.tag,
-                bgColor = todo.tagColor.copy(alpha = 0.12f),
-                textColor = todo.tagColor,
-            )
+            // M20:tag 空串(「全部」态新增,M19 前老数据同理)不渲染标签胶囊,勿出空胶囊
+            if (todo.tag.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(5.dp))
+                AppTag(
+                    todo.tag,
+                    bgColor = todo.tagColor.copy(alpha = 0.12f),
+                    textColor = todo.tagColor,
+                )
+            }
         }
         // 删除(clickable 与透明 background 同节点,铁律⑤:命中测试以带 background 的原生视图为准,
         // 无背景 clickable 的点击会被行级背景子视图整个吞掉)

@@ -171,6 +171,22 @@ internal fun InspirationPage(pager: Pager) {
                     }
                 }
             }
+            // 分类 chips 固定区(M20 粘顶:原 LazyColumn 内 item 随内容滚走,挪出列表=滚动恒定粘顶;
+            // 显示条件与列表内数据分支一致——加载/失败/空态不显示)
+            if (!loading && !loadFailed && inspirations.isNotEmpty()) {
+                AppFilterChipRow(
+                    labels = chipLabels,
+                    selectedIndex = selectedChipIndex,
+                    onSelect = { i ->
+                        selectedCategory = if (i == 0) "" else chipLabels[i]
+                        recomputeDisplay(shuffle = false)
+                    },
+                    modifier = Modifier.padding(
+                        horizontal = AppTheme.PageHPadding,
+                        vertical = 12.dp,
+                    ),
+                )
+            }
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 state = listState,
@@ -214,20 +230,6 @@ internal fun InspirationPage(pager: Pager) {
                         )
                     }
                     else -> {
-                        item(key = "chips", contentType = "inspiration-chips") {
-                            AppFilterChipRow(
-                                labels = chipLabels,
-                                selectedIndex = selectedChipIndex,
-                                onSelect = { i ->
-                                    selectedCategory = if (i == 0) "" else chipLabels[i]
-                                    recomputeDisplay(shuffle = false)
-                                },
-                                modifier = Modifier.padding(
-                                    horizontal = AppTheme.PageHPadding,
-                                    vertical = 12.dp,
-                                ),
-                            )
-                        }
                         items(display, key = { it.id }, contentType = { "inspiration-card" }) { item ->
                             InspirationCard(
                                 info = item,
