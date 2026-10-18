@@ -37,8 +37,10 @@ class KRApplication : Application() {
     /**
      * 通知渠道 App 启动即建(skeptic major 修复):targetSdk≤32 应用的 Android 13+ 通知权限弹窗
      * 由「activity 启动 + 已存在通知渠道」触发——渠道建晚了(如闸在 notify 的权限检查之后)
-     * 弹窗永不出现,新装设备通知永久失效。IMPORTANCE_DEFAULT=声音/震动/状态栏图标,**无
-     * heads-up 横幅**(HIGH 才有);本功能主目标是后台/锁屏提醒,DEFAULT 够用不打扰
+     * 弹窗永不出现,新装设备通知永久失效。IMPORTANCE_HIGH=声音/震动/状态栏图标+**heads-up
+     * 悬浮横幅**(DEFAULT 无横幅,2026-10-18 真机反馈「顶部有提示但没有横幅」后升级;渠道
+     * importance 一经创建不可改,改配置必须连 channel id 一起换——旧 id "chat" 在已安装设备
+     * 上永远留着 DEFAULT 语义)
      */
     private fun ensureNotifyChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
@@ -52,7 +54,7 @@ class KRApplication : Application() {
             NotificationChannel(
                 KRNotificationModule.CHANNEL_ID_CHAT,
                 "悄悄话",
-                NotificationManager.IMPORTANCE_DEFAULT,
+                NotificationManager.IMPORTANCE_HIGH,
             )
         )
     }

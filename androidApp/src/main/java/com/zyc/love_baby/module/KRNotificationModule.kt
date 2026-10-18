@@ -58,6 +58,8 @@ class KRNotificationModule : KuiklyRenderBaseModule() {
             .setContentText(body)
             // 文本超行折叠成 BigTextStyle 单行摘要语义(情侣消息常长句,预览尽量多露)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            // API<26 旧设备 heads-up 语义(26+ 由渠道 IMPORTANCE_HIGH 决定,priority 被忽略)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             // 同 id 重投不重放声音/震动(并发覆盖拉双发时数秒内只响一声)
             .setOnlyAlertOnce(true)
             .setAutoCancel(true)
@@ -87,8 +89,12 @@ class KRNotificationModule : KuiklyRenderBaseModule() {
         /** common 侧 base/NotificationModule.MODULE_NAME 同串(KR 前缀原生类名、HR 前缀注册名,惯例) */
         const val MODULE_NAME = "HRNotificationModule"
 
-        /** 通知渠道 id(KRApplication.ensureNotifyChannel 同串,系统设置可见名「悄悄话」) */
-        const val CHANNEL_ID_CHAT = "chat"
+        /**
+         * 通知渠道 id(KRApplication.ensureNotifyChannel 同串,系统设置可见名「悄悄话」)。
+         * v2:由 "chat" 换 "chat_high"——渠道 importance 一经创建不可改,升 IMPORTANCE_HIGH
+         * (heads-up 横幅)必须换 id,旧 id 渠道在已装设备上留 DEFAULT 语义不碍事
+         */
+        const val CHANNEL_ID_CHAT = "chat_high"
         private const val METHOD_NOTIFY = "notify"
 
         /** 固定通知 id(新覆盖旧不堆叠)与 PendingIntent requestCode */
