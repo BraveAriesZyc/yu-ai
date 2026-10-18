@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
 	<uses-permission android:name="android.permission.INTERNET"/>
+	<!-- 后台消息通知(M21):targetSdk 30 在 Android 13+ 自动授予(无需运行时申请);
+	     声明为未来升 targetSdk 33+ 时补运行时申请留位,未授权场景 KRNotificationModule 静默降级 -->
+	<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
 	<application
 			android:name=".KRApplication"

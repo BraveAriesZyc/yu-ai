@@ -27,6 +27,7 @@ import com.zyc.love_baby.adapter.KRThreadAdapter
 import com.zyc.love_baby.adapter.KRUncaughtExceptionHandlerAdapter
 import com.zyc.love_baby.module.KRBridgeModule
 import com.zyc.love_baby.module.KRFileModule
+import com.zyc.love_baby.module.KRNotificationModule
 import com.zyc.love_baby.module.KRShareModule
 import com.zyc.love_baby.module.KRWebSocketModule
 import org.json.JSONObject
@@ -116,6 +117,11 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
             // 头像上传(文件服务里程碑):common base/FileModule 声明,选图+压缩+直传一条龙
             moduleExport(KRFileModule.MODULE_NAME) {
                 KRFileModule()
+            }
+            // 后台消息通知(M21):common base/NotificationModule 声明,pull 落态钩子驱动,
+            // 前台 no-op(KRApplication started 计数),App 后台才发系统通知
+            moduleExport(KRNotificationModule.MODULE_NAME) {
+                KRNotificationModule()
             }
         }
     }

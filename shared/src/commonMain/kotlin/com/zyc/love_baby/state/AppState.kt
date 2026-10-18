@@ -10,6 +10,7 @@ import com.tencent.kuikly.core.coroutines.launch
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BridgeModule
+import com.zyc.love_baby.base.NotificationModule
 import com.zyc.love_baby.base.WebSocketModule
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.data.model.AnniversaryInfo
@@ -1008,6 +1009,9 @@ internal object ChatStore {
     }
 
     private suspend fun pull(pager: Pager, overwrite: Boolean): ApiResult {
+        // 进锁前快照游标(与回包同窗口基线):锁外通知判定「本回包新增」的依据,防并发覆盖拉
+        // 先推进游标后失真;首拉(空游标)不通知——拉的是历史不是新消息(见 notifyPartnerMessage)
+        val prevLastId = lastId
         val result = pullMutex.withLock {
             val listResult = MessageApi.list(pager, if (overwrite) "" else lastId)
             if (listResult is ApiResult.Ok) {
@@ -1038,9 +1042,54 @@ internal object ChatStore {
         // 覆盖 loadInitial/loadIncrement 全部拉取路径(首拉/切 Tab/下拉/5s 轮询/WS 信号);send 系不经过
         // 此处(本端发送只增加对方未读,不改我方)。失败静默(只读降级 §11),下个触发点自愈
         if (result is ApiResult.Ok) {
+            // M21 通知先于未读同步(skeptic minor:syncReadState 有一次网络往返,markRead/ unread
+            // 期间切后台会让「用户已看到的消息」迟发通知;调序消掉该窗口,纯内存判定零成本)
+            notifyPartnerMessage(pager, result, prevLastId)
             syncReadState(pager)
         }
         return result
+    }
+
+    /**
+     * 后台新消息通知(M21 本地通知,不做厂商推送):回包中「id 大于进锁前游标」的对方最新一条消息
+     * → 原生系统通知(App 后台才发;前台气泡+红点已可见,原生 no-op,common 无状态)。
+     * 空游标(本进程首拉,skeptic major 修复):回包是最近一页历史,无游标可判「新」——只认
+     * 服务端升序回包尾条(=最新一条)为本进程未看的消息,尾条是对方才通知(装好 App 直接切
+     * 后台收到对方首条消息的场景);用 maxByOrNull 会误报窗口里更早的历史对方消息,不可用。
+     * 本端消息过滤(send 不推游标,回包含自己迟到条目);墓碑不发(增量拉扫不到老消息变更,
+     * 覆盖窗口若含已撤回条目同样无通知意义)。多条合并一条(取最新摘要,原生 NOTIF_ID 固定
+     * 覆盖,情侣单会话语义)。未桥接端 getModule=null 静默降级(未读红点兜底,渐进降级同
+     * WebSocketModule)
+     */
+    private fun notifyPartnerMessage(pager: Pager, result: ApiResult.Ok, prevLastId: String) {
+        val latest = if (prevLastId.isEmpty()) {
+            MessageInfo.listFrom(result.dataArray).lastOrNull()
+                ?.takeIf { !it.recalled && it.senderId != SessionStore.userId }
+        } else {
+            val prevLong = prevLastId.toLongOrNull() ?: Long.MIN_VALUE
+            MessageInfo.listFrom(result.dataArray)
+                .asSequence()
+                .filter { !it.recalled && it.senderId != SessionStore.userId }
+                .filter { (it.id.toLongOrNull() ?: Long.MIN_VALUE) > prevLong }
+                .maxByOrNull { it.id.toLongOrNull() ?: Long.MIN_VALUE }
+        } ?: return
+        pager.getModule<NotificationModule>(NotificationModule.MODULE_NAME)?.notify(
+            title = CoupleStore.couple?.partnerNickname?.trim().orEmpty().ifEmpty { "TA" },
+            body = previewOf(latest),
+        )
+    }
+
+    /** 通知单行摘要:文本取 content 压平换行截 50 字(代理对安全截断,emoji 不截半);
+     *  心愿「💌 标题」(content=标题快照);图片「[图片]」 */
+    private fun previewOf(info: MessageInfo): String = when (info.kind) {
+        MessageInfo.KIND_WISH -> "💌 ${info.content}"
+        MessageInfo.KIND_IMAGE -> "[图片]"
+        else -> {
+            val flat = info.content.replace("\n", " ")
+            var end = minOf(50, flat.length)
+            while (end > 0 && flat[end - 1].isHighSurrogate()) end-- // 回退孤立高位代理项
+            flat.take(end)
+        }
     }
 
     /**
