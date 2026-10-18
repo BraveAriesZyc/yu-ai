@@ -26,8 +26,8 @@ FROM nginx:stable-alpine AS production
 RUN echo "types { application/javascript js mjs; }" > /etc/nginx/conf.d/mjs.conf \
     && rm -rf /etc/nginx/conf.d/default.conf
 
-# 复制构建产物
-COPY --from=builder /app/playground/dist /usr/share/nginx/html
+# 复制构建产物(M20:上游残留 playground/dist 修正为主力变体 web-antdv-next)
+COPY --from=builder /app/apps/web-antdv-next/dist /usr/share/nginx/html
 
 # 复制 nginx 配置
 COPY --from=builder /app/scripts/deploy/nginx.conf /etc/nginx/nginx.conf
