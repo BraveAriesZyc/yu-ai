@@ -130,4 +130,14 @@ public interface ErrorCodeConstants {
      */
     ErrorCode INSPIRATION_NOT_EXISTS = new ErrorCode(1_003_011_000, "灵感不存在");
 
+    // ========== 业务配置 模块 1-003-012-xxx（M23 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。配置是全局共享的运营 KV
+     * （无 couple 归属），app 侧 list 单端点只读零错误路径（缺行/停用行不下发，端上走
+     * 内置兜底值）；本组仅供 admin 通道 CRUD 判空与 config_key 唯一性校验
+     */
+    ErrorCode CONFIG_NOT_EXISTS = new ErrorCode(1_003_012_000, "配置项不存在");
+
+    ErrorCode CONFIG_KEY_DUPLICATE = new ErrorCode(1_003_012_001, "配置键已存在");
+
 }

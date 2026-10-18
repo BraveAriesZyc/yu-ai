@@ -843,3 +843,65 @@ SET @m20_ddl := IF(@m20_idx = 0,
 PREPARE m20_stmt FROM @m20_ddl;
 EXECUTE m20_stmt;
 DEALLOCATE PREPARE m20_stmt;
+
+-- ============================================================================
+-- M23 段：业务配置表 + 种子配置 + 菜单/按钮权限（love 业务专属 KV 配置，B 端配置 App 只读）
+-- 本段追加于 M20 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- love_config = 全局共享的运营 KV 配置（无 couple_id / user_id 归属，所有用户共读同一池），
+-- 继承 BaseDO 走【逻辑删除】（deleted 列 + DO 侧 @TableLogic），love_inspiration 同路线。
+-- config_key 是 App 读取契约（小写字母数字下划线，服务端 @Pattern 收口）；
+-- status=1 停用行不下发 App（端上 LoveConfigStore 对缺键走内置兜底值）。
+-- App 只读单端点（GET /love/config/list 回 configKey→configValue 映射）零错误路径
+-- （空表/全停用回空 Map）；admin 全量 CRUD（config_key 唯一性 service 层校验）。
+-- 无 DB uk（逻辑删除行残留 + uk 会挡同键重建，唯一性靠 service selectByKey 校验，
+-- yudao infra_config 同哲学）；idx_config_key 普通索引（App 全量拉取 + admin 键筛选）。
+-- 首个配置项 = 客服微信号（App 我的页「帮助与客服」行复制引导，原写死占位值迁入配置）。
+-- 上线顺序必须 SQL 先于新代码（新代码 DO 映射依赖本表）。
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `love_config`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '配置编号',
+  `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '配置名称（管理端展示用，如「客服微信号」）',
+  `config_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '配置键（App 读取契约：小写字母开头+小写字母数字下划线，如 customer_service_wechat）',
+  `config_value` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '配置值（App 按键读取；停用/缺键端上走内置兜底值）',
+  `remark` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注（用途与消费位置；提醒 config_key 是 App 契约勿随意改）',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0启用 1停用；停用行不下发 App）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_config_key`(`config_key` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '业务配置表（love 业务 KV，B 端配置，App 只读）';
+
+-- ----------------------------
+-- 种子配置（M23，1 行：客服微信号——原 MinePage 写死占位值迁入配置，端上同值兜底双保险）；
+-- 幂等：已存在同 config_key 且 deleted=0 行则跳过（M17 种子模板同款）
+-- ----------------------------
+INSERT INTO `love_config` (`name`, `config_key`, `config_value`, `remark`, `status`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT * FROM (
+  SELECT '客服微信号' AS `name`, 'customer_service_wechat' AS `config_key`, 'lovebaby-helper' AS `config_value`,
+         '我的页「帮助与客服」行点击复制并引导添加微信；config_key 为 App 契约勿随意改动' AS `remark`,
+         0 AS `status`, '1' AS `creator`, NOW() AS `create_time`, '1' AS `updater`, NOW() AS `update_time`, b'0' AS `deleted`
+) AS seed
+WHERE NOT EXISTS (
+  SELECT 1 FROM `love_config` d WHERE d.`deleted` = b'0' AND d.`config_key` = seed.`config_key`
+);
+
+-- ----------------------------
+-- 菜单/按钮权限 SQL（M23，「情侣业务」目录下第十一个管理页）
+-- 挂接：目录 id 按 type+name 回查（同 M17 段理由，不依赖前段 LAST_INSERT_ID）；
+-- 幂等：按钮（按 permission）→ 管理菜单（按 component_name）先行 DELETE，先子后父（M17 同款）。
+-- ----------------------------
+DELETE FROM `system_menu` WHERE `permission` IN ('love:config:query', 'love:config:create', 'love:config:update', 'love:config:delete');
+DELETE FROM `system_menu` WHERE `component_name` = 'LoveConfig';
+
+SELECT @loveDirectoryId := `id` FROM `system_menu` WHERE `type` = 1 AND `name` = '情侣业务' AND `deleted` = b'0' LIMIT 1;
+
+-- 管理菜单十一：业务配置（component_name 唯一 = LoveConfig，M17 实况同款无 Menu 后缀）
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('业务配置', '', 2, 11, @loveDirectoryId, 'config', 'ep:setting', 'love/config/index', 'LoveConfig', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+SELECT @parentId := LAST_INSERT_ID();
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('配置查询', 'love:config:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('配置新增', 'love:config:create', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('配置编辑', 'love:config:update', 3, 3, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('配置删除', 'love:config:delete', 3, 4, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
