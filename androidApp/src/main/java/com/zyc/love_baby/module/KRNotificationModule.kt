@@ -100,6 +100,9 @@ class KRNotificationModule : KuiklyRenderBaseModule() {
      *  结果」——拒绝两次后系统静默拒绝时 requestPermissions 不再弹框**但仍立即回调
      *  DENIED**(3-skeptic 官方文档锤实),即静默拒绝也走 asked=true,无法与真实弹框区分;
      *  调用方(PermissionPage)已改为 denied 一律引导跳系统设置,勿依赖 asked 做分支 */
+    /** 本实例在飞的申请回调(与 companion 静态槽存同一对象引用;onDestroy 归属校验用) */
+    private var myPendingCallback: KuiklyRenderCallback? = null
+
     private fun requestPermission(callback: KuiklyRenderCallback?) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             val on = NotificationManagerCompat.from(KRApplication.application).areNotificationsEnabled()
@@ -116,6 +119,7 @@ class KRNotificationModule : KuiklyRenderBaseModule() {
             return
         }
         pendingPermissionCallback = callback
+        myPendingCallback = callback
         try {
             host.requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), REQUEST_CODE_PERMISSION)
         } catch (_: Exception) {
@@ -139,6 +143,20 @@ class KRNotificationModule : KuiklyRenderBaseModule() {
             context.startActivity(intent)
         } catch (_: ActivityNotFoundException) {
         }
+    }
+
+    /** 页面销毁即清自己在飞的 pending 槽(3-skeptic:静态槽无销毁清理则已销毁页面的
+     *  Activity/视图树被静态引用到进程结束=泄漏,且 stale 回调可能被另一 Activity 实例
+     *  的 2001 结果错误消费;归属校验照 KRFileModule.onDestroy 清 current 先例——仅当
+     *  槽内仍是本实例发出的回调才清,不误伤其他实例在飞的申请;正常流程结果先于销毁
+     *  送达,此处清空是 no-op。销毁后结果到达走 onPermissionResult 的 pending 空静默
+     *  丢弃,死页面无感,新实例 requesting=false 自愈) */
+    override fun onDestroy() {
+        if (myPendingCallback != null && pendingPermissionCallback === myPendingCallback) {
+            pendingPermissionCallback = null
+        }
+        myPendingCallback = null
+        super.onDestroy()
     }
 
     /** 点击通知回 App:复用既有任务栈(SINGLE_TOP 不重建),进页后红点/消息由常规拉取链路就绪 */
