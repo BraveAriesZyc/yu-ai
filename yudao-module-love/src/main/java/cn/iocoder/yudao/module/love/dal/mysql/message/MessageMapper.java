@@ -58,6 +58,28 @@ public interface MessageMapper extends BaseMapperX<LoveMessageDO> {
     }
 
     /**
+     * 历史前翻一页（M19 下拉加载更早）：id &lt; beforeId 按 id 倒序取 limit 条
+     *
+     * 返回【倒序】结果，service 层反转为正序后返回端上（首屏同款）；
+     * 走 idx_couple_time(couple_id, id)：couple_id 等值 + id 范围 + ORDER BY id DESC LIMIT n，
+     * 与 selectListLatestPage 同型；
+     * 不过滤 recalled（M12 定稿：聊天流含墓碑灰条，wish-list 才排除——AppMessageController list 注释）
+     *
+     * @param coupleId 情侣关系编号
+     * @param beforeId 历史游标（取 id 小于该值的更早一页；调用方保证 &gt; 0）
+     * @param limit    条数上限（service 层钳制：默认 50、上限 200，§5.2；本方法直接拼 SQL，
+     *                 禁止把未钳制的客户端原始值传入）
+     */
+    default List<LoveMessageDO> selectListHistoryPage(Long coupleId, Long beforeId, Integer limit) {
+        return selectList(new LambdaQueryWrapper<LoveMessageDO>()
+                .eq(LoveMessageDO::getCoupleId, coupleId)
+                .lt(LoveMessageDO::getId, beforeId)
+                .orderByDesc(LoveMessageDO::getId)
+                // 与仓内 QueryWrapperX.limitN 同款惯例：last("LIMIT n")；limit 由 service 钳制后传入
+                .last("LIMIT " + limit));
+    }
+
+    /**
      * 心愿时间线视图：kind=2（心愿消息）按 id 倒序取 limit 条（§5.2 心愿查看，只读视图）
      *
      * 返回【倒序】结果（最新在前），service 直接透传不反转——时间线浏览语义与首屏正序流不同；

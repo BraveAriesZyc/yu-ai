@@ -25,13 +25,15 @@ public interface MessageService {
     /**
      * 增量拉取消息列表（恒升序返回）
      *
-     * 空参 lastId = 首屏取最近一页（id 倒序取 limit 条后反转为正序）；有 lastId = 顺序扫 id &gt; lastId 升序
+     * beforeId &gt; 0 = 历史前翻（id &lt; beforeId 倒序取一页反转正序，M19）；空参 lastId = 首屏取最近一页
+     * （id 倒序取 limit 条后反转为正序）；有 lastId = 顺序扫 id &gt; lastId 升序；beforeId 优先于 lastId
      *
-     * @param lastId 上次拉取的最大消息 id（空 = 首屏）
-     * @param limit  条数上限（默认 50、钳制上限 200，§5.2）
+     * @param lastId   上次拉取的最大消息 id（空 = 首屏）
+     * @param beforeId 历史前翻游标（M19：取 id 小于该值的更早一页；0/空 = 不启用）
+     * @param limit    条数上限（默认 50、钳制上限 200，§5.2）
      * @return 消息列表（正序）
      */
-    List<AppMessageRespVO> getMessageList(Long lastId, Integer limit);
+    List<AppMessageRespVO> getMessageList(Long lastId, Long beforeId, Integer limit);
 
     /**
      * 心愿时间线（kind=2 只读视图，按 id 倒序最新在前）：与聊天流解耦的查看入口——

@@ -102,12 +102,19 @@ public class MessageServiceImpl implements MessageService {
     private WebSocketMessageSender webSocketMessageSender;
 
     @Override
-    public List<AppMessageRespVO> getMessageList(Long lastId, Integer limit) {
+    public List<AppMessageRespVO> getMessageList(Long lastId, Long beforeId, Integer limit) {
         Long currentUserId = getCurrentUserId();
         // §6.5 停用账号收口
         getValidatedCurrentUser(currentUserId);
         LoveCoupleDO couple = getValidatedCouple(currentUserId);
         int size = resolveLimit(limit);
+        // M19 历史前翻：beforeId>0 优先于 lastId（两游标语义不同向，同传以 beforeId 为准）
+        if (beforeId != null && beforeId > 0) {
+            // id < beforeId 倒序取一页，service 反转正序（首屏同款）；不推 lastId 游标（D-12 不受影响）
+            List<LoveMessageDO> historyPage = messageMapper.selectListHistoryPage(couple.getId(), beforeId, size);
+            Collections.reverse(historyPage); // MyBatis 返回可变 ArrayList，可原地反转
+            return BeanUtils.toBean(historyPage, AppMessageRespVO.class);
+        }
         if (lastId == null) {
             // 空参 lastId = 首屏：id 倒序取最近一页（mapper 返回倒序），service 反转为正序后返回端上（§5.2）
             List<LoveMessageDO> latestPage = messageMapper.selectListLatestPage(couple.getId(), size);

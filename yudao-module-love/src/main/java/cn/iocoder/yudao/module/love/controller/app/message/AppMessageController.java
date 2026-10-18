@@ -45,13 +45,17 @@ public class AppMessageController {
 
     @GetMapping("/list")
     @Operation(summary = "增量拉取消息列表（恒升序返回）",
-            description = "空参 lastId = 首屏取最近一页（id 倒序取 limit 条后正序返回）；有 lastId = 走 idx_couple_time 顺序扫 id > lastId 升序返回；limit 默认 50、钳制上限 200（§5.2）")
+            description = "beforeId > 0 = 历史前翻（id < beforeId 倒序取一页正序返回，M19 下拉加载更早；优先于 lastId）；"
+                    + "空参 lastId = 首屏取最近一页（id 倒序取 limit 条后正序返回）；有 lastId = 走 idx_couple_time 顺序扫 id > lastId 升序返回；"
+                    + "limit 默认 50、钳制上限 200（§5.2）；recalled 墓碑照常回传（端上灰条口径不变）")
     public CommonResult<List<AppMessageRespVO>> getMessageList(
             @Parameter(description = "上次拉取的最大消息 id（空 = 首屏取最近一页）", example = "1024")
             @RequestParam(value = "lastId", required = false) Long lastId,
+            @Parameter(description = "历史前翻游标（取 id 小于该值的更早一页；0 = 不启用）", example = "1024")
+            @RequestParam(value = "beforeId", required = false, defaultValue = "0") Long beforeId,
             @Parameter(description = "每页条数（默认 50、上限 200）", example = "50")
             @RequestParam(value = "limit", required = false) Integer limit) {
-        return success(messageService.getMessageList(lastId, limit));
+        return success(messageService.getMessageList(lastId, beforeId, limit));
     }
 
     @GetMapping("/wish-list")
