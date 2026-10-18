@@ -22,6 +22,7 @@ import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.compose.profiler.RecompositionProfiler
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.components.AppBottomBar
+import com.zyc.love_baby.components.AppConfirmOverlay
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.UserProfile
@@ -34,6 +35,7 @@ import com.zyc.love_baby.features.couple.BindingPanel
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.features.mine.LogoutConfirmOverlay
+import com.zyc.love_baby.features.mine.MineAboutOverlay
 import com.zyc.love_baby.features.profile.ProfileEditOverlay
 import com.zyc.love_baby.features.profile.uploadAvatarAndUpdate
 import com.zyc.love_baby.network.ApiResult
@@ -183,6 +185,8 @@ internal fun MainPageImpl(pager: BasePager) {
     var showProfileEdit by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showMoodManage by remember { mutableStateOf(false) }
+    // 「关于我们」信息卡(M18 死入口接轻功能):MinePage 菜单行回调打开,纯展示零网络
+    var showMineAbout by remember { mutableStateOf(false) }
     var unbindSubmitting by remember { mutableStateOf(false) }
     var logoutSubmitting by remember { mutableStateOf(false) }
     // 头像上传进行中(文件服务里程碑):浮层头像行文案切换 + 拦重复发起(原生模块 inFlight 外的 UI 层判重)
@@ -194,6 +198,10 @@ internal fun MainPageImpl(pager: BasePager) {
     var chatImagePreviewUrl by remember { mutableStateOf("") }
     var chatRecallTargetId by remember { mutableStateOf("") }
     var chatRecallSubmitting by remember { mutableStateOf(false) } // POST 在飞(浮层撤回钮防双击)
+    // 待办删除确认(M18):Tab 页页内浮层盖不住浮岛底栏(铁律 14),目标 id 提升 MainPager
+    // 挂根级确认浮层(ChatRecallConfirmOverlay 同款双通道);deleting 在飞防重复提交
+    var todoDeleteTargetId by remember { mutableStateOf("") }
+    var todoDeleting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     // 浮层开着时关闭背景滚动(横滑 Pager + 当前页列表):Kuikly 浮层遮罩的 clickable 只吃
     // tap 不吃拖拽,背景原生滚动容器仍收 down/move(2026-10-17 真机实证「浮层开着还能滚
@@ -201,7 +209,8 @@ internal fun MainPageImpl(pager: BasePager) {
     // 开关,浮层任一开着即全关,是最干净的阻断通道(遮罩拦截方案在 Kuikly 原生视图层不成立)
     val overlayActive =
         showUnbindConfirm || showProfileEdit || showLogoutConfirm || showMoodManage ||
-            chatImagePreviewUrl.isNotEmpty() || chatRecallTargetId.isNotEmpty()
+            chatImagePreviewUrl.isNotEmpty() || chatRecallTargetId.isNotEmpty() ||
+            todoDeleteTargetId.isNotEmpty() || showMineAbout
     // Tab 跳转统一走 scrollToPage 瞬时直达(底栏点切/首页快捷入口/心情页「去悄悄话」),胶囊由
     // pillPosition(=targetPage 瞬移)驱动零动画帧,见 AppBottomBar.SlidingPill。⚠ 勿改回
     // animateScrollToPage(2026-10-16 真机「底栏异常
@@ -278,6 +287,22 @@ internal fun MainPageImpl(pager: BasePager) {
         }
     }
 
+    // 待办删除提交(M18,确认浮层回调):成功静默(列表写穿透消失即反馈,与删前口径一致),
+    // 失败关浮层 + toast;在飞防重复提交
+    fun submitTodoDelete() {
+        if (todoDeleting || todoDeleteTargetId.isEmpty()) return
+        val id = todoDeleteTargetId
+        todoDeleting = true
+        scope.launch {
+            val result = TodoStore.delete(pager, id)
+            todoDeleting = false
+            todoDeleteTargetId = ""
+            if (result !is ApiResult.Ok) {
+                toastCoupleResult(pager, result)
+            }
+        }
+    }
+
     // M12 撤回提交(浮层状态提升随迁):POST Ok 后墓碑已由 ChatStore.recall 内部 markLocalRecalled
     // 即地置灰,关浮层即见;失败也关浮层 + toast(超窗 1_003_003_001 由服务端权威兜底,不在端上
     // 复制时间窗判定细节)
@@ -310,8 +335,14 @@ internal fun MainPageImpl(pager: BasePager) {
                     pager,
                     myNickname = profile?.nickname.orEmpty(),
                     myAvatar = profile?.avatar.orEmpty(),
+                    onGoChat = goChat,
                 )
-                1 -> TodoPage(pager)
+                1 -> TodoPage(
+                    pager,
+                    deleteTargetId = todoDeleteTargetId,
+                    onSetDeleteTarget = { todoDeleteTargetId = it },
+                    listScrollEnabled = !overlayActive,
+                )
                 2 -> MoodPage(pager, onGoChat = goChat, onOpenManage = openMoodManage, listScrollEnabled = !overlayActive)
                 3 -> ChatPage(
                     pager,
@@ -329,6 +360,7 @@ internal fun MainPageImpl(pager: BasePager) {
                     onEditProfile = openProfileEdit,
                     onUnbindClick = openUnbindConfirm,
                     onLogoutClick = openLogoutConfirm,
+                    onAboutClick = { showMineAbout = true },
                     listScrollEnabled = !overlayActive,
                 )
             }
@@ -363,6 +395,17 @@ internal fun MainPageImpl(pager: BasePager) {
                 submitting = chatRecallSubmitting,
                 onDismiss = { chatRecallTargetId = "" },
                 onConfirm = { submitChatRecall() },
+            )
+        }
+
+        // 待办删除确认浮层(M18):后于底栏组合 → 盖住底栏,遮罩挡触摸;Tab 页删除确认统一根级挂载
+        if (todoDeleteTargetId.isNotEmpty()) {
+            AppConfirmOverlay(
+                title = "删除这条待办?",
+                message = "删除后双方都看不到这条待办了。确定要删除吗?",
+                busy = todoDeleting,
+                onDismiss = { if (!todoDeleting) todoDeleteTargetId = "" },
+                onConfirm = { submitTodoDelete() },
             )
         }
 
@@ -420,6 +463,12 @@ internal fun MainPageImpl(pager: BasePager) {
                 pager = pager,
                 onDismiss = { showMoodManage = false },
             )
+        }
+
+        // 「关于我们」信息卡(M18 死入口接轻功能):MinePage 菜单行打开,纯展示零网络,
+        // 后于底栏组合盖住底栏(LogoutConfirmOverlay 同款);卡外点击/知道了关闭
+        if (showMineAbout) {
+            MineAboutOverlay(onDismiss = { showMineAbout = false })
         }
 
         // 登录门(INTEGRATION-DESIGN §7.3):未登录/会话不可恢复时整树条件渲染 GatePanel,
@@ -486,6 +535,9 @@ internal fun MainPageImpl(pager: BasePager) {
                     AnniversaryStore.loadList(pager)
                     // 聊天增量补拉(M11 顺手修既有缺口:不在聊天页时回前台从不拉消息;红点随 foreground 校准)
                     ChatStore.loadIncrement(pager)
+                    // 今日打卡条校准(M18 修复:回前台此前不刷 CheckinStore,上午打过卡下午回前台
+                    // 首页仍显未打卡/对方打卡后恒「等 TA 中」;syncToday 只动 flags 不拽打卡页月缓存)
+                    CheckinStore.syncToday(pager)
                 }
             }
         }

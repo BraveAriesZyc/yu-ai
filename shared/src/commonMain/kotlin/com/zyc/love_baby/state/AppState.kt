@@ -517,6 +517,29 @@ internal object CheckinStore {
     }
 
     /**
+     * 前台校准今日双布尔(M18 修复:首页/回前台此前无通道——checkedToday 仅 check 置位、
+     * syncTodayFlags 仅打卡页 loadMonth 落值,冷启动/回前台时首页打卡条长时陈旧:上午打过卡
+     * 下午冷启动仍显未打卡,对方打卡后恒「等 TA 中」)。拉当月明细只校准 flags;displayMonth==
+     * 当月(打卡页正看当月)时缓存一并刷新防 flags 与月历脱节;翻月浏览中则不动
+     * checkins/displayMonth(浏览不被拽回当月)
+     */
+    suspend fun syncToday(pager: Pager): ApiResult {
+        val month = currentDate(pager).take(7)
+        if (month.isEmpty()) return ApiResult.Ok(JSONObject())
+        // 与 loadMonth 共用 monthReqSeq 乱序闸(对抗审查 M18:syncToday 是新的写通道,
+        // 迟到回包不得覆盖更晚发起的切月请求落态)
+        val seq = ++monthReqSeq
+        val result = CheckinApi.list(pager, month)
+        if (seq != monthReqSeq) return result // 过期回包:期间已有更新的拉取/打卡,不落状态
+        if (result is ApiResult.Ok) {
+            val rows = CheckinInfo.listFrom(result.dataArray)
+            if (displayMonth == month) checkins = rows
+            syncTodayFlags(pager, month, rows)
+        }
+        return result
+    }
+
+    /**
      * 打卡今天(§7.4 写穿透):uk 幂等由服务端保证(重复打卡回已有记录不打错),端上按成功处理。
      * 回包落态:checkedToday 置位;回包记录并入当月缓存(仅当回包月 == 展示月,防跨月脏插);
      * 随后重拉 summary(打卡直接改变 streak/累计,跨日口径本地增量算不准,整对象覆盖最稳)
@@ -524,6 +547,10 @@ internal object CheckinStore {
     suspend fun check(pager: Pager): ApiResult {
         val result = CheckinApi.check(pager)
         if (result is ApiResult.Ok) {
+            // 写使在飞读作废(对抗审查 M18:弱网下首页 syncToday/打卡页 loadMonth 与打卡并发,
+            // 服务端处理早于打卡的迟到回包会把 checkedToday/checkins 打回打卡前状态)——
+            // 打卡成功即 bump seq,所有在飞拉取回包过期不落;月历完整性由下方并入今日行兜底
+            monthReqSeq++
             checkedToday = true
             val info = CheckinInfo.from(result.data)
             if (info != null && displayMonth.isNotEmpty() && info.checkinDate.take(7) == displayMonth) {

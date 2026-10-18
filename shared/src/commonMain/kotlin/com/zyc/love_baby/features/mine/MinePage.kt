@@ -36,6 +36,7 @@ import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppIconTile
 import com.zyc.love_baby.components.AppMenuDivider
 import com.zyc.love_baby.components.AppMenuGroup
 import com.zyc.love_baby.components.AppMenuRow
@@ -46,6 +47,8 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.UserProfile
 import com.zyc.love_baby.features.couple.BoundPartnerCard
+import com.zyc.love_baby.features.couple.copyToPasteboard
+import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
 import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.state.CoupleBindState
@@ -62,7 +65,9 @@ import kotlinx.coroutines.launch
  * 依赖:ThemeStore/AppIcons/components 通用组件;RouterModule(打开组件列表页);
  *      UserProfile(MainPager 回填);CoupleStore/BoundPartnerCard(情侣空间,M2)
  * 事件:主题圆点点击 → ThemeStore.switch + persist;「组件列表」→ openPage("componentList");
- *      「编辑」→ onEditProfile();「解绑」→ onUnbindClick();「退出登录」→ onLogoutClick()(动作由 MainPager 收口)
+ *      「帮助与客服」→ 复制客服微信号 + toast(页内自持);「关于我们」→ onAboutClick()(信息卡
+ *      MineAboutOverlay 挂 MainPager 根);「编辑」→ onEditProfile();「解绑」→ onUnbindClick();
+ *      「退出登录」→ onLogoutClick()(动作由 MainPager 收口)
  * 功能:
  *  - 资料区(§7.7):昵称/头像展示由 profile 参数给定,编辑浮层在 MainPager(user/update 写穿透)
  *  - 情侣空间卡:已绑定时展示伴侣昵称/绑定时间 + 解绑入口(二次确认浮层在 MainPager);
@@ -75,6 +80,7 @@ internal fun MinePage(
     onEditProfile: () -> Unit,
     onUnbindClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onAboutClick: () -> Unit = {},
     listScrollEnabled: Boolean = true,
 ) {
     // 根容器收背景(浮层在 MainPager 根 Box,需盖住整页;背景与 LazyColumn 原本同色,视觉无变化)
@@ -107,6 +113,12 @@ internal fun MinePage(
                         iconTint = Color(0xFF34C77B),
                         iconBg = Color(0xFFE6F8EF),
                         title = "帮助与客服",
+                        // M18 死入口接轻功能:复制客服微信号 + toast(纯动作无浮层,页内自持)
+                        onClick = {
+                            copyToPasteboard(pager, CONTACT_WECHAT_ID) {
+                                toastCouple(pager, "微信号 $CONTACT_WECHAT_ID 已复制，去微信添加吧")
+                            }
+                        },
                     )
                     AppMenuDivider()
                     AppMenuRow(
@@ -114,6 +126,8 @@ internal fun MinePage(
                         iconTint = Color(0xFF6C7BFF),
                         iconBg = Color(0xFFEDEFFF),
                         title = "关于我们",
+                        // 信息卡浮层挂 MainPager 根(铁律 14:Tab 页页内浮层盖不住浮岛底栏)
+                        onClick = onAboutClick,
                     )
                     AppMenuDivider()
                     // 组件列表:通用组件 demo 画廊
@@ -137,7 +151,7 @@ internal fun MinePage(
                 ) {
                     Text("退出登录", color = AppTheme.Danger, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
-                Spacer(modifier = Modifier.height(100.dp + navBarSafePaddingDp())) // 底部导航避让
+                Spacer(modifier = Modifier.height(AppTheme.BottomBarAvoidExtra + navBarSafePaddingDp())) // 底部导航避让(M18 统一常数,原 100dp 与首页 96dp 不一致)
             }
         }
     }
@@ -351,6 +365,66 @@ private fun ThemePickerCard(pager: Pager) {
                                 },
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+// ---------- 关于我们(M18 死入口接轻功能) ----------
+
+/** 客服微信号(⚠️ 占位值,上线前替换为真实微信号;「帮助与客服」行点击复制) */
+private const val CONTACT_WECHAT_ID = "lovebaby-helper"
+
+/** 产品版本号(与 androidApp build.gradle versionName 同步维护;Kuikly commonMain 读不到 BuildConfig) */
+private const val APP_VERSION_NAME = "1.0.0"
+
+/**
+ * MineAboutOverlay — 「关于我们」信息卡:纯展示零网络,版本号 + 产品说明 + 知道了收口
+ * 用法:MainPager 根级组合(M18):if (showMineAbout) MineAboutOverlay(onDismiss = { showMineAbout = false })
+ * 依赖:AppTheme(brandBrush/CardBg/TextSecondary/TextTertiary)/AppIconTile/AppIcon;
+ *      骨架同全屏浮层惯例(黑幕 0.45 + 居中白卡 20dp 圆角 + 空 clickable 吞点击)
+ * 事件:卡外点击/「知道了」→ onDismiss()
+ * 功能:黑幕盖底栏由挂载位置保证(后于底栏组合,LogoutConfirmOverlay 同款);卡片吞点击防误关
+ */
+@Composable
+internal fun MineAboutOverlay(onDismiss: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = 48.dp)
+                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
+                .clickable { } // 吞卡片内点击,不触发卡外 dismiss
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // 品牌图标:主题渐变圆角底 + 心(brandBrush 挂主题实例,随 ThemeStore.current 切换)
+            AppIconTile(AppIconType.Heart, size = 56.dp, bgBrush = ThemeStore.current.brandBrush, corner = 18.dp)
+            Spacer(modifier = Modifier.height(14.dp))
+            Text("LoveBaby 情侣互动", color = AppTheme.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("版本 $APP_VERSION_NAME", color = AppTheme.TextTertiary, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "和另一半在这里记待办、写心情、说悄悄话、攒照片、点恋爱清单——把每一天的小日子都好好存起来。",
+                color = AppTheme.TextSecondary,
+                fontSize = 13.sp,
+            )
+            Spacer(modifier = Modifier.height(22.dp))
+            // 知道了(铁律 14/15 胶囊三层写法:外层 Box 容器 + 内层 Box 载 background/padding + Text 子节点)
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .background(ThemeStore.current.brandBrush, RoundedCornerShape(22.dp))
+                        .clickable { onDismiss() }
+                        .padding(horizontal = 44.dp, vertical = 10.dp),
+                ) {
+                    Text("知道了", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }

@@ -72,10 +72,10 @@ internal fun toastCoupleResult(pager: Pager, result: ApiResult) {
     }
 }
 
-/** 复制邀请码到剪贴板(宿主 BridgeModule;可空 getModule 降级,失败静默不崩) */
-internal fun copyInviteCode(pager: Pager, code: String, onCopied: () -> Unit) {
+/** 复制文本到剪贴板(宿主 BridgeModule;可空 getModule 降级,失败静默不崩)。邀请码/客服微信号等共用 */
+internal fun copyToPasteboard(pager: Pager, text: String, onCopied: () -> Unit) {
     try {
-        pager.getModule<BridgeModule>(BridgeModule.MODULE_NAME)?.copyToPasteboard(code)
+        pager.getModule<BridgeModule>(BridgeModule.MODULE_NAME)?.copyToPasteboard(text)
         onCopied()
     } catch (_: Exception) {
     }

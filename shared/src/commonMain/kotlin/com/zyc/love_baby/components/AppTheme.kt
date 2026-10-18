@@ -50,6 +50,10 @@ object AppTheme {
     val Divider = Color(0xFFF0F1F5)       // 分割线
 
     val PageHPadding = 16.dp
+
+    /** Tab 页列表尾部导航避让净高(浮岛底栏之上再留呼吸空间;+navBarSafePaddingDp() 使用)。
+     *  M18 收口:原 HomePage 96dp / MinePage 100dp 两处各自写死不一致,统一取 96 */
+    val BottomBarAvoidExtra = 96.dp
 }
 
 /**

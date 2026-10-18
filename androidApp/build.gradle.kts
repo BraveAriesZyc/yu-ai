@@ -22,7 +22,8 @@ android {
         minSdk = 23
         targetSdk = 30
         versionCode = 1
-        versionName = "1.0"
+        // 与 MinePage.kt 的 APP_VERSION_NAME 手工双源同步(关于我们卡展示;ohosApp app.json5 同 1.0.0)
+        versionName = "1.0.0"
     }
 
     signingConfigs {

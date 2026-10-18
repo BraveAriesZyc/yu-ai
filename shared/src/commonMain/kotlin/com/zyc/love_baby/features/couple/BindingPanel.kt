@@ -212,7 +212,7 @@ private fun InviteCodePane(pager: Pager) {
             code = invite.inviteCode,
             expireText = expireText,
             onCopy = {
-                copyInviteCode(pager, invite.inviteCode) {
+                copyToPasteboard(pager, invite.inviteCode) {
                     toastCouple(pager, "已复制,去发给 TA 吧")
                 }
             },

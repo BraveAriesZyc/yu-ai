@@ -41,6 +41,7 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.InspirationQuote
 import com.zyc.love_baby.features.couple.BindPrimaryButton
+import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.features.mood.TimelineLoadFailed
 import com.zyc.love_baby.features.mood.TimelineLoading
 import com.zyc.love_baby.network.ApiResult
@@ -146,6 +147,9 @@ internal fun QuotePage(pager: Pager) {
                     val result = InspirationApi.quoteRandom(pager)
                     if (result is ApiResult.Ok) {
                         InspirationQuote.from(result.data)?.let { content = it.content }
+                    } else {
+                        // 失败不再静默(M18 收口):保留原句,toast 告知(网络/服务端原因区分文案)
+                        toastCoupleResult(pager, result)
                     }
                     switching = false
                 }

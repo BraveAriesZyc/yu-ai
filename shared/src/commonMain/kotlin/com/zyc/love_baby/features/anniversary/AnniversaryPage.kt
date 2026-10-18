@@ -40,6 +40,7 @@ import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.components.AppConfirmOverlay
 import com.zyc.love_baby.components.AppDatePickerOverlay
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
@@ -114,6 +115,8 @@ internal fun AnniversaryPage(pager: Pager) {
     var loading by remember { mutableStateOf(true) }
     var loadFailed by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
+    // 删除确认目标 id(M18):纪念日删除从 ✕ 一键直删改二次确认——录入成本高于待办,误触即丢
+    var deleteTargetId by remember { mutableStateOf("") }
     // 今天的天序号 remember 一次:本页短驻留内跨天不重排(回前台/重进重拉校准,§7.4)
     val todayIndex = remember { todayDayIndexGmt8() }
     val anniversaries = AnniversaryStore.anniversaries
@@ -178,7 +181,7 @@ internal fun AnniversaryPage(pager: Pager) {
                         AnniversaryRow(
                             item = item,
                             todayIndex = todayIndex,
-                            onDelete = { remove(item.id) },
+                            onDelete = { deleteTargetId = item.id },
                         )
                     }
                 }
@@ -199,6 +202,20 @@ internal fun AnniversaryPage(pager: Pager) {
                 pager = pager,
                 todayIndex = todayIndex,
                 onDismiss = { showAdd = false },
+            )
+        }
+
+        // 删除确认浮层(M18):后于 FAB/新增浮层组合盖住全部;确认前先清 target 关浮层再删除
+        if (deleteTargetId.isNotEmpty()) {
+            AppConfirmOverlay(
+                title = "删除这个纪念日?",
+                message = "删除后双方都看不到这个纪念日了。确定要删除吗?",
+                onConfirm = {
+                    val id = deleteTargetId
+                    deleteTargetId = ""
+                    remove(id)
+                },
+                onDismiss = { deleteTargetId = "" },
             )
         }
     }

@@ -124,6 +124,14 @@ fun MoodPage(
         today = currentDate(pager)
     }
 
+    // 跨午夜校准(M18 收口):常驻组合页只在本 effect 赋 today 一次,后台过夜回来「今天」已
+    // 陈旧——回前台(foregroundTick>0,冷启动首现不计)重算;today 只喂展示文案,不落 store
+    LaunchedEffect(CoupleStore.foregroundTick) {
+        if (CoupleStore.foregroundTick > 0 && CoupleStore.bindState == CoupleBindState.BOUND) {
+            today = currentDate(pager)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // 渐变头部

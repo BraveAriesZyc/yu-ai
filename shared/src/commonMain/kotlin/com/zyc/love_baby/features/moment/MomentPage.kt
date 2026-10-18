@@ -52,6 +52,7 @@ import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.base.FileModule
+import com.zyc.love_baby.components.AppConfirmOverlay
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
@@ -141,6 +142,9 @@ internal fun MomentPage(pager: Pager) {
     // 大图预览目标(null = 关闭);非空时 LazyColumn 关滚动(F6)
     var preview by remember { mutableStateOf<MomentInfo?>(null) }
     var previewDeleting by remember { mutableStateOf(false) }
+    // 删除确认目标(M18):瞬间删除从一键直删改二次确认——不可逆内容+预览浮层里删除钮与
+    // 点赞钮相邻易误触(此前是全 App 唯一无确认的不可逆删除入口);独立页页内挂载无底栏问题
+    var deleteTarget by remember { mutableStateOf<MomentInfo?>(null) }
     // 点赞单飞锁(M15):在飞期间轮询跳过、预览点赞钮拦截
     var likeToggling by remember { mutableStateOf(false) }
     // 页内自持(M7 时间线页先例):id 倒序新→旧,服务端序原样保留不重排
@@ -352,7 +356,10 @@ internal fun MomentPage(pager: Pager) {
                     else -> {
                         // 双列自排:chunked(2) Row(CheckinPage 日历同款);头插/删除按整行重排,量级可接受
                         moments.chunked(2).forEach { rowItems ->
-                            item(key = "moment-${rowItems.first().id}") {
+                            item(
+                                key = "moment-${rowItems.first().id}",
+                                contentType = "momentRow", // 行同构,与空态/加载更多脚项区分复用池(M18 收口)
+                            ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth()
                                         .padding(horizontal = AppTheme.PageHPadding, vertical = 6.dp),
@@ -437,8 +444,23 @@ internal fun MomentPage(pager: Pager) {
                 likeSubmitting = likeToggling,
                 deleting = previewDeleting,
                 onToggleLike = { toggleLike(it) },
-                onDelete = { removeMoment(info) },
+                onDelete = { deleteTarget = info },
                 onDismiss = { preview = null },
+            )
+        }
+
+        // 删除确认浮层(M18):后于 preview 组合盖住预览;确认前先清 target 关浮层再执行删除,
+        // 删除中(previewDeleting)拦全部出口防重复提交
+        deleteTarget?.let { target ->
+            AppConfirmOverlay(
+                title = "删除这条瞬间?",
+                message = "删除后双方都看不到这条瞬间了,照片无法恢复。确定要删除吗?",
+                busy = previewDeleting,
+                onConfirm = {
+                    deleteTarget = null
+                    removeMoment(target)
+                },
+                onDismiss = { if (!previewDeleting) deleteTarget = null },
             )
         }
     }

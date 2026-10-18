@@ -46,6 +46,7 @@ import com.zyc.love_baby.features.chat.todayDayIndexGmt8
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
 import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.state.AnniversaryStore
+import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
@@ -59,11 +60,17 @@ import com.zyc.love_baby.state.nextAnniversaryCountdownDays
  * 依赖:ThemeStore(主题)/TodoStore/StatsStore/AnniversaryStore/CheckinStore(统计与打卡条);
  *      components 通用组件(AppGradientHeader/AppStatBar/AppQuickAction 等);RouterModule(开独立页)
  * 事件:四快捷入口(纪念日提醒/每日打卡/我们的相册/恋爱清单,2026-10-18 自 MinePage 迁入)
- *      与纪念日统计列 onClick 均经 RouterModule 打开对应独立页
+ *      与纪念日统计列 onClick 均经 RouterModule 打开对应独立页;铃铛 → onGoChat()(M18 死入口
+ *      接轻功能:跳聊天 Tab,红点=ChatStore.unreadCount)
  * 功能:纯展示型首页;统计实时来自 TodoStore;bindState 驱动纪念日整表首拉(§7.4)
  */
 @Composable
-fun HomePage(pager: Pager, myNickname: String = "", myAvatar: String = "") {
+fun HomePage(
+    pager: Pager,
+    myNickname: String = "",
+    myAvatar: String = "",
+    onGoChat: () -> Unit = {},
+) {
     val theme = ThemeStore.current
     // 纪念日首拉(bindState 驱动,TodoPage LaunchedEffect 同款):首页第 4 统计列消费
     // AnniversaryStore,未绑定/登出静默跳过;独立页增删写穿透即时反映,跨端靠回前台/
@@ -71,13 +78,14 @@ fun HomePage(pager: Pager, myNickname: String = "", myAvatar: String = "") {
     LaunchedEffect(CoupleStore.bindState) {
         if (CoupleStore.bindState != CoupleBindState.BOUND) return@LaunchedEffect
         AnniversaryStore.loadList(pager)
-        // 今日打卡条(M8):summary 供条上「连续 N 天」展示;checkin 明细不在此拉
-        //(独立页进入时拉当月),条上今日状态吃 CheckinStore.checkedToday(独立页打卡后回首页仍准)
+        // 今日打卡条(M8):summary 供条上「连续 N 天」展示;今日双布尔此前仅打卡页 loadMonth
+        // 校准,冷启动长时陈旧(M18 修复)——syncToday 拉当月只校准 flags,不动打卡页月缓存
         CheckinStore.loadSummary(pager)
+        CheckinStore.syncToday(pager)
     }
     LazyColumn(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         item {
-            HeaderWithStats(pager, myNickname, myAvatar)
+            HeaderWithStats(pager, myNickname, myAvatar, onGoChat)
         }
         item {
             // 今日打卡条(M8):HeaderWithStats 悬浮统计卡之下、快捷入口之上
@@ -92,7 +100,8 @@ fun HomePage(pager: Pager, myNickname: String = "", myAvatar: String = "") {
         item {
             // 功能入口(2026-10-18 真机反馈:原「去待办/送心意/去聊天/我的」与底栏五 Tab 纯重复,
             // 删掉换上原「我的」页四功能——图标/配色/命名与 MinePage 菜单行同源,路由开独立页;
-            // 未绑定不设守卫,独立页内部有未绑定态自处理,与 MinePage 菜单行为一致)
+            // 未绑定不设守卫:进页拉取 401 静默落空态,写操作经 toastCoupleResult 提示登录失效,
+            // 与 MinePage 菜单行为一致)
             Column(modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)) {
                 Spacer(modifier = Modifier.height(24.dp))
                 AppSectionTitle("快捷入口")
@@ -155,24 +164,45 @@ fun HomePage(pager: Pager, myNickname: String = "", myAvatar: String = "") {
                 }
             }
         }
-        item { Spacer(modifier = Modifier.height(96.dp + navBarSafePaddingDp())) } // 底部导航避让
+        item { Spacer(modifier = Modifier.height(AppTheme.BottomBarAvoidExtra + navBarSafePaddingDp())) } // 底部导航避让(M18 统一常数)
     }
 }
 
 @Composable
-private fun HeaderWithStats(pager: Pager, myNickname: String, myAvatar: String) {
+private fun HeaderWithStats(pager: Pager, myNickname: String, myAvatar: String, onGoChat: () -> Unit) {
     val theme = ThemeStore.current
     Box(modifier = Modifier.fillMaxWidth()) {
         // 渐变头部
         AppGradientHeader(height = 122.dp, topSpacing = 16.dp) {
             AppHeaderTitle("Hi,宝贝", "今天也要甜甜的哦", titleSize = 22.sp, subtitleSize = 12.sp)
-            // 铃铛通知入口
-            AppIconTile(
-                AppIconType.Bell,
-                size = 38.dp,
-                bgColor = Color.White.copy(alpha = 0.25f),
-                corner = 19.dp,
-            )
+            // 铃铛(M18 死入口接轻功能):点击跳聊天 Tab;红点=ChatStore.unreadCount(M11 同一
+            // 事实源),样式照抄 AppQuickAction badge——红点盖在带底可点件上必须挂同一回调(铁律 7)
+            Box {
+                AppIconTile(
+                    AppIconType.Bell,
+                    size = 38.dp,
+                    bgColor = Color.White.copy(alpha = 0.25f),
+                    corner = 19.dp,
+                    onClick = onGoChat,
+                )
+                if (ChatStore.unreadCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 4.dp, y = (-2).dp)
+                            .size(14.dp)
+                            .background(AppTheme.Danger, RoundedCornerShape(7.dp))
+                            .clickable { onGoChat() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = if (ChatStore.unreadCount > 99) "99+" else "${ChatStore.unreadCount}",
+                            color = Color.White,
+                            fontSize = 8.sp,
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.width(10.dp))
             // 头像(2026-10-18 资料详情页入口):接真实昵称/头像(MainPager 传参),点击进自己资料页;
             // 空值回退「宝」字——原写死「宝」是 M12 遗留,今随 profilePage 一并解决
@@ -190,7 +220,8 @@ private fun HeaderWithStats(pager: Pager, myNickname: String, myAvatar: String) 
         // 第 4 列纪念日倒数 = M5,值来自 AnniversaryStore 端上纯函数,D-17)
         AppStatBar(
             items = listOf(
-                AppStatItem("${TodoStore.todos.size}", "今日待办"),
+                // 「待办」非「今日待办」(M18 收口):TodoStore.todos 是全量列表(含更早),不限今日
+                AppStatItem("${TodoStore.todos.size}", "待办"),
                 AppStatItem("${TodoStore.doneCount}", "已完成"),
                 AppStatItem(
                     if (CoupleStore.bindState == CoupleBindState.BOUND) "${StatsStore.bindDays}" else "--",

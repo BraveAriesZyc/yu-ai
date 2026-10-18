@@ -54,6 +54,7 @@ import com.zyc.love_baby.TextField
 import com.zyc.love_baby.onSizeChangedDp
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.components.AppCheckbox
+import com.zyc.love_baby.components.AppConfirmOverlay
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
@@ -630,10 +631,13 @@ internal fun WishListPage(pager: Pager) {
             )
         }
 
-        // 删除确认浮层(页面级,无底栏无需 MainPager 收口;组合在列表/添加条之后 = 后组合者在上)
+        // 删除确认浮层(M18 换通用 AppConfirmOverlay;页面级,无底栏无需 MainPager 收口;
+        // 组合在列表/添加条之后 = 后组合者在上)
         if (deleteTarget != null) {
-            DeleteWishOverlay(
-                deleting = deleting,
+            AppConfirmOverlay(
+                title = "删除心愿?",
+                message = "删除后双方都看不到这条心愿了,已发出的完成消息不受影响。确定要删除吗?",
+                busy = deleting,
                 onConfirm = { confirmDelete() },
                 onDismiss = { if (!deleting) deleteTarget = null },
             )
@@ -874,68 +878,6 @@ private fun WishEmptyHint(modifier: Modifier = Modifier) {
             color = AppTheme.TextSecondary,
             fontSize = 13.sp,
         )
-    }
-}
-
-/**
- * DeleteWishOverlay — 删除心愿二次确认浮层(全屏灰幕 + 居中白卡,LogoutConfirmOverlay 同款结构):
- * 灰幕点击取消,卡片 background+clickable 同节点吞点击防透传(铁律⑤);deleting 期间所有出口拦点击。
- * 页面级挂载(本页无底栏,组合顺序 = 盖住列表与添加条,无需 MainPager 收口)
- */
-@Composable
-private fun DeleteWishOverlay(
-    deleting: Boolean,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { if (!deleting) onDismiss() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 36.dp)
-                .fillMaxWidth()
-                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
-                .clickable { }
-                .padding(horizontal = 20.dp, vertical = 22.dp),
-        ) {
-            Text("删除心愿?", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "删除后双方都看不到这条心愿了,已发出的完成消息不受影响。确定要删除吗?",
-                color = AppTheme.TextSecondary,
-                fontSize = 13.sp,
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            Row {
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .height(42.dp)
-                        .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
-                        .clickable { if (!deleting) onDismiss() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("取消", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .height(42.dp)
-                        .background(AppTheme.Danger, RoundedCornerShape(21.dp))
-                        .clickable { if (!deleting) onConfirm() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        if (deleting) "删除中…" else "删除",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-        }
     }
 }
 

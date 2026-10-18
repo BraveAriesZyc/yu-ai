@@ -75,9 +75,12 @@ private const val TODO_INPUT_MAX_LENGTH = 64
 
 /**
  * TodoPage — 待办页:主题渐变头部 + 分段过滤 + 清单卡片 + 底部添加输入条(M3 服务端同步版)
- * 用法:TodoPage(pager),数据与过滤状态在 TodoStore(全局,切 Tab 不丢);写操作经 pager 走 app-api
+ * 用法:TodoPage(pager, deleteTargetId, onSetDeleteTarget),数据与过滤状态在 TodoStore(全局,
+ *      切 Tab 不丢);写操作经 pager 走 app-api;删除确认状态提升 MainPager(M18:本页是 Tab 页,
+ *      页内浮层盖不住浮岛底栏,铁律 14——ChatRecallConfirmOverlay 同款双通道接线)
  * 依赖:TodoStore/ThemeStore/AppIcons/BasicWidget.TextField(String placeholder, keyboardHeightChange)
- * 事件:勾选完成/删除/添加 → TodoStore 写穿透(乐观更新失败回滚,失败 toastCoupleResult);
+ * 事件:勾选完成/添加 → TodoStore 写穿透(乐观更新失败回滚,失败 toastCoupleResult);删除 →
+ *      onSetDeleteTarget 置 id 弹 MainPager 根级确认浮层,确认后 MainPager 调 TodoStore.delete;
  *      进入首组合 loadAll 全量拉取,再进本页由 MainPager 切 Tab 触发补拉(§7.4 拉取触发点);
  *      添加成功 → 滚到列表尾新条目(TodoStore.add 恒追加,长列表不滚 = 「加了没反应」)
  * 功能:全部/进行中/已完成 三态过滤;空列表引导文案;键盘三件套(2026-10-16 对齐聊天页):
@@ -90,7 +93,12 @@ private const val TODO_INPUT_MAX_LENGTH = 64
  *    maxLines=3 长文本封顶自然长高,64 字上限与服务端 @Length(max=64) 对齐
  */
 @Composable
-fun TodoPage(pager: Pager) {
+fun TodoPage(
+    pager: Pager,
+    deleteTargetId: String = "",
+    onSetDeleteTarget: (String) -> Unit = {},
+    listScrollEnabled: Boolean = true,
+) {
     val theme = ThemeStore.current
     var inputText by remember { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
@@ -182,6 +190,9 @@ fun TodoPage(pager: Pager) {
                         }
                     },
                 state = listState,
+                // 删除确认浮层(M18)开着时关本页滚动:遮罩只吃 tap 不吃拖拽,背景列表仍收
+                // down/move(真机实证),Mood/Mine/Chat 三页同款门控,本页此前是唯一缺口
+                userScrollEnabled = listScrollEnabled,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (filtered.isEmpty()) {
@@ -212,10 +223,9 @@ fun TodoPage(pager: Pager) {
                                 }
                             },
                             onDelete = {
-                                scope.launch {
-                                    val result = TodoStore.delete(pager, entry.todo.id)
-                                    if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
-                                }
+                                // M18:删除改二次确认——目标 id 提升给 MainPager 弹确认浮层,
+                                // 确认回调在 MainPager 侧执行 TodoStore.delete(本页零网络动作)
+                                onSetDeleteTarget(entry.todo.id)
                             },
                         )
                     }
