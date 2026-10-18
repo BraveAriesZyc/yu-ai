@@ -35,12 +35,13 @@ class KRApplication : Application() {
     }
 
     /**
-     * 通知渠道 App 启动即建(skeptic major 修复):targetSdk≤32 应用的 Android 13+ 通知权限弹窗
-     * 由「activity 启动 + 已存在通知渠道」触发——渠道建晚了(如闸在 notify 的权限检查之后)
-     * 弹窗永不出现,新装设备通知永久失效。IMPORTANCE_HIGH=声音/震动/状态栏图标+**heads-up
-     * 悬浮横幅**(DEFAULT 无横幅,2026-10-18 真机反馈「顶部有提示但没有横幅」后升级;渠道
-     * importance 一经创建不可改,改配置必须连 channel id 一起换——旧 id "chat" 在已安装设备
-     * 上永远留着 DEFAULT 语义)
+     * 通知渠道 App 启动即建(skeptic major 修复):targetSdk≤32 时代 Android 13+ 的系统自动
+     * 弹窗依赖「首渠道已建 + activity 启动」;升 targetSdk 33(M22)后改由应用主动申请
+     * (KuiklyRenderActivity 主页 onCreate),渠道尽早就绪仍成立——权限弹窗的「管理」入口
+     * 与通知发送都依赖渠道存在。IMPORTANCE_HIGH=声音/震动/状态栏图标+**heads-up 悬浮横幅**
+     * (DEFAULT 无横幅,2026-10-18 真机反馈「顶部有提示但没有横幅」后升级;渠道 importance
+     * 一经创建不可改,改配置必须连 channel id 一起换——旧 id "chat" 在已安装设备上永远留着
+     * DEFAULT 语义)
      */
     private fun ensureNotifyChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {

@@ -2,6 +2,7 @@ package com.zyc.love_baby
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -83,7 +84,38 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         errorView = findViewById(R.id.hr_error)
         onBackPressedDispatcher.addCallback(this, backToExitCallback)
         backToExitCallback.isEnabled = pageName == PAGE_MAIN
+        maybeRequestNotificationPermission(savedInstanceState)
         kuiklyRenderViewDelegator.onAttach(hrContainerView, "", pageName, createPageData())
+    }
+
+    /**
+     * 打开即请求通知权限(M22,用户裁决「在打开的时候获取」):targetSdk 33 起系统不再
+     * 自动弹窗(≤32 时代每个安装只弹一次、拒绝即永久静默——「需要自己去开权限」的根因),
+     * 改由应用对系统申请。仅主页触发(单 Activity 每页模型下不加 main 闸则每开一个二级页
+     * 都会走到这里),且仅真冷启动触发——重建(savedInstanceState 非空,旋转/深浅色等配置
+     * 变更)不再弹,防止每次重建烧系统「拒绝 2 次」预算(预算烧完连权限页的弹框机会一并
+     * 失效,3-skeptic minor);重复冷启动反复申请由系统自带上限收口(拒绝两次后
+     * requestPermissions 不再弹框但仍回调 DENIED,静默拒绝),无需自建持久化闸门;
+     * 已授权/低版本(<13 无运行时权限)直接短路。
+     * 结果不接回调(用户在权限管理页可查状态,红点/静默降级兜底)
+     */
+    private fun maybeRequestNotificationPermission(savedInstanceState: Bundle?) {
+        if (savedInstanceState != null) return
+        if (pageName != PAGE_MAIN) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+        try {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), KRNotificationModule.REQUEST_CODE_PERMISSION)
+        } catch (_: Exception) {
+            // 极端场景(申请窗口异常)不崩:红点兜底,权限管理页可查可补
+        }
+    }
+
+    /** 权限申请结果统一转发:页面主动申请(METHOD_REQUEST)经 KRNotificationModule 静态
+     *  桥回传 common;自动请求(本类 onCreate)无 pending 静默丢弃 */
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        KRNotificationModule.onPermissionResult(requestCode, grantResults)
     }
 
     override fun onDestroy() {

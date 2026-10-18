@@ -20,7 +20,9 @@ android {
     defaultConfig {
         applicationId = "com.zyc.love_baby"
         minSdk = 23
-        targetSdk = 30
+        // M22:targetSdk 33 起 POST_NOTIFICATIONS 为运行时权限,应用可主动弹授权框(打开时
+        // 请求,KuiklyRenderActivity 主页 onCreate;30→31/32/33 全部门槛已审计合规,见提交说明)
+        targetSdk = 33
         versionCode = 1
         // 与 MinePage.kt 的 APP_VERSION_NAME 手工双源同步(关于我们卡展示;ohosApp app.json5 同 1.0.0)
         versionName = "1.0.0"
@@ -52,7 +54,8 @@ android {
         buildConfig = true
     }
     lint {
-        // 个人应用不上架 Google Play,targetSdk 30 为模板默认值;lintVital 会因 ExpiredTargetSdkVersion 拦截 release 构建
+        // 个人应用不上架 Google Play,无 Play 政策的 targetSdk 时限约束;lintVital 关闭防
+        // release 构建被非阻断 lint 拦截(M20 模板遗留开关,维持不变)
         checkReleaseBuilds = false
     }
     compileOptions {

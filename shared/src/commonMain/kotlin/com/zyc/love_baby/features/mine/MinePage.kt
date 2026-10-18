@@ -49,6 +49,7 @@ import com.zyc.love_baby.data.model.UserProfile
 import com.zyc.love_baby.features.couple.BoundPartnerCard
 import com.zyc.love_baby.features.couple.copyToPasteboard
 import com.zyc.love_baby.features.couple.toastCouple
+import com.zyc.love_baby.features.permission.openPermissionPage
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
 import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.state.CoupleBindState
@@ -127,6 +128,15 @@ internal fun MinePage(
                         title = "关于我们",
                         // 信息卡浮层挂 MainPager 根(铁律 14:Tab 页页内浮层盖不住浮岛底栏)
                         onClick = onAboutClick,
+                    )
+                    AppMenuDivider()
+                    AppMenuRow(
+                        icon = AppIconType.Bell,
+                        iconTint = Color(0xFFFF4D6A),
+                        iconBg = Color(0xFFFFE9ED),
+                        title = "权限管理",
+                        // M22:权限状态页(通知权限查询/一键开启/跳系统设置)
+                        onClick = { openPermissionPage(pager) },
                     )
                     AppMenuDivider()
                     // 组件列表:通用组件 demo 画廊

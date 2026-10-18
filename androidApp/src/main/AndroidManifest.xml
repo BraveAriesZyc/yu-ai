@@ -2,8 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
 	<uses-permission android:name="android.permission.INTERNET"/>
-	<!-- 后台消息通知(M21):targetSdk 30 在 Android 13+ 自动授予(无需运行时申请);
-	     声明为未来升 targetSdk 33+ 时补运行时申请留位,未授权场景 KRNotificationModule 静默降级 -->
+	<!-- 后台消息通知(M21):targetSdk 33(M22)起为运行时权限,新装默认关——由应用打开时主动
+	     请求(KuiklyRenderActivity 主页 onCreate)与权限管理页(「我的」页入口)双通道申请;
+	     未授权场景 KRNotificationModule 静默降级,红点兜底 -->
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
 	<application
