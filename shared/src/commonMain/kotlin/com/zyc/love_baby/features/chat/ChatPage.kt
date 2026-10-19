@@ -319,6 +319,7 @@ fun ChatPage(
                             SessionStore.accessToken,
                             pendingImageUri,
                             CHAT_IMAGE_MAX_EDGE,
+                            directory = FileModule.DIR_CHAT,
                         ) { result ->
                             val code = result?.optInt("code", -1) ?: -1
                             val data = result?.optString("data").orEmpty()

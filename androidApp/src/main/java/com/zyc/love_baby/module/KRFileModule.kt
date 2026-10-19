@@ -34,7 +34,8 @@ import java.util.concurrent.TimeUnit
  *    授权随时间衰减,延迟读取部分张失败真机实证)——回本地 file: 路径字符串,展示与上传全走
  *    本地稳态副本(KRImageAdapter file 分支 / Glide 本命支持)。
  *  - uploadImage(M15):单张本地 URI → Glide 压缩 → multipart 直传,压缩移后台线程(主线程
- *    Bitmap.compress 100-300ms×N 张是「选图/发布卡顿」根因),回 data 单 URL 字符串。
+ *    Bitmap.compress 100-300ms×N 张是「选图/发布卡顿」根因),回 data 单 URL 字符串;
+ *    directory 表单字段透传服务端(AppFileUploadReqVO.directory,空不发字段=老契约字节不变)。
  * 压缩链:centerInside 等比缩到 maxEdge 内(EXIF 自动矫正),JPEG 80 出图避开 16MB 服务端限制;
  * 直传端点 /app-api/infra/file/upload(MEMBER token),解析 yudao CommonResult 收口回调给
  * common 侧(base/FileModule 声明,一次性回调 keepCallbackAlive=false)。
@@ -120,6 +121,8 @@ class KRFileModule : KuiklyRenderBaseModule() {
             return
         }
         val maxEdge = paramJSON.optInt("maxEdge", DEFAULT_MAX_EDGE)
+        // 存储子目录透传(空=不发字段,服务端走原逻辑;头像/相册/聊天按业务归目录)
+        val directory = paramJSON.optString("directory")
         if (inFlight) {
             callback?.invoke(mapOf("code" to -1, "msg" to "图片处理中,请稍候"))
             return
@@ -135,6 +138,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         pendingUploadUrl = url
         pendingToken = token
         pendingMaxEdge = maxEdge
+        pendingDirectory = directory.takeIf { it.isNotEmpty() }
         compressAndUpload(context, Uri.parse(uri)) { fileUrl, msg ->
             if (fileUrl != null) {
                 finishFlight(resultCallback, 0, "", fileUrl)
@@ -160,6 +164,8 @@ class KRFileModule : KuiklyRenderBaseModule() {
         val maxEdge = paramJSON.optInt("maxEdge", DEFAULT_MAX_EDGE)
         // 多选张数上限可传(M15 相册多图传余量;缺省 1 = 单选老契约,≤0 防御回 1)
         val maxCount = paramJSON.optInt("maxCount", 1).coerceAtLeast(1)
+        // 存储子目录透传(同 uploadImage;头像场景 DIR_AVATAR)
+        val directory = paramJSON.optString("directory")
         val activity = activity
         if (activity == null || activity.isFinishing) {
             callback?.invoke(mapOf("code" to -1, "msg" to "宿主不可用"))
@@ -176,6 +182,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         pendingToken = token
         pendingMaxEdge = maxEdge
         pendingMaxCount = maxCount
+        pendingDirectory = directory.takeIf { it.isNotEmpty() }
         // 透明桥 Activity 收选图结果,结果经类级静态入口转发回本实例(生命周期解耦:
         // 桥 Activity 只认 companion 的 onPickResult,不持模块引用)。
         // ⚠ 必须 catch:桥 Activity 声明缺失等配置错误在此抛 ActivityNotFoundException,
@@ -338,6 +345,11 @@ class KRFileModule : KuiklyRenderBaseModule() {
                 "file", "img_${System.currentTimeMillis()}.jpg",
                 RequestBody.create("image/jpeg".toMediaTypeOrNull(), jpegBytes),
             )
+            .also { builder ->
+                // 存储子目录透传(AppFileUploadReqVO.directory 服务端校验后直通存储器;
+                // 空=null 不发字段,老契约字节不变)
+                pendingDirectory?.takeIf { it.isNotEmpty() }?.let { builder.addFormDataPart("directory", it) }
+            }
             .build()
         val request = Request.Builder()
             .url(uploadUrl)
@@ -387,6 +399,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         pendingToken = null
         pendingMaxEdge = DEFAULT_MAX_EDGE
         pendingMaxCount = 1
+        pendingDirectory = null
         val result = LinkedHashMap<String, Any>()
         result["code"] = code
         if (!data.isNullOrEmpty()) {
@@ -405,6 +418,7 @@ class KRFileModule : KuiklyRenderBaseModule() {
         pendingToken = null
         pendingMaxEdge = DEFAULT_MAX_EDGE
         pendingMaxCount = 1
+        pendingDirectory = null
         if (current === this) {
             current = null
         }
@@ -458,6 +472,10 @@ class KRFileModule : KuiklyRenderBaseModule() {
         /** 发起时写入(缺省 1)、收口清空的多选张数(M15;收口 data 形态据此分流) */
         @Volatile
         var pendingMaxCount: Int = 1
+
+        /** 发起时写入、收口清空的存储子目录(common 侧 directory 透传;null=不发字段走服务端原逻辑) */
+        @Volatile
+        var pendingDirectory: String? = null
 
         /** 桥 Activity 回传入口(uris=null/空=取消/无相册):转发给活跃实例,无实例则静默丢弃 */
         fun onPickResult(uris: List<Uri>?) {

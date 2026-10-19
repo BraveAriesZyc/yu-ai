@@ -656,6 +656,7 @@ private fun MomentAddOverlay(
                                 SessionStore.accessToken,
                                 uri,
                                 MOMENT_MAX_EDGE,
+                                directory = FileModule.DIR_ALBUM,
                             ) { result ->
                                 val code = result?.optInt("code", -1) ?: -1
                                 val data = result?.optString("data").orEmpty()

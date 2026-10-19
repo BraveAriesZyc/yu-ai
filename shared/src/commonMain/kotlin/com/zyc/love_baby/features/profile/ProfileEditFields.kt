@@ -277,6 +277,7 @@ internal suspend fun uploadAvatarAndUpdate(pager: Pager): String? {
                 module.pickAndUpload(
                     ApiConfig.url(pager, "/infra/file/upload"),
                     SessionStore.accessToken,
+                    directory = FileModule.DIR_AVATAR,
                 ) { result ->
                     val code = result?.optInt("code", -1) ?: -1
                     val data = result?.optString("data").orEmpty()
