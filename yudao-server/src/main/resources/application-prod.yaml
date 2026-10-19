@@ -128,5 +128,3 @@ yudao:
   access-log: # 访问日志的配置项
     enable: false
   demo: false
-  # love.auth.master-code 故意不配置：@Value("${love.auth.master-code:}") 默认空串=禁用
-  # （AppAuthServiceImpl.java:66 + validateSmsCode 空串短路），生产严禁配置（D-4 上线检查项）

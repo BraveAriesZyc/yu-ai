@@ -28,7 +28,6 @@ import cn.iocoder.yudao.module.system.enums.logger.LoginResultEnum;
 import cn.iocoder.yudao.module.system.enums.sms.SmsSceneEnum;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -56,15 +55,6 @@ public class AppAuthServiceImpl implements AppAuthService {
      * OAuth2 客户端编号，对应 love.sql 中 system_oauth2_client 的 couple-app 行
      */
     public static final String CLIENT_ID_COUPLE_APP = "couple-app";
-
-    /**
-     * 万能验证码（测试兜底，配置驱动）：任意手机号填此验证码即可跳过短信校验，省去联调时每条短信的费用。
-     * M18 收口：原写死 {@code 888888} 恒开，生产忘关即裸奔——现改为 {@code love.auth.master-code}
-     * 配置才启用，留空/未配置一律禁用（默认安全）；目前仅 application-local.yaml 显式打开，
-     * dev/prod 不配置（生产严禁配置，已列入 INTEGRATION-DESIGN.md D-4 上线检查项）
-     */
-    @Value("${love.auth.master-code:}")
-    private String masterSmsCode;
 
     @Resource
     private LoveUserMapper loveUserMapper;
@@ -200,11 +190,6 @@ public class AppAuthServiceImpl implements AppAuthService {
     }
 
     private void validateSmsCode(String mobile, String code) {
-        // 兜底万能验证码（测试用，配置驱动）：love.auth.master-code 配置才启用，空=禁用（D-4 生产检查项）
-        if (StrUtil.isNotEmpty(masterSmsCode) && masterSmsCode.equals(code)) {
-            log.warn("[validateSmsCode][mobile({}) 命中兜底万能验证码(love.auth.master-code 已配置)，仅限测试环境，生产环境必须关闭！]", mobile);
-            return;
-        }
         smsCodeApi.useSmsCode(new SmsCodeUseReqDTO()
                 .setMobile(mobile)
                 .setCode(code)
