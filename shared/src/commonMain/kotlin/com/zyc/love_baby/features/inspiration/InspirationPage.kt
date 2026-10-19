@@ -205,7 +205,11 @@ internal fun InspirationPage(pager: Pager) {
                         items(display, key = { it.id }, contentType = { "inspiration-card" }) { item ->
                             InspirationCard(
                                 info = item,
-                                modifier = Modifier.padding(horizontal = AppTheme.PageHPadding),
+                                // 卡间距 10dp(与 Todo/Wish 卡列表 spacedBy(10) 同值);逐卡 bottom
+                                // padding 而非列表 verticalArrangement——首 item 是下拉刷新指示器,
+                                // spacedBy 会在 chips 与首卡间凭空加缝,MoodPage 链式 padding 同款
+                                modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)
+                                    .padding(bottom = 10.dp),
                             )
                         }
                         item(key = "tail", contentType = "inspiration-tail") {
