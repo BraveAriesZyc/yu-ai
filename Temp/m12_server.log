@@ -1,0 +1,734 @@
+”Ûµ¿‘¥¬Î http://www.iocoder.cn
+Application Version: 1.0.0
+Spring Boot Version: 4.1.1
+
+.__   __.   ______      .______    __    __    _______
+|  \ |  |  /  __  \     |   _  \  |  |  |  |  /  _____|
+|   \|  | |  |  |  |    |  |_)  | |  |  |  | |  |  __
+|  . `  | |  |  |  |    |   _  <  |  |  |  | |  | |_ |
+|  |\   | |  `--'  |    |  |_)  | |  `--'  | |  |__| |
+|__| \__|  \______/     |______/   \______/   \______|
+
+®Ä®Ä®Ä®[   ®Ä®Ä®[ ®Ä®Ä®Ä®Ä®Ä®Ä®[     ®Ä®Ä®Ä®Ä®Ä®Ä®[ ®Ä®Ä®[   ®Ä®Ä®[ ®Ä®Ä®Ä®Ä®Ä®Ä®[
+®Ä®Ä®Ä®Ä®[  ®Ä®Ä®U®Ä®Ä®X®T®T®T®Ä®Ä®[    ®Ä®Ä®X®T®T®Ä®Ä®[®Ä®Ä®U   ®Ä®Ä®U®Ä®Ä®X®T®T®T®T®a
+®Ä®Ä®X®Ä®Ä®[ ®Ä®Ä®U®Ä®Ä®U   ®Ä®Ä®U    ®Ä®Ä®Ä®Ä®Ä®Ä®X®a®Ä®Ä®U   ®Ä®Ä®U®Ä®Ä®U  ®Ä®Ä®Ä®[
+®Ä®Ä®U®^®Ä®Ä®[®Ä®Ä®U®Ä®Ä®U   ®Ä®Ä®U    ®Ä®Ä®X®T®T®Ä®Ä®[®Ä®Ä®U   ®Ä®Ä®U®Ä®Ä®U   ®Ä®Ä®U
+®Ä®Ä®U ®^®Ä®Ä®Ä®Ä®U®^®Ä®Ä®Ä®Ä®Ä®Ä®X®a    ®Ä®Ä®Ä®Ä®Ä®Ä®X®a®^®Ä®Ä®Ä®Ä®Ä®Ä®X®a®^®Ä®Ä®Ä®Ä®Ä®Ä®X®a
+®^®T®a  ®^®T®T®T®a ®^®T®T®T®T®T®a     ®^®T®T®T®T®T®a  ®^®T®T®T®T®T®a  ®^®T®T®T®T®T®a
+
+2026-10-17 16:29:20.907 [main] [34mINFO [0;39m [36mcn.iocoder.yudao.server.YudaoServerApplication:54[0;39m - Starting YudaoServerApplication using Java 25.0.4 with PID 44908 (C:\Users\13248\Desktop\app\love_baby_server\yudao-server\target\yudao-server.jar started by 13248 in C:\Users\13248\Desktop\app\love_baby_server)
+2026-10-17 16:29:20.909 [main] [34mINFO [0;39m [36mcn.iocoder.yudao.server.YudaoServerApplication:658[0;39m - The following 1 profile is active: "local"
+2026-10-17 16:29:21.183 [background-preinit] [34mINFO [0;39m [36morg.hibernate.validator.internal.util.Version:18[0;39m - HV000001: Hibernate Validator 9.1.3.Final
+2026-10-17 16:29:22.291 [main] [34mINFO [0;39m [36mc.g.y.a.MybatisPlusJoinAutoConfiguration:141[0;39m - MPJ SqlSessionFactory bean definition: sqlSessionFactory factoryBeanName: com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration factoryMethodName: sqlSessionFactory source: public org.apache.ibatis.session.SqlSessionFactory com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration.sqlSessionFactory(javax.sql.DataSource)
+2026-10-17 16:29:23.000 [main] [34mINFO [0;39m [36morg.springframework.boot.tomcat.TomcatWebServer:114[0;39m - Tomcat initialized with port 48081 (http)
+2026-10-17 16:29:23.011 [main] [34mINFO [0;39m [36morg.apache.coyote.http11.Http11NioProtocol:168[0;39m - Initializing ProtocolHandler ["http-nio-48081"]
+2026-10-17 16:29:23.012 [main] [34mINFO [0;39m [36morg.apache.catalina.core.StandardService:168[0;39m - Starting service [Tomcat]
+2026-10-17 16:29:23.012 [main] [34mINFO [0;39m [36morg.apache.catalina.core.StandardEngine:168[0;39m - Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-17 16:29:23.037 [main] [34mINFO [0;39m [36mo.s.b.w.c.servlet.WebApplicationContextInitializer:77[0;39m - Root WebApplicationContext: initialization completed in 2093 ms
+2026-10-17 16:29:23.482 [main] [34mINFO [0;39m [36mcom.alibaba.druid.pool.DruidDataSource:865[0;39m - {dataSource-1,master} inited
+2026-10-17 16:29:23.484 [main] [34mINFO [0;39m [36mc.b.dynamic.datasource.DynamicRoutingDataSource:158[0;39m - dynamic-datasource - add a datasource named [slave] success
+2026-10-17 16:29:23.484 [main] [34mINFO [0;39m [36mc.b.dynamic.datasource.DynamicRoutingDataSource:158[0;39m - dynamic-datasource - add a datasource named [master] success
+2026-10-17 16:29:23.484 [main] [34mINFO [0;39m [36mc.b.dynamic.datasource.DynamicRoutingDataSource:241[0;39m - dynamic-datasource initial loaded [2] datasource,primary datasource named [master]
+2026-10-17 16:29:24.012 [main] [34mINFO [0;39m [36morg.redisson.Version:43[0;39m - Redisson 4.7.0
+2026-10-17 16:29:24.477 [redisson-netty-1-4] [34mINFO [0;39m [36morg.redisson.connection.ConnectionsHolder:152[0;39m - 1 connections initialized for 127.0.0.1/127.0.0.1:6379
+2026-10-17 16:29:24.513 [redisson-netty-1-19] [34mINFO [0;39m [36morg.redisson.connection.ConnectionsHolder:152[0;39m - 24 connections initialized for 127.0.0.1/127.0.0.1:6379
+2026-10-17 16:29:24.745 [main] [34mINFO [0;39m [36mo.s.boot.web.servlet.RegistrationBean:49[0;39m - Filter tokenAuthenticationFilterRegistration was not registered (disabled)
+2026-10-17 16:29:25.983 [main] [34mINFO [0;39m [36mc.a.c.config.AjCaptchaServiceAutoConfiguration:33[0;39m - Ëá™ÂÆö‰πâÈÖçÁΩÆÈ°πÔºö
+AjCaptchaProperties{type=BLOCKPUZZLE, jigsaw='classpath:images/jigsaw', picClick='classpath:images/pic-click', waterMark='ËäãÈÅìÊ∫êÁ†Å', waterFont='WenQuanZhengHei.ttf', fontType='WenQuanZhengHei.ttf', slipOffset='5', aesStatus=true, interferenceOptions='0', cacheNumber='1000', timingClear='180', cacheType=redis, reqFrequencyLimitEnable=false, reqGetLockLimit=5, reqGetLockSeconds=10, reqGetMinuteLimit=30, reqCheckMinuteLimit=60, reqVerifyMinuteLimit=60}
+2026-10-17 16:29:25.993 [main] [34mINFO [0;39m [36mcom.anji.captcha.util.ImageUtils:71[0;39m - Ëá™ÂÆö‰πâresourceÂ∫ïÂõæ:[SLIDING_BLOCK=[Ljava.lang.String;@6816b0cb, ORIGINAL=[Ljava.lang.String;@6f6d2847, PIC_CLICK=[Ljava.lang.String;@7fc8930f]
+2026-10-17 16:29:25.995 [main] [34mINFO [0;39m [36mc.anji.captcha.service.impl.CaptchaServiceFactory:52[0;39m - supported-captchaCache-service:[redis, local]
+2026-10-17 16:29:25.999 [main] [34mINFO [0;39m [36mc.anji.captcha.service.impl.CaptchaServiceFactory:57[0;39m - supported-captchaTypes-service:[clickWord, default, blockPuzzle, pictureWord]
+2026-10-17 16:29:25.999 [main] [34mINFO [0;39m [36mc.a.c.service.impl.BlockPuzzleCaptchaServiceImpl:80[0;39m - --->>>ÂàùÂßãÂåñÈ™åËØÅÁ†ÅÂ∫ïÂõæ<<<---blockPuzzle
+2026-10-17 16:29:26.871 [main] [34mINFO [0;39m [36mc.i.y.f.quartz.config.YudaoQuartzAutoConfiguration:23[0;39m - [ÂÆöÊó∂‰ªªÂä° - Â∑≤Á¶ÅÁî®][ÂèÇËÄÉ https://doc.iocoder.cn/job/ ÂºÄÂêØ]
+2026-10-17 16:29:27.741 [main] [34mINFO [0;39m [36mc.i.yudao.framework.dict.core.DictFrameworkUtils:44[0;39m - [init][ÂàùÂßãÂåñ DictFrameworkUtils ÊàêÂäü]
+2026-10-17 16:29:27.874 [main] [34mINFO [0;39m [36mc.b.m.spring.MybatisPlusApplicationContextAware:43[0;39m - Register ApplicationContext instances org.springframework.boot.web.server.servlet.context.AnnotationConfigServletWebServerApplicationContext@1adb7478
+2026-10-17 16:29:27.888 [main] [34mINFO [0;39m [36morg.dromara.common.spring.SpringContextUtil:37[0;39m - ------SpringContextUtil setApplicationContext-------
+2026-10-17 16:29:28.155 [main] [34mINFO [0;39m [36morg.apache.coyote.http11.Http11NioProtocol:168[0;39m - Starting ProtocolHandler ["http-nio-48081"]
+2026-10-17 16:29:28.161 [main] [34mINFO [0;39m [36morg.springframework.boot.tomcat.TomcatWebServer:240[0;39m - Tomcat started on port 48081 (http) with context path '/'
+2026-10-17 16:29:28.168 [main] [34mINFO [0;39m [36mcn.iocoder.yudao.server.YudaoServerApplication:60[0;39m - Started YudaoServerApplication in 7.732 seconds (process running for 8.096)
+2026-10-17 16:29:28.978 [http-nio-48081-exec-1] [34mINFO [0;39m [36mo.a.c.core.ContainerBase.[Tomcat].[localhost].[/]:168[0;39m - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-17 16:29:28.978 [http-nio-48081-exec-1] [34mINFO [0;39m [36morg.springframework.web.servlet.DispatcherServlet:523[0;39m - Initializing Servlet 'dispatcherServlet'
+2026-10-17 16:29:28.979 [http-nio-48081-exec-1] [34mINFO [0;39m [36morg.springframework.web.servlet.DispatcherServlet:545[0;39m - Completed initialization in 1 ms
+2026-10-17 16:29:28.999 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/admin-api/system/auth/login) ÂèÇÊï∞({})]
+2026-10-17 16:29:29.085 [http-nio-48081-exec-1] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:150[0;39m - [methodArgumentNotValidExceptionExceptionHandler]
+org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public cn.iocoder.yudao.framework.common.pojo.CommonResult<cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginRespVO> cn.iocoder.yudao.module.system.controller.admin.auth.AuthController.login(cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginReqVO) with 2 errors: [Field error in object 'authLoginReqVO' on field 'password': rejected value [null]; codes [NotEmpty.authLoginReqVO.password,NotEmpty.password,NotEmpty.java.lang.String,NotEmpty]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [authLoginReqVO.password,password]; arguments []; default message [password]]; default message [ÂØÜÁ†Å‰∏çËÉΩ‰∏∫Á©∫]] [Field error in object 'authLoginReqVO' on field 'username': rejected value [null]; codes [NotEmpty.authLoginReqVO.username,NotEmpty.username,NotEmpty.java.lang.String,NotEmpty]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [authLoginReqVO.username,username]; arguments []; default message [username]]; default message [ÁôªÂΩïË¥¶Âè∑‰∏çËÉΩ‰∏∫Á©∫]] 
+	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:165)
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122)
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:224)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:174)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:934)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:853)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:86)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:963)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:866)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1000)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:649)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:874)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:710)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:132)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:59)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at com.alibaba.druid.support.jakarta.WebStatFilter.doFilter(WebStatFilter.java:113)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$2(FilterChainProxy.java:235)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:376)
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:132)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:86)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:181)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter.doFilterInternal(TokenAuthenticationFilter.java:68)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:110)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:96)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:237)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:195)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:317)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:355)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:272)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at cn.iocoder.yudao.framework.web.core.filter.CacheRequestBodyFilter.doFilterInternal(CacheRequestBodyFilter.java:31)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at cn.iocoder.yudao.framework.tracer.core.filter.TraceFilter.doFilterInternal(TraceFilter.java:30)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:199)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:77)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:535)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:86)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:71)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:347)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:406)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:71)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:1307)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:2036)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:74)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:949)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:483)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:74)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2026-10-17 16:29:29.122 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/admin-api/system/auth/login) ËÄóÊó∂(122 ms)]
+2026-10-17 16:29:29.172 [pool-6-thread-1] [34mINFO [0;39m [36mc.i.y.f.banner.core.BannerApplicationRunner:23[0;39m - 
+----------------------------------------------------------
+	È°πÁõÆÂêØÂä®ÊàêÂäüÔºÅ
+	Êé•Âè£ÊñáÊ°£: 	https://doc.iocoder.cn/api-doc/ 
+	ÂºÄÂèëÊñáÊ°£: 	https://doc.iocoder.cn 
+	ËßÜÈ¢ëÊïôÁ®ã: 	https://t.zsxq.com/02Yf6M7Qn 
+----------------------------------------------------------
+[π§◊˜¡˜ƒ£øÈ yudao-module-bpm - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/bpm/ ø™∆Ù]
+[÷ß∏∂œµÕ≥ yudao-module-pay - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/pay/build/ ø™∆Ù]
+[±®±Ìƒ£øÈ yudao-module-report - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/report/ ø™∆Ù]
+[Œ¢–≈π´÷⁄∫≈ yudao-module-mp - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/mp/build/ ø™∆Ù]
+[…Ã≥«œµÕ≥ yudao-module-mall - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/mall/build/ ø™∆Ù]
+[ERP œµÕ≥ yudao-module-erp - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/erp/build/ ø™∆Ù]
+[WMS ≤÷ø‚π‹¿ÌœµÕ≥ yudao-module-wms - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/wms/build/ ø™∆Ù]
+[CRM œµÕ≥ yudao-module-crm - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/crm/build/ ø™∆Ù]
+[MES œµÕ≥ yudao-module-mes - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/mes/build/ ø™∆Ù]
+[HRM »À¡¶◊ ‘¥π‹¿ÌœµÕ≥ yudao-module-hrm - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/hrm/build/ ø™∆Ù]
+[FMS ≤∆ŒÒπ‹¿ÌœµÕ≥ yudao-module-fms - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/fms/build/ ø™∆Ù]
+[PMS œÓƒøπ‹¿ÌœµÕ≥ yudao-module-pms - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/pms/build/ ø™∆Ù]
+[OA –≠Õ¨∞Ïπ´ yudao-module-oa - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/oa/build/ ø™∆Ù]
+[AI ¥Ûƒ£–Õ yudao-module-ai - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/ai/build/ ø™∆Ù]
+[IoT ŒÔ¡™Õ¯ yudao-module-iot - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/iot/build/ ø™∆Ù]
+[IM º¥ ±Õ®—∂ yudao-module-im - “—Ω˚”√][≤Œøº https://doc.iocoder.cn/im/build/ ø™∆Ù]
+2026-10-17 16:29:38.049 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/auth/send-sms-code) ÂèÇÊï∞({"mobile": "13900010031", "scene": 1})]
+2026-10-17 16:29:38.135 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,mobile,code,scene,create_ip,today_index,used,used_time,used_ip,create_time,update_time,creator,updater,deleted FROM system_sms_code WHERE deleted=0 AND (mobile = ?) ORDER BY id DESC LIMIT 1
+2026-10-17 16:29:38.151 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==> Parameters: 13900010031(String)
+2026-10-17 16:29:38.162 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - <==      Total: 0
+2026-10-17 16:29:38.172 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_sms_code ( mobile, code, scene, create_ip, today_index, used, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.176 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - ==> Parameters: 13900010031(String), 9999(String), 1(Integer), 127.0.0.1(String), 1(Integer), false(Boolean), 2026-10-17T16:29:38.171832700(LocalDateTime), 2026-10-17T16:29:38.171832700(LocalDateTime), null, null
+2026-10-17 16:29:38.180 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.199 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.s.SmsTemplateMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,type,status,code,name,content,params,remark,api_template_id,channel_id,channel_code,create_time,update_time,creator,updater,deleted FROM system_sms_template WHERE deleted=0 AND (code = ?)
+2026-10-17 16:29:38.200 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.s.SmsTemplateMapper.selectWithCursor:135[0;39m - ==> Parameters: user-sms-login(String)
+2026-10-17 16:29:38.207 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.s.SmsTemplateMapper.selectWithCursor:135[0;39m - <==      Total: 1
+2026-10-17 16:29:38.303 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_sms_log ( channel_id, channel_code, template_id, template_code, template_type, template_content, template_params, api_template_id, mobile, send_status, receive_status, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.311 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - ==> Parameters: 4(Long), DEBUG_DING_TALK(String), 8(Long), user-sms-login(String), 1(Integer), ÊÇ®ÁöÑÈ™åËØÅÁ†ÅÊòØ9999(String), {"code":"9999"}(String), 4372216(String), 13900010031(String), 0(Integer), 0(Integer), 2026-10-17T16:29:38.303350300(LocalDateTime), 2026-10-17T16:29:38.303350300(LocalDateTime), null, null
+2026-10-17 16:29:38.314 [http-nio-48081-exec-2] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.319 [task-1] [34mINFO [0;39m [36mc.i.y.m.system.mq.consumer.sms.SmsSendConsumer:27[0;39m - [onMessage][Ê∂àÊÅØÂÜÖÂÆπ(SmsSendMessage(logId=1690, mobile=13900010031, channelId=4, apiTemplateId=4372216, templateParams=[KeyValue(key=code, value=9999)]))]
+2026-10-17 16:29:38.320 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/auth/send-sms-code) ËÄóÊó∂(270 ms)]
+2026-10-17 16:29:38.345 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/auth/sms-login) ÂèÇÊï∞({"mobile": "13900010031", "code": "9999"})]
+2026-10-17 16:29:38.357 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,mobile,code,scene,create_ip,today_index,used,used_time,used_ip,create_time,update_time,creator,updater,deleted FROM system_sms_code WHERE deleted=0 AND (mobile = ? AND scene = ? AND code = ?) ORDER BY id DESC LIMIT 1
+2026-10-17 16:29:38.357 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==> Parameters: 13900010031(String), 1(Integer), 9999(String)
+2026-10-17 16:29:38.359 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - <==      Total: 1
+2026-10-17 16:29:38.370 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_sms_code SET used = ?, used_time = ?, used_ip = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:38.371 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - ==> Parameters: true(Boolean), 2026-10-17T16:29:38.360248600(LocalDateTime), 127.0.0.1(String), 2026-10-17T16:29:38.363247800(LocalDateTime), null, 746(Long)
+2026-10-17 16:29:38.373 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.385 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_login_log ( log_type, trace_id, user_id, user_type, username, result, user_ip, user_agent, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.385 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==> Parameters: 104(Integer), (String), 63(Long), 1(Integer), 13900010031(String), 0(Integer), 127.0.0.1(String), Python-urllib/3.12(String), 2026-10-17T16:29:38.385254400(LocalDateTime), 2026-10-17T16:29:38.385254400(LocalDateTime), null, null
+2026-10-17 16:29:38.389 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.403 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.O.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,client_id,secret,name,logo,description,status,access_token_validity_seconds,refresh_token_validity_seconds,redirect_uris,authorized_grant_types,scopes,auto_approve_scopes,authorities,resource_ids,additional_information,create_time,update_time,creator,updater,deleted FROM system_oauth2_client WHERE deleted=0 AND (client_id = ?)
+2026-10-17 16:29:38.404 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.O.selectWithCursor:135[0;39m - ==> Parameters: couple-app(String)
+2026-10-17 16:29:38.406 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.O.selectWithCursor:135[0;39m - <==      Total: 1
+2026-10-17 16:29:38.409 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_refresh_token ( refresh_token, user_id, user_type, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.409 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==> Parameters: a8da5928eedc4fceb06e9c627d81f7c4(String), 63(Long), 1(Integer), couple-app(String), 2027-01-15T16:29:38.407548700(LocalDateTime), 2026-10-17T16:29:38.409547800(LocalDateTime), 2026-10-17T16:29:38.409547800(LocalDateTime), null, null
+2026-10-17 16:29:38.411 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.412 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_access_token ( access_token, refresh_token, user_id, user_type, user_info, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.414 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==> Parameters: 26a58867f3b84a20b8256c717e74e712(String), a8da5928eedc4fceb06e9c627d81f7c4(String), 63(Long), 1(Integer), {}(String), couple-app(String), 2026-11-16T16:29:38.411691500(LocalDateTime), 2026-10-17T16:29:38.412691800(LocalDateTime), 2026-10-17T16:29:38.412691800(LocalDateTime), null, null
+2026-10-17 16:29:38.414 [http-nio-48081-exec-3] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.427 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/auth/sms-login) ËÄóÊó∂(82 ms)]
+2026-10-17 16:29:38.452 [http-nio-48081-exec-4] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/auth/send-sms-code) ÂèÇÊï∞({"mobile": "13900010032", "scene": 1})]
+2026-10-17 16:29:38.460 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,mobile,code,scene,create_ip,today_index,used,used_time,used_ip,create_time,update_time,creator,updater,deleted FROM system_sms_code WHERE deleted=0 AND (mobile = ?) ORDER BY id DESC LIMIT 1
+2026-10-17 16:29:38.460 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==> Parameters: 13900010032(String)
+2026-10-17 16:29:38.461 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - <==      Total: 0
+2026-10-17 16:29:38.462 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_sms_code ( mobile, code, scene, create_ip, today_index, used, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.462 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - ==> Parameters: 13900010032(String), 9999(String), 1(Integer), 127.0.0.1(String), 1(Integer), false(Boolean), 2026-10-17T16:29:38.462841800(LocalDateTime), 2026-10-17T16:29:38.462841800(LocalDateTime), null, null
+2026-10-17 16:29:38.464 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.483 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_sms_log ( channel_id, channel_code, template_id, template_code, template_type, template_content, template_params, api_template_id, mobile, send_status, receive_status, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.484 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - ==> Parameters: 4(Long), DEBUG_DING_TALK(String), 8(Long), user-sms-login(String), 1(Integer), ÊÇ®ÁöÑÈ™åËØÅÁ†ÅÊòØ9999(String), {"code":"9999"}(String), 4372216(String), 13900010032(String), 0(Integer), 0(Integer), 2026-10-17T16:29:38.483848(LocalDateTime), 2026-10-17T16:29:38.483848(LocalDateTime), null, null
+2026-10-17 16:29:38.486 [http-nio-48081-exec-4] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.487 [task-2] [34mINFO [0;39m [36mc.i.y.m.system.mq.consumer.sms.SmsSendConsumer:27[0;39m - [onMessage][Ê∂àÊÅØÂÜÖÂÆπ(SmsSendMessage(logId=1691, mobile=13900010032, channelId=4, apiTemplateId=4372216, templateParams=[KeyValue(key=code, value=9999)]))]
+2026-10-17 16:29:38.487 [http-nio-48081-exec-4] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/auth/send-sms-code) ËÄóÊó∂(35 ms)]
+2026-10-17 16:29:38.515 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/auth/sms-login) ÂèÇÊï∞({"mobile": "13900010032", "code": "9999"})]
+2026-10-17 16:29:38.522 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,mobile,code,scene,create_ip,today_index,used,used_time,used_ip,create_time,update_time,creator,updater,deleted FROM system_sms_code WHERE deleted=0 AND (mobile = ? AND scene = ? AND code = ?) ORDER BY id DESC LIMIT 1
+2026-10-17 16:29:38.523 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==> Parameters: 13900010032(String), 1(Integer), 9999(String)
+2026-10-17 16:29:38.524 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - <==      Total: 1
+2026-10-17 16:29:38.526 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_sms_code SET used = ?, used_time = ?, used_ip = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:38.526 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - ==> Parameters: true(Boolean), 2026-10-17T16:29:38.524897100(LocalDateTime), 127.0.0.1(String), 2026-10-17T16:29:38.525896800(LocalDateTime), null, 747(Long)
+2026-10-17 16:29:38.528 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.534 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_login_log ( log_type, trace_id, user_id, user_type, username, result, user_ip, user_agent, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.535 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==> Parameters: 104(Integer), (String), 64(Long), 1(Integer), 13900010032(String), 0(Integer), 127.0.0.1(String), Python-urllib/3.12(String), 2026-10-17T16:29:38.534507400(LocalDateTime), 2026-10-17T16:29:38.534507400(LocalDateTime), null, null
+2026-10-17 16:29:38.536 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.543 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_refresh_token ( refresh_token, user_id, user_type, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.544 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==> Parameters: 471d4573ca0f4f3fba58570c8efece88(String), 64(Long), 1(Integer), couple-app(String), 2027-01-15T16:29:38.543684300(LocalDateTime), 2026-10-17T16:29:38.543684300(LocalDateTime), 2026-10-17T16:29:38.543684300(LocalDateTime), null, null
+2026-10-17 16:29:38.545 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.546 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_access_token ( access_token, refresh_token, user_id, user_type, user_info, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.546 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==> Parameters: ae27e41eb95f42e595a6b4b7e225b0cb(String), 471d4573ca0f4f3fba58570c8efece88(String), 64(Long), 1(Integer), {}(String), couple-app(String), 2026-11-16T16:29:38.545925300(LocalDateTime), 2026-10-17T16:29:38.545925300(LocalDateTime), 2026-10-17T16:29:38.545925300(LocalDateTime), null, null
+2026-10-17 16:29:38.547 [http-nio-48081-exec-5] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.551 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/auth/sms-login) ËÄóÊó∂(34 ms)]
+2026-10-17 16:29:38.553 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/auth/send-sms-code) ÂèÇÊï∞({"mobile": "13900010033", "scene": 1})]
+2026-10-17 16:29:38.560 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,mobile,code,scene,create_ip,today_index,used,used_time,used_ip,create_time,update_time,creator,updater,deleted FROM system_sms_code WHERE deleted=0 AND (mobile = ?) ORDER BY id DESC LIMIT 1
+2026-10-17 16:29:38.561 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==> Parameters: 13900010033(String)
+2026-10-17 16:29:38.562 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - <==      Total: 0
+2026-10-17 16:29:38.563 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_sms_code ( mobile, code, scene, create_ip, today_index, used, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.564 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - ==> Parameters: 13900010033(String), 9999(String), 1(Integer), 127.0.0.1(String), 1(Integer), false(Boolean), 2026-10-17T16:29:38.563505800(LocalDateTime), 2026-10-17T16:29:38.563505800(LocalDateTime), null, null
+2026-10-17 16:29:38.565 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.568 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_sms_log ( channel_id, channel_code, template_id, template_code, template_type, template_content, template_params, api_template_id, mobile, send_status, receive_status, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.568 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - ==> Parameters: 4(Long), DEBUG_DING_TALK(String), 8(Long), user-sms-login(String), 1(Integer), ÊÇ®ÁöÑÈ™åËØÅÁ†ÅÊòØ9999(String), {"code":"9999"}(String), 4372216(String), 13900010033(String), 0(Integer), 0(Integer), 2026-10-17T16:29:38.568629700(LocalDateTime), 2026-10-17T16:29:38.568629700(LocalDateTime), null, null
+2026-10-17 16:29:38.571 [http-nio-48081-exec-6] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.572 [task-3] [34mINFO [0;39m [36mc.i.y.m.system.mq.consumer.sms.SmsSendConsumer:27[0;39m - [onMessage][Ê∂àÊÅØÂÜÖÂÆπ(SmsSendMessage(logId=1692, mobile=13900010033, channelId=4, apiTemplateId=4372216, templateParams=[KeyValue(key=code, value=9999)]))]
+2026-10-17 16:29:38.572 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/auth/send-sms-code) ËÄóÊó∂(18 ms)]
+2026-10-17 16:29:38.574 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/auth/sms-login) ÂèÇÊï∞({"mobile": "13900010033", "code": "9999"})]
+2026-10-17 16:29:38.581 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,mobile,code,scene,create_ip,today_index,used,used_time,used_ip,create_time,update_time,creator,updater,deleted FROM system_sms_code WHERE deleted=0 AND (mobile = ? AND scene = ? AND code = ?) ORDER BY id DESC LIMIT 1
+2026-10-17 16:29:38.582 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==> Parameters: 13900010033(String), 1(Integer), 9999(String)
+2026-10-17 16:29:38.583 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - <==      Total: 1
+2026-10-17 16:29:38.584 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_sms_code SET used = ?, used_time = ?, used_ip = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:38.584 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - ==> Parameters: true(Boolean), 2026-10-17T16:29:38.583659100(LocalDateTime), 127.0.0.1(String), 2026-10-17T16:29:38.583659100(LocalDateTime), null, 748(Long)
+2026-10-17 16:29:38.586 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.591 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_login_log ( log_type, trace_id, user_id, user_type, username, result, user_ip, user_agent, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.591 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==> Parameters: 104(Integer), (String), 65(Long), 1(Integer), 13900010033(String), 0(Integer), 127.0.0.1(String), Python-urllib/3.12(String), 2026-10-17T16:29:38.591859400(LocalDateTime), 2026-10-17T16:29:38.591859400(LocalDateTime), null, null
+2026-10-17 16:29:38.594 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.599 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_refresh_token ( refresh_token, user_id, user_type, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.600 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==> Parameters: 2f721d046cd74f9a83212cca0be6d9de(String), 65(Long), 1(Integer), couple-app(String), 2027-01-15T16:29:38.599864600(LocalDateTime), 2026-10-17T16:29:38.599864600(LocalDateTime), 2026-10-17T16:29:38.599864600(LocalDateTime), null, null
+2026-10-17 16:29:38.601 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.601 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_access_token ( access_token, refresh_token, user_id, user_type, user_info, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.602 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==> Parameters: 02068f2d9e7b432db1bcc54d2437cad5(String), 2f721d046cd74f9a83212cca0be6d9de(String), 65(Long), 1(Integer), {}(String), couple-app(String), 2026-11-16T16:29:38.601863(LocalDateTime), 2026-10-17T16:29:38.601863(LocalDateTime), 2026-10-17T16:29:38.601863(LocalDateTime), null, null
+2026-10-17 16:29:38.602 [http-nio-48081-exec-7] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.606 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/auth/sms-login) ËÄóÊó∂(31 ms)]
+2026-10-17 16:29:38.622 [http-nio-48081-exec-8] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/auth/send-sms-code) ÂèÇÊï∞({"mobile": "13900010034", "scene": 1})]
+2026-10-17 16:29:38.630 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,mobile,code,scene,create_ip,today_index,used,used_time,used_ip,create_time,update_time,creator,updater,deleted FROM system_sms_code WHERE deleted=0 AND (mobile = ?) ORDER BY id DESC LIMIT 1
+2026-10-17 16:29:38.630 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==> Parameters: 13900010034(String)
+2026-10-17 16:29:38.631 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - <==      Total: 0
+2026-10-17 16:29:38.632 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_sms_code ( mobile, code, scene, create_ip, today_index, used, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.633 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - ==> Parameters: 13900010034(String), 9999(String), 1(Integer), 127.0.0.1(String), 1(Integer), false(Boolean), 2026-10-17T16:29:38.632924700(LocalDateTime), 2026-10-17T16:29:38.632924700(LocalDateTime), null, null
+2026-10-17 16:29:38.635 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsCodeMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.638 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_sms_log ( channel_id, channel_code, template_id, template_code, template_type, template_content, template_params, api_template_id, mobile, send_status, receive_status, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.639 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - ==> Parameters: 4(Long), DEBUG_DING_TALK(String), 8(Long), user-sms-login(String), 1(Integer), ÊÇ®ÁöÑÈ™åËØÅÁ†ÅÊòØ9999(String), {"code":"9999"}(String), 4372216(String), 13900010034(String), 0(Integer), 0(Integer), 2026-10-17T16:29:38.638921400(LocalDateTime), 2026-10-17T16:29:38.638921400(LocalDateTime), null, null
+2026-10-17 16:29:38.641 [http-nio-48081-exec-8] [39mDEBUG[0;39m [36mc.i.y.m.system.dal.mysql.sms.SmsLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.642 [task-4] [34mINFO [0;39m [36mc.i.y.m.system.mq.consumer.sms.SmsSendConsumer:27[0;39m - [onMessage][Ê∂àÊÅØÂÜÖÂÆπ(SmsSendMessage(logId=1693, mobile=13900010034, channelId=4, apiTemplateId=4372216, templateParams=[KeyValue(key=code, value=9999)]))]
+2026-10-17 16:29:38.642 [http-nio-48081-exec-8] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/auth/send-sms-code) ËÄóÊó∂(19 ms)]
+2026-10-17 16:29:38.645 [http-nio-48081-exec-9] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/auth/sms-login) ÂèÇÊï∞({"mobile": "13900010034", "code": "9999"})]
+2026-10-17 16:29:38.652 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,mobile,code,scene,create_ip,today_index,used,used_time,used_ip,create_time,update_time,creator,updater,deleted FROM system_sms_code WHERE deleted=0 AND (mobile = ? AND scene = ? AND code = ?) ORDER BY id DESC LIMIT 1
+2026-10-17 16:29:38.653 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - ==> Parameters: 13900010034(String), 1(Integer), 9999(String)
+2026-10-17 16:29:38.654 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.sms.SmsCodeMapper.selectWithCursor:135[0;39m - <==      Total: 1
+2026-10-17 16:29:38.655 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_sms_code SET used = ?, used_time = ?, used_ip = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:38.655 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - ==> Parameters: true(Boolean), 2026-10-17T16:29:38.654249(LocalDateTime), 127.0.0.1(String), 2026-10-17T16:29:38.655247300(LocalDateTime), null, 749(Long)
+2026-10-17 16:29:38.657 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsCodeMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.661 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_login_log ( log_type, trace_id, user_id, user_type, username, result, user_ip, user_agent, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.662 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==> Parameters: 104(Integer), (String), 66(Long), 1(Integer), 13900010034(String), 0(Integer), 127.0.0.1(String), Python-urllib/3.12(String), 2026-10-17T16:29:38.661247300(LocalDateTime), 2026-10-17T16:29:38.661247300(LocalDateTime), null, null
+2026-10-17 16:29:38.663 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.668 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_refresh_token ( refresh_token, user_id, user_type, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.668 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==> Parameters: 26aee48bc5db46f2b9196d1955ddff1e(String), 66(Long), 1(Integer), couple-app(String), 2027-01-15T16:29:38.668248200(LocalDateTime), 2026-10-17T16:29:38.668248200(LocalDateTime), 2026-10-17T16:29:38.668248200(LocalDateTime), null, null
+2026-10-17 16:29:38.669 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.670 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_access_token ( access_token, refresh_token, user_id, user_type, user_info, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:38.670 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==> Parameters: b2de662bddcb4ae0935d06fcee0c9af6(String), 26aee48bc5db46f2b9196d1955ddff1e(String), 66(Long), 1(Integer), {}(String), couple-app(String), 2026-11-16T16:29:38.670246700(LocalDateTime), 2026-10-17T16:29:38.670246700(LocalDateTime), 2026-10-17T16:29:38.670246700(LocalDateTime), null, null
+2026-10-17 16:29:38.670 [http-nio-48081-exec-9] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.673 [http-nio-48081-exec-9] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/auth/sms-login) ËÄóÊó∂(27 ms)]
+2026-10-17 16:29:38.683 [http-nio-48081-exec-10] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:49[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/couple/create-invite) Êó†ÂèÇÊï∞]
+2026-10-17 16:29:38.707 [http-nio-48081-exec-10] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/couple/create-invite) ËÄóÊó∂(23 ms)]
+2026-10-17 16:29:38.712 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/couple/bind) ÂèÇÊï∞({"inviteCode": "63YW9F8X"})]
+2026-10-17 16:29:38.750 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/couple/bind) ËÄóÊó∂(38 ms)]
+2026-10-17 16:29:38.778 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/send) ÂèÇÊï∞({"content": "\u64a4\u56de\u5192\u70df-1"})]
+2026-10-17 16:29:38.795 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/send) ËÄóÊó∂(16 ms)]
+2026-10-17 16:29:38.807 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 117})]
+2026-10-17 16:29:38.829 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(20 ms)]
+2026-10-17 16:29:38.833 [http-nio-48081-exec-4] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:49[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/list) Êó†ÂèÇÊï∞]
+2026-10-17 16:29:38.843 [task-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_sms_log SET send_status = ?, send_time = ?, api_send_code = ?, api_serial_no = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:38.843 [task-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - ==> Parameters: 20(Integer), 2026-10-17T16:29:38.839978600(LocalDateTime), 660026(String), d2094754-795d-4bc4-ba72-4507712166ce(String), 2026-10-17T16:29:38.840977500(LocalDateTime), null, 1692(Long)
+2026-10-17 16:29:38.845 [task-1] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_sms_log SET send_status = ?, send_time = ?, api_send_code = ?, api_serial_no = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:38.846 [task-3] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.846 [task-1] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - ==> Parameters: 20(Integer), 2026-10-17T16:29:38.842979200(LocalDateTime), 660026(String), 1ffc342f-318f-4ec0-a6e1-04b11941452b(String), 2026-10-17T16:29:38.843977500(LocalDateTime), null, 1690(Long)
+2026-10-17 16:29:38.848 [task-1] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.849 [http-nio-48081-exec-4] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/list) ËÄóÊó∂(15 ms)]
+2026-10-17 16:29:38.854 [task-2] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_sms_log SET send_status = ?, send_time = ?, api_send_code = ?, api_serial_no = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:38.855 [task-2] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - ==> Parameters: 20(Integer), 2026-10-17T16:29:38.853102500(LocalDateTime), 660026(String), 036604be-666b-41c2-94d6-3f6779139743(String), 2026-10-17T16:29:38.853102500(LocalDateTime), null, 1691(Long)
+2026-10-17 16:29:38.857 [task-2] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.871 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:49[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/list) Êó†ÂèÇÊï∞]
+2026-10-17 16:29:38.880 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/list) ËÄóÊó∂(8 ms)]
+2026-10-17 16:29:38.893 [task-4] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_sms_log SET send_status = ?, send_time = ?, api_send_code = ?, api_serial_no = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:38.893 [task-4] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - ==> Parameters: 20(Integer), 2026-10-17T16:29:38.892733100(LocalDateTime), 660026(String), 73457928-403e-436b-89a9-d1fb632255d0(String), 2026-10-17T16:29:38.893733900(LocalDateTime), null, 1693(Long)
+2026-10-17 16:29:38.895 [task-4] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.sms.SmsLogMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:38.902 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/send-wishes) ÂèÇÊï∞({"wishKey": "smoke_w12", "text": "\u64a4\u56de\u5fc3\u613f", "color": "#FF5A8C", "icon": "Star"})]
+2026-10-17 16:29:38.913 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/send-wishes) ËÄóÊó∂(10 ms)]
+2026-10-17 16:29:38.934 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 118})]
+2026-10-17 16:29:38.943 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(8 ms)]
+2026-10-17 16:29:38.965 [http-nio-48081-exec-8] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/send-image) ÂèÇÊï∞({"imageUrl": "http://192.168.1.4:48080/admin-api/infra/file/4/get/smoke_m12.jpg"})]
+2026-10-17 16:29:38.976 [http-nio-48081-exec-8] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/send-image) ËÄóÊó∂(10 ms)]
+2026-10-17 16:29:38.979 [http-nio-48081-exec-9] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 119})]
+2026-10-17 16:29:38.988 [http-nio-48081-exec-9] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(9 ms)]
+2026-10-17 16:29:39.011 [http-nio-48081-exec-10] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/send) ÂèÇÊï∞({"content": "\u64a4\u56de\u5192\u70df-2"})]
+2026-10-17 16:29:39.021 [http-nio-48081-exec-10] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/send) ËÄóÊó∂(9 ms)]
+2026-10-17 16:29:39.042 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 120})]
+2026-10-17 16:29:39.050 [http-nio-48081-exec-1] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:308[0;39m - [serviceExceptionHandler]
+	cn.iocoder.yudao.module.love.service.message.MessageServiceImpl.recallMessage(MessageServiceImpl.java:218)
+2026-10-17 16:29:39.051 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(8 ms)]
+2026-10-17 16:29:39.073 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 117})]
+2026-10-17 16:29:39.080 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(7 ms)]
+2026-10-17 16:29:39.102 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 123})]
+2026-10-17 16:29:39.110 [http-nio-48081-exec-3] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:308[0;39m - [serviceExceptionHandler]
+	cn.iocoder.yudao.module.love.service.message.MessageServiceImpl.getValidatedCouple(MessageServiceImpl.java:292)
+2026-10-17 16:29:39.111 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(7 ms)]
+2026-10-17 16:29:39.114 [http-nio-48081-exec-4] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 999999999})]
+2026-10-17 16:29:39.122 [http-nio-48081-exec-4] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:308[0;39m - [serviceExceptionHandler]
+	cn.iocoder.yudao.module.love.service.message.MessageServiceImpl.recallMessage(MessageServiceImpl.java:208)
+2026-10-17 16:29:39.122 [http-nio-48081-exec-4] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(8 ms)]
+2026-10-17 16:29:39.125 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:49[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/couple/create-invite) Êó†ÂèÇÊï∞]
+2026-10-17 16:29:39.135 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/couple/create-invite) ËÄóÊó∂(9 ms)]
+2026-10-17 16:29:39.139 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/couple/bind) ÂèÇÊï∞({"inviteCode": "6XDWP8HZ"})]
+2026-10-17 16:29:39.160 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/couple/bind) ËÄóÊó∂(20 ms)]
+2026-10-17 16:29:39.164 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/send) ÂèÇÊï∞({"content": "couple2 \u4e13\u5c5e"})]
+2026-10-17 16:29:39.172 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/send) ËÄóÊó∂(7 ms)]
+2026-10-17 16:29:39.197 [http-nio-48081-exec-8] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 121})]
+2026-10-17 16:29:39.203 [http-nio-48081-exec-8] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:308[0;39m - [serviceExceptionHandler]
+	cn.iocoder.yudao.module.love.service.message.MessageServiceImpl.recallMessage(MessageServiceImpl.java:208)
+2026-10-17 16:29:39.204 [http-nio-48081-exec-8] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(7 ms)]
+2026-10-17 16:29:39.227 [http-nio-48081-exec-9] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/send) ÂèÇÊï∞({"content": "\u64a4\u56de\u5192\u70df-3"})]
+2026-10-17 16:29:39.235 [http-nio-48081-exec-9] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/send) ËÄóÊó∂(7 ms)]
+2026-10-17 16:29:39.236 [http-nio-48081-exec-10] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 122})]
+2026-10-17 16:29:39.242 [http-nio-48081-exec-10] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:308[0;39m - [serviceExceptionHandler]
+	cn.iocoder.yudao.module.love.service.message.MessageServiceImpl.recallMessage(MessageServiceImpl.java:208)
+2026-10-17 16:29:39.243 [http-nio-48081-exec-10] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(6 ms)]
+2026-10-17 16:29:39.258 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({})]
+2026-10-17 16:29:39.261 [http-nio-48081-exec-1] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:150[0;39m - [methodArgumentNotValidExceptionExceptionHandler]
+org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public cn.iocoder.yudao.framework.common.pojo.CommonResult<java.lang.Boolean> cn.iocoder.yudao.module.love.controller.app.message.AppMessageController.recallMessage(cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO): [Field error in object 'appMessageRecallReqVO' on field 'messageId': rejected value [null]; codes [NotNull.appMessageRecallReqVO.messageId,NotNull.messageId,NotNull.java.lang.Long,NotNull]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [appMessageRecallReqVO.messageId,messageId]; arguments []; default message [messageId]]; default message [Ê∂àÊÅØÁºñÂè∑‰∏çËÉΩ‰∏∫Á©∫]] 
+	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:165)
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122)
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:224)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:174)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:934)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:853)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:86)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:963)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:866)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1000)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:649)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:874)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:710)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:132)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:59)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at com.alibaba.druid.support.jakarta.WebStatFilter.doFilter(WebStatFilter.java:113)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$2(FilterChainProxy.java:235)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:376)
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:132)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:86)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:181)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter.doFilterInternal(TokenAuthenticationFilter.java:68)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:110)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:96)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:237)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:195)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:317)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:355)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:272)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at cn.iocoder.yudao.framework.web.core.filter.CacheRequestBodyFilter.doFilterInternal(CacheRequestBodyFilter.java:31)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at cn.iocoder.yudao.framework.tracer.core.filter.TraceFilter.doFilterInternal(TraceFilter.java:30)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:199)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:77)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:535)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:86)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:71)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:347)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:406)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:71)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:1307)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:2036)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:74)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:949)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:483)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:74)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2026-10-17 16:29:39.262 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(3 ms)]
+2026-10-17 16:29:39.289 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 0})]
+2026-10-17 16:29:39.292 [http-nio-48081-exec-2] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:150[0;39m - [methodArgumentNotValidExceptionExceptionHandler]
+org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public cn.iocoder.yudao.framework.common.pojo.CommonResult<java.lang.Boolean> cn.iocoder.yudao.module.love.controller.app.message.AppMessageController.recallMessage(cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO): [Field error in object 'appMessageRecallReqVO' on field 'messageId': rejected value [0]; codes [Positive.appMessageRecallReqVO.messageId,Positive.messageId,Positive.java.lang.Long,Positive]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [appMessageRecallReqVO.messageId,messageId]; arguments []; default message [messageId]]; default message [Ê∂àÊÅØÁºñÂè∑ÂøÖÈ°ª‰∏∫Ê≠£Êï∞]] 
+	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:165)
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122)
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:224)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:174)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:934)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:853)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:86)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:963)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:866)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1000)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:649)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:874)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:710)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:132)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:59)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at com.alibaba.druid.support.jakarta.WebStatFilter.doFilter(WebStatFilter.java:113)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$2(FilterChainProxy.java:235)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:376)
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:132)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:86)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:181)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter.doFilterInternal(TokenAuthenticationFilter.java:68)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:110)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:96)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:237)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:195)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:317)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:355)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:272)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at cn.iocoder.yudao.framework.web.core.filter.CacheRequestBodyFilter.doFilterInternal(CacheRequestBodyFilter.java:31)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at cn.iocoder.yudao.framework.tracer.core.filter.TraceFilter.doFilterInternal(TraceFilter.java:30)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:199)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:77)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:535)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:86)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:71)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:347)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:406)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:71)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:1307)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:2036)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:74)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:949)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:483)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:74)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2026-10-17 16:29:39.293 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(3 ms)]
+2026-10-17 16:29:39.305 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": -1})]
+2026-10-17 16:29:39.307 [http-nio-48081-exec-3] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:150[0;39m - [methodArgumentNotValidExceptionExceptionHandler]
+org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public cn.iocoder.yudao.framework.common.pojo.CommonResult<java.lang.Boolean> cn.iocoder.yudao.module.love.controller.app.message.AppMessageController.recallMessage(cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO): [Field error in object 'appMessageRecallReqVO' on field 'messageId': rejected value [-1]; codes [Positive.appMessageRecallReqVO.messageId,Positive.messageId,Positive.java.lang.Long,Positive]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [appMessageRecallReqVO.messageId,messageId]; arguments []; default message [messageId]]; default message [Ê∂àÊÅØÁºñÂè∑ÂøÖÈ°ª‰∏∫Ê≠£Êï∞]] 
+	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:165)
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122)
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:224)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:174)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:934)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:853)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:86)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:963)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:866)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1000)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:649)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:874)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:710)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:132)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:59)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at com.alibaba.druid.support.jakarta.WebStatFilter.doFilter(WebStatFilter.java:113)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$2(FilterChainProxy.java:235)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:376)
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:132)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:86)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:181)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at cn.iocoder.yudao.framework.security.core.filter.TokenAuthenticationFilter.doFilterInternal(TokenAuthenticationFilter.java:68)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:110)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:96)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:385)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:237)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:195)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:317)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:355)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:272)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at cn.iocoder.yudao.framework.web.core.filter.CacheRequestBodyFilter.doFilterInternal(CacheRequestBodyFilter.java:31)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at cn.iocoder.yudao.framework.tracer.core.filter.TraceFilter.doFilterInternal(TraceFilter.java:30)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:199)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:111)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:77)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:535)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:86)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:71)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:347)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:406)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:71)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:1307)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:2036)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:74)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:949)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:483)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:74)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2026-10-17 16:29:39.308 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(2 ms)]
+2026-10-17 16:29:39.337 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:49[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/unread) Êó†ÂèÇÊï∞]
+2026-10-17 16:29:39.349 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/unread) ËÄóÊó∂(12 ms)]
+2026-10-17 16:29:39.366 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/send) ÂèÇÊï∞({"content": "\u64a4\u56de\u5192\u70df-4(\u7ea2\u70b9\u8054\u52a8)"})]
+2026-10-17 16:29:39.375 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/send) ËÄóÊó∂(8 ms)]
+2026-10-17 16:29:39.399 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:49[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/unread) Êó†ÂèÇÊï∞]
+2026-10-17 16:29:39.406 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/unread) ËÄóÊó∂(7 ms)]
+2026-10-17 16:29:39.429 [http-nio-48081-exec-8] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 123})]
+2026-10-17 16:29:39.437 [http-nio-48081-exec-8] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(8 ms)]
+2026-10-17 16:29:39.440 [http-nio-48081-exec-9] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:49[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/unread) Êó†ÂèÇÊï∞]
+2026-10-17 16:29:39.447 [http-nio-48081-exec-9] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/unread) ËÄóÊó∂(6 ms)]
+2026-10-17 16:29:39.458 [http-nio-48081-exec-10] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/admin-api/system/auth/login) ÂèÇÊï∞({"username": "admin", "password": "admin123"})]
+2026-10-17 16:29:39.464 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.u.AdminUserMapper.selectWithCursor:135[0;39m - ==>  Preparing: SELECT id,username,password,nickname,remark,dept_id,post_ids,email,mobile,sex,avatar,status,login_ip,login_date,tenant_id,create_time,update_time,creator,updater,deleted FROM system_users WHERE deleted=0 AND (username = ?)
+2026-10-17 16:29:39.465 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.u.AdminUserMapper.selectWithCursor:135[0;39m - ==> Parameters: admin(String)
+2026-10-17 16:29:39.467 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.u.AdminUserMapper.selectWithCursor:135[0;39m - <==      Total: 1
+2026-10-17 16:29:39.470 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_login_log ( log_type, trace_id, user_id, user_type, username, result, user_ip, user_agent, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:39.470 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - ==> Parameters: 100(Integer), (String), 1(Long), 2(Integer), admin(String), 0(Integer), 127.0.0.1(String), Python-urllib/3.12(String), 2026-10-17T16:29:39.470734(LocalDateTime), 2026-10-17T16:29:39.470734(LocalDateTime), null, null
+2026-10-17 16:29:39.472 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.dal.mysql.logger.LoginLogMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:39.475 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.mysql.user.AdminUserMapper.updateById:135[0;39m - ==>  Preparing: UPDATE system_users SET login_ip = ?, login_date = ?, update_time = ?, updater = ? WHERE id = ? AND deleted = 0
+2026-10-17 16:29:39.476 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.mysql.user.AdminUserMapper.updateById:135[0;39m - ==> Parameters: 127.0.0.1(String), 2026-10-17T16:29:39.473735800(LocalDateTime), 2026-10-17T16:29:39.474738200(LocalDateTime), null, 1(Long)
+2026-10-17 16:29:39.477 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.mysql.user.AdminUserMapper.updateById:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:39.479 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_refresh_token ( refresh_token, user_id, user_type, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:39.480 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - ==> Parameters: 70c7793bf21f42ff9382c1c783678204(String), 1(Long), 2(Integer), default(String), 2026-11-16T16:29:39.479737(LocalDateTime), 2026-10-17T16:29:39.479737(LocalDateTime), 2026-10-17T16:29:39.479737(LocalDateTime), null, null
+2026-10-17 16:29:39.480 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2RefreshTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:39.483 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.mysql.user.AdminUserMapper.selectById:135[0;39m - ==>  Preparing: SELECT id, username, password, nickname, remark, dept_id, post_ids, email, mobile, sex, avatar, status, login_ip, login_date, tenant_id, create_time, update_time, creator, updater, deleted FROM system_users WHERE id = ? AND deleted = 0
+2026-10-17 16:29:39.483 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.mysql.user.AdminUserMapper.selectById:135[0;39m - ==> Parameters: 1(Long)
+2026-10-17 16:29:39.484 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.mysql.user.AdminUserMapper.selectById:135[0;39m - <==      Total: 1
+2026-10-17 16:29:39.484 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==>  Preparing: INSERT INTO system_oauth2_access_token ( access_token, refresh_token, user_id, user_type, user_info, client_id, expires_time, create_time, update_time, creator, updater ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-10-17 16:29:39.485 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - ==> Parameters: ca7df9125f834ed4b70b8b1199d4ce69(String), 70c7793bf21f42ff9382c1c783678204(String), 1(Long), 2(Integer), {"nickname":"ËäãÈÅìÊ∫êÁ†Å","deptId":"103"}(String), default(String), 2026-10-17T16:59:39.484736200(LocalDateTime), 2026-10-17T16:29:39.484736200(LocalDateTime), 2026-10-17T16:29:39.484736200(LocalDateTime), null, null
+2026-10-17 16:29:39.485 [http-nio-48081-exec-10] [39mDEBUG[0;39m [36mc.i.y.m.s.d.m.o.OAuth2AccessTokenMapper.insert:135[0;39m - <==    Updates: 1
+2026-10-17 16:29:39.489 [http-nio-48081-exec-10] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/admin-api/system/auth/login) ËÄóÊó∂(30 ms)]
+2026-10-17 16:29:39.505 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/admin-api/love/message/delete) ÂèÇÊï∞({id=122})]
+2026-10-17 16:29:39.550 [http-nio-48081-exec-1] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/admin-api/love/message/delete) ËÄóÊó∂(45 ms)]
+2026-10-17 16:29:39.554 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 122})]
+2026-10-17 16:29:39.561 [http-nio-48081-exec-2] [31mWARN [0;39m [36mc.i.y.f.web.core.handler.GlobalExceptionHandler:308[0;39m - [serviceExceptionHandler]
+	cn.iocoder.yudao.module.love.service.message.MessageServiceImpl.recallMessage(MessageServiceImpl.java:208)
+2026-10-17 16:29:39.562 [http-nio-48081-exec-2] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(7 ms)]
+2026-10-17 16:29:39.583 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/admin-api/love/message/delete) ÂèÇÊï∞({id=117})]
+2026-10-17 16:29:39.592 [http-nio-48081-exec-3] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/admin-api/love/message/delete) ËÄóÊó∂(8 ms)]
+2026-10-17 16:29:39.612 [http-nio-48081-exec-4] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:49[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/list) Êó†ÂèÇÊï∞]
+2026-10-17 16:29:39.619 [http-nio-48081-exec-4] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/list) ËÄóÊó∂(6 ms)]
+2026-10-17 16:29:39.643 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/send-wishes) ÂèÇÊï∞({"wishKey": "smoke_w12b", "text": "\u65f6\u95f4\u7ebf\u6392\u9664", "color": "#6C7BFF", "icon": "Gift"})]
+2026-10-17 16:29:39.651 [http-nio-48081-exec-5] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/send-wishes) ËÄóÊó∂(7 ms)]
+2026-10-17 16:29:39.653 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/recall) ÂèÇÊï∞({"messageId": 124})]
+2026-10-17 16:29:39.660 [http-nio-48081-exec-6] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/recall) ËÄóÊó∂(6 ms)]
+2026-10-17 16:29:39.674 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:51[0;39m - [preHandle][ÂºÄÂßãËØ∑Ê±Ç URL(/app-api/love/message/wish-list) ÂèÇÊï∞({limit=200})]
+2026-10-17 16:29:39.683 [http-nio-48081-exec-7] [34mINFO [0;39m [36mc.i.y.f.a.core.interceptor.ApiAccessLogInterceptor:70[0;39m - [afterCompletion][ÂÆåÊàêËØ∑Ê±Ç URL(/app-api/love/message/wish-list) ËÄóÊó∂(8 ms)]
