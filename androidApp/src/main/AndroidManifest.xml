@@ -13,7 +13,7 @@
 			android:supportsRtl="true"
 			android:icon="@mipmap/ic_launcher"
 			android:roundIcon="@mipmap/ic_launcher_round"
-			android:label="LoveBaby"
+			android:label="予爱"
 			android:networkSecurityConfig="@xml/network_security_config"
 			android:theme="@style/Theme.LoveBaby">
 		<activity

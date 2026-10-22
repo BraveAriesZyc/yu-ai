@@ -652,6 +652,10 @@ fun ChatPage(
                     val topPad = when {
                         showDayDivider -> 8.dp // 分隔条自带与上组的呼吸
                         groupStart -> 10.dp // 组间
+                        // 图片是大块实体(边缘即气泡边缘,无文字气泡 9dp 内边距缓冲),3dp 组内距
+                        // 视觉上与相邻消息贴死(2026-10-22 真机反馈「图片和其他聊天没有间距」)
+                        // → 图片上下一律按组间 10dp 呼吸;下一侧由下一条的 prev 判定天然覆盖
+                        msg.kind == MsgKind.IMAGE || prev?.kind == MsgKind.IMAGE -> 10.dp
                         else -> 3.dp // 组内紧凑
                     }
                     Column(
