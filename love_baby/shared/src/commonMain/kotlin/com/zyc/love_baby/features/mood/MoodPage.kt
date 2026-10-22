@@ -36,9 +36,8 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
-import com.tencent.kuikly.core.module.RouterModule
-import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppCheckbox
 import com.zyc.love_baby.components.AppCheckBadge
 import com.zyc.love_baby.components.AppGradientHeader
@@ -261,7 +260,7 @@ fun MoodPage(
                             // 同节点(铁律⑤);原「点卡片许愿」说明让位——卡片手势本身已是许愿引导
                             Box(
                                 modifier = Modifier.background(Color.Transparent, RoundedCornerShape(8.dp))
-                                    .clickable { openWishTimeline(pager) }
+                                    .clickable { pager.openLovePage("wishTimeline") }
                                     .padding(horizontal = 4.dp, vertical = 2.dp),
                             ) {
                                 Text("已送的心愿 ›", color = theme.brandStart, fontSize = 11.sp)
@@ -334,24 +333,6 @@ fun MoodPage(
                 }
             }
         }
-    }
-}
-
-/** openWishTimeline — 路由打开心愿时间线页(独立二级页压栈,closePage/系统返回即回) */
-private fun openWishTimeline(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("wishTimeline", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/** openMoodTimeline — 路由打开心情时间线页(独立二级页压栈,closePage/系统返回即回) */
-private fun openMoodTimeline(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("moodTimeline", JSONObject())
-    } catch (_: Exception) {
     }
 }
 
@@ -458,7 +439,7 @@ private fun MoodCalendarCard(
             // 原「圆点颜色 = 当天心情」说明让位(图例本身已表意)
             Box(
                 modifier = Modifier.background(Color.Transparent, RoundedCornerShape(8.dp))
-                    .clickable { openMoodTimeline(pager) }
+                    .clickable { pager.openLovePage("moodTimeline") }
                     .padding(horizontal = 4.dp, vertical = 2.dp),
             ) {
                 Text("心情时间线 ›", color = theme.brandStart, fontSize = 10.sp)

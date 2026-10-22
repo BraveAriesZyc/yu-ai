@@ -35,8 +35,8 @@ import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
-import com.zyc.love_baby.base.Utils
 import com.zyc.love_baby.components.AppDateCapsule
+import com.zyc.love_baby.components.AppFeedback
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppLoadFailed
@@ -121,8 +121,9 @@ internal fun MoodTimelinePage(pager: Pager) {
                 // 首拉失败且无内容:失败重试态(四态分家,不造假空态)
                 loadFailed = true
             } else {
-                // 浏览中切月失败:保留现月缓存,toast 提示(§7.4 只读降级)
-                Utils.bridgeModule(pager.pagerId).toast("切换失败,请重试")
+                // 浏览中切月失败:保留现月缓存,toast 提示(§7.4 只读降级;AppFeedback 收口
+                // 替代 Utils.bridgeModule 直调淘汰路径)
+                AppFeedback.toast(pager, "切换失败,请重试")
             }
             loading = false
         }

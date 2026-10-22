@@ -25,9 +25,8 @@ import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
-import com.tencent.kuikly.core.module.RouterModule
-import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppFeatureCard
 import com.zyc.love_baby.components.AppGradientHeader
@@ -113,28 +112,28 @@ fun HomePage(
                         iconBg = Color(0xFFFFF1E8),
                         icon = AppIconType.Star,
                         modifier = Modifier.weight(1f),
-                    ) { openAnniversaryList(pager) }
+                    ) { pager.openLovePage("anniversaryList") }
                     AppQuickAction(
                         label = "每日打卡",
                         iconTint = Color(0xFF6C7BFF),
                         iconBg = Color(0xFFEDEFFF),
                         icon = AppIconType.Todo,
                         modifier = Modifier.weight(1f),
-                    ) { openCheckinPage(pager) }
+                    ) { pager.openLovePage("checkinPage") }
                     AppQuickAction(
                         label = "我们的相册",
                         iconTint = Color(0xFFFF5A8C),
                         iconBg = Color(0xFFFFEAF1),
                         icon = AppIconType.Heart,
                         modifier = Modifier.weight(1f),
-                    ) { openMomentPage(pager) }
+                    ) { pager.openLovePage("momentPage") }
                     AppQuickAction(
                         label = "恋爱清单",
                         iconTint = Color(0xFFF7A44A),
                         iconBg = Color(0xFFFFF3E6),
                         icon = AppIconType.Flag,
                         modifier = Modifier.weight(1f),
-                    ) { openWishListPage(pager) }
+                    ) { pager.openLovePage("wishListPage") }
                 }
             }
         }
@@ -151,7 +150,7 @@ fun HomePage(
                         icon = AppIconType.Heart,
                         tileColors = listOf(Color(0xFFFFB27A), Color(0xFFFF7A8C)),
                         modifier = Modifier.weight(1f),
-                        onClick = { openQuotePage(pager) },
+                        onClick = { pager.openLovePage("quotePage") },
                     )
                     AppFeatureCard(
                         title = "约会灵感",
@@ -159,7 +158,7 @@ fun HomePage(
                         icon = AppIconType.Star,
                         tileColors = listOf(theme.brandStart, theme.brandEnd),
                         modifier = Modifier.weight(1f),
-                        onClick = { openInspirationPage(pager) },
+                        onClick = { pager.openLovePage("inspirationPage") },
                     )
                 }
             }
@@ -236,67 +235,13 @@ private fun HeaderWithStats(pager: Pager, myNickname: String, myAvatar: String, 
                         "--"
                     },
                     "纪念日(天)",
-                    onClick = { if (CoupleStore.bindState == CoupleBindState.BOUND) openAnniversaryList(pager) },
+                    onClick = { if (CoupleStore.bindState == CoupleBindState.BOUND) pager.openLovePage("anniversaryList") },
                 ),
             ),
             modifier = Modifier.align(Alignment.BottomCenter)
                 .offset(y = 20.dp)
                 .padding(horizontal = AppTheme.PageHPadding),
         )
-    }
-}
-
-/** 路由打开纪念日独立页(新页压栈;MinePage.openWishTimeline 同款 try/catch 包 acquireModule) */
-private fun openAnniversaryList(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("anniversaryList", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/** 路由打开每日打卡独立页(openAnniversaryList 同款) */
-private fun openCheckinPage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("checkinPage", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/** 路由打开我们的相册独立页(M9;openCheckinPage 同款) */
-private fun openMomentPage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("momentPage", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/** 路由打开恋爱清单独立页(M14;openMomentPage 同款) */
-private fun openWishListPage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("wishListPage", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/** 路由打开今日情话独立页(M17;openWishListPage 同款) */
-private fun openQuotePage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("quotePage", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/** 路由打开约会灵感独立页(M17;openQuotePage 同款) */
-private fun openInspirationPage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("inspirationPage", JSONObject())
-    } catch (_: Exception) {
     }
 }
 
@@ -312,7 +257,7 @@ private fun TodayCheckinEntry(pager: Pager, bound: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth()
             .background(AppTheme.CardBg, RoundedCornerShape(16.dp))
-            .clickable { if (bound) openCheckinPage(pager) }
+            .clickable { if (bound) pager.openLovePage("checkinPage") }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

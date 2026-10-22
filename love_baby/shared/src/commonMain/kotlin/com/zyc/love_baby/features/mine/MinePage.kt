@@ -29,9 +29,8 @@ import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
-import com.tencent.kuikly.core.module.RouterModule
-import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
@@ -151,7 +150,7 @@ internal fun MinePage(
                         iconTint = Color(0xFFFF7A45),
                         iconBg = Color(0xFFFFF3ED),
                         title = "组件列表",
-                        onClick = { openComponentGallery(pager) },
+                        onClick = { pager.openLovePage("componentList") },
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -169,30 +168,6 @@ internal fun MinePage(
                 Spacer(modifier = Modifier.height(AppTheme.BottomBarAvoidExtra + navBarSafePaddingDp())) // 底部导航避让(M18 统一常数,原 100dp 与首页 96dp 不一致)
             }
         }
-    }
-}
-
-/**
- * openComponentGallery — 路由打开组件列表页(新 Activity 压栈,closePage/系统返回即回)
- * 事件回调里模块已就绪(didInit 之后),acquireModule 安全
- */
-private fun openComponentGallery(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("componentList", JSONObject())
-    } catch (_: Exception) {
-    }
-}
-
-/**
- * openWishTimeline — 路由打开心愿时间线页(新 Activity 压栈,closePage/系统返回即回)
- * 事件回调里模块已就绪(didInit 之后),acquireModule 安全(openComponentGallery 同款)
- */
-private fun openWishTimeline(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage("wishTimeline", JSONObject())
-    } catch (_: Exception) {
     }
 }
 
@@ -254,7 +229,7 @@ private fun HeaderWithStats(pager: Pager, profile: UserProfile?) {
                     "${StatsStore.wishCount}",
                     "心愿",
                     onClick = {
-                        if (CoupleStore.bindState == CoupleBindState.BOUND) openWishTimeline(pager)
+                        if (CoupleStore.bindState == CoupleBindState.BOUND) pager.openLovePage("wishTimeline")
                     },
                 ),
                 AppStatItem("${StatsStore.todoCount}", "待办"),

@@ -23,12 +23,12 @@ import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.RouterModule
-import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.reactive.handler.observable
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.base.NotificationModule
 import com.zyc.love_baby.base.NotifyPermState
+import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppMenuDivider
 import com.zyc.love_baby.components.AppMenuGroup
@@ -45,14 +45,10 @@ import com.zyc.love_baby.features.couple.toastCouple
 internal const val PERMISSION_PAGE_NAME = "permissionPage"
 
 /**
- * 路由打开权限管理页;事件回调里模块已就绪,try/catch 吞未桥接端(openProfilePage 同款包裹)
+ * 路由打开权限管理页(base.openLovePage 收口,try/catch 吞未桥接端在 helper 内统一处理)
  */
 internal fun openPermissionPage(pager: Pager) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage(PERMISSION_PAGE_NAME, JSONObject())
-    } catch (_: Exception) {
-    }
+    pager.openLovePage(PERMISSION_PAGE_NAME)
 }
 
 /**

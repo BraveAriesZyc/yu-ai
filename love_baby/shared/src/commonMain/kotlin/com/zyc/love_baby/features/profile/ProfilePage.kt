@@ -74,7 +74,7 @@ internal const val PROFILE_WHO_PARTNER = "partner"
 
 /**
  * 路由打开用户资料详情页(who=mine|partner);事件回调里模块已就绪,try/catch 吞未桥接端
- * (HomePage.openAnniversaryList 同款包裹)。带参 openPage 先例 = RouterPage.jumpPage
+ * (base.Pager.openLovePage 统一包裹)。带参 openPage 先例 = RouterPage.jumpPage
  */
 internal fun openProfilePage(pager: Pager, who: String) {
     try {

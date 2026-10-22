@@ -54,7 +54,7 @@ import kotlinx.coroutines.launch
 
 /**
  * InspirationPage — 约会灵感页(@Page 注册名 "inspirationPage",M17):分类 chips + 灵感卡列表
- * 用法:首页「恋爱灵感·约会灵感」卡 RouterModule.openPage 打开(HomePage.openInspirationPage);
+ * 用法:首页「恋爱灵感·约会灵感」卡 `pager.openLovePage("inspirationPage")` 打开(base 路由收口);
  *      返回键 closePage;独立二级页(WishListPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:InspirationApi/InspirationInfo(页内自持不进 AppState,D-19g——页销毁即弃);
  *      AppFilterChipRow(分类 chips,components 通用件,M17 本页需求同源抽离);

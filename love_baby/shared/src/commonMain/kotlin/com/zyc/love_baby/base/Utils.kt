@@ -3,6 +3,9 @@ package com.zyc.love_baby.base
 import com.tencent.kuikly.core.base.BaseObject
 import com.tencent.kuikly.core.manager.BridgeManager
 import com.tencent.kuikly.core.manager.PagerManager
+import com.tencent.kuikly.core.module.RouterModule
+import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
+import com.tencent.kuikly.core.pager.Pager
 
 internal object Utils : BaseObject() {
 
@@ -29,4 +32,16 @@ internal object Utils : BaseObject() {
         return (price / 100f).toString()
     }
 
+}
+
+/**
+ * 路由打开站内二级页(新页压栈):try/catch 吞未桥接端异常(getModule null/宿主未实现,
+ * 渐进降级语义同 bridgeModule 系);HomePage/MinePage/PermissionPage 原各持一份 openXxx
+ * 私有包裹(同体复制 9 份),2026-10-22 收口单源
+ */
+internal fun Pager.openLovePage(name: String, params: JSONObject = JSONObject()) {
+    try {
+        acquireModule<RouterModule>(RouterModule.MODULE_NAME).openPage(name, params)
+    } catch (_: Exception) {
+    }
 }

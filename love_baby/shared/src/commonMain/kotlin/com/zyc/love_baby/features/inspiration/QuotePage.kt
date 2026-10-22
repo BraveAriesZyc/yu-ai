@@ -46,7 +46,7 @@ import kotlinx.coroutines.launch
 
 /**
  * QuotePage — 今日情话页(@Page 注册名 "quotePage",M17):服务端按日轮换的一句话 + 随机换一句
- * 用法:首页「恋爱灵感·今日情话」卡 RouterModule.openPage 打开(HomePage.openQuotePage);
+ * 用法:首页「恋爱灵感·今日情话」卡 `pager.openLovePage("quotePage")` 打开(base 路由收口);
  *      返回键 closePage;独立二级页(WishListPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:InspirationApi/InspirationQuote(页内自持不进 AppState,D-19g——页销毁即弃);
  *      components.AppLoading/AppLoadFailed(加载/失败态);couple.BindPrimaryButton(换一句钮);
