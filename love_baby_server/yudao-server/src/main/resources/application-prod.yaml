@@ -1,0 +1,130 @@
+server:
+  port: 48080
+
+--- #################### 数据库相关配置 ####################
+
+spring:
+  autoconfigure:
+    # noinspection SpringBootApplicationYaml
+    exclude:
+      - org.springframework.ai.vectorstore.qdrant.autoconfigure.QdrantVectorStoreAutoConfiguration # 禁用 AI 模块的 Qdrant，手动创建
+      - org.springframework.ai.vectorstore.redis.autoconfigure.RedisVectorStoreAutoConfiguration # 禁用 AI 模块的 Redis，手动创建
+      - org.springframework.ai.vectorstore.milvus.autoconfigure.MilvusVectorStoreAutoConfiguration # 禁用 AI 模块的 Milvus，手动创建
+      # TODO 芋艿：spring-ai-alibaba 2.0.0-M1.1 的 DashScope 自动配置暂不兼容 Spring AI 2.0.0
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeChatAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAgentAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeImageAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeVideoAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAudioSpeechAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAudioTranscriptionAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeRerankAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeEmbeddingAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeMultimodalEmbeddingAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAsyncToolCallingManagerAutoConfiguration
+  datasource:
+    druid: # Druid 【监控】相关的全局配置
+      web-stat-filter:
+        enabled: true
+      stat-view-servlet:
+        enabled: false # 生产关闭 Druid 监控台（local/dev 开）
+      filter:
+        stat:
+          enabled: true
+          log-slow-sql: true # 慢 SQL 记录
+          slow-sql-millis: 100
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true
+    dynamic: # 多数据源配置
+      druid: # Druid 【连接池】相关的全局配置
+        initial-size: 5 # 初始连接数
+        min-idle: 10 # 最小连接池数量
+        max-active: 20 # 最大连接池数量
+        max-wait: 60000 # 获取连接等待超时（毫秒）
+        time-between-eviction-runs-millis: 60000
+        min-evictable-idle-time-millis: 600000
+        max-evictable-idle-time-millis: 1800000
+        validation-query: SELECT 1 FROM DUAL
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+      primary: master
+      datasource:
+        master:
+          # 生产连接参数走环境变量；MYSQL_PASSWORD 不给默认值——未注入时启动即失败（占位符未解析），防裸奔
+          url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/yudao?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
+          username: ${MYSQL_USERNAME:yudao}
+          password: ${MYSQL_PASSWORD}
+        slave:
+          lazy: true # 懒加载，保证启动速度
+          url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/yudao?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
+          username: ${MYSQL_USERNAME:yudao}
+          password: ${MYSQL_PASSWORD}
+  # Redis 配置
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      password: ${REDIS_PASSWORD:} # 生产建议设置密码
+
+--- #################### 定时任务相关配置 ####################
+
+# Quartz 配置项
+spring:
+  quartz:
+    auto-startup: true # 生产开启定时任务（infra 作业日志清理等依赖；local 排除 QuartzAutoConfiguration 才是关）
+    scheduler-name: schedulerName
+    job-store-type: jdbc
+    wait-for-jobs-to-complete-on-shutdown: true
+    properties:
+      org:
+        quartz:
+          scheduler:
+            instanceName: schedulerName
+            instanceId: AUTO
+          jobStore:
+            class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+            isClustered: true
+            clusterCheckinInterval: 15000
+            misfireThreshold: 60000
+          threadPool:
+            threadCount: 25
+            threadPriority: 5
+            class: org.quartz.simpl.SimpleThreadPool
+    jdbc:
+      initialize-schema: NEVER # 手动建表（ruoyi-vue-pro.sql 已含 QRTZ_ 表）
+
+--- #################### 监控相关配置 ####################
+
+# Actuator 监控端点的配置项
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,info # 生产只暴露 health/info（local/dev 的 '*' 不带入）
+
+# 日志文件配置
+logging:
+  file:
+    name: ${user.home}/logs/${spring.application.name}.log
+
+--- #################### 芋道相关配置 ####################
+
+# 芋道配置项，设置当前项目所有自定义的配置
+yudao:
+  captcha:
+    enable: true # 生产开启图片验证码（AdminAuthServiceImpl @Value 默认即 true，显式写出防漂移）
+  security:
+    mock-enable: false # 生产关闭 mock 模式（默认 false，显式写出）
+    # BCrypt cost 4→10（SecurityProperties 默认 4 偏弱）。对存量哈希无影响：
+    # BCrypt 哈希串自带 cost 自描述（$2a$10$...），matches 按哈希内嵌 cost 校验，调大只影响新 encode
+    password-encoder-length: 10
+  sms-code: # 覆盖 application.yaml 共享默认的 9999 测试值（local 不动）
+    begin-code: 100000
+    end-code: 999999
+  access-log: # 访问日志的配置项
+    enable: false
+  demo: false

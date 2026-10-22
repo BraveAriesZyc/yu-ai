@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>cn.iocoder.boot</groupId>
+        <artifactId>yudao</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>yudao-module-love</artifactId>
+    <packaging>jar</packaging>
+
+    <name>${project.artifactId}</name>
+    <description>
+        love 模块下，我们放情侣互动业务，支撑 C 端 App（love_baby）。
+        例如说：C 端用户（love_user）、情侣关系、待办、心情、悄悄话等等
+    </description>
+
+    <dependencies>
+        <!-- 依赖 system 模块，复用其 OAuth2 令牌、短信验证码、登录日志等 API 能力（love 模块绝不自造 token/短信） -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-module-system</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <!-- Web 相关 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- DB 相关 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-mybatis</artifactId>
+        </dependency>
+
+        <!-- 服务保障相关：@RateLimiter 登录/发码限流 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-protection</artifactId>
+        </dependency>
+
+        <!-- WebSocket 触发器(D-16)：消息 send 落库后给对方在线连接推纯信号(端点 /infra/ws,§5.2 WS 通道) -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-websocket</artifactId>
+        </dependency>
+
+    </dependencies>
+
+</project>
