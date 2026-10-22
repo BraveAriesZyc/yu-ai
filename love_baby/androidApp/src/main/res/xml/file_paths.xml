@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider 路径表(M24 六轮聊天「拍照」卡):仅开放拍照输出目录,
+     filesDir/camera/(KRPickImageActivity EXTRA_OUTPUT 直落全量原图) -->
+<paths>
+	<files-path
+			name="camera"
+			path="camera/"/>
+</paths>

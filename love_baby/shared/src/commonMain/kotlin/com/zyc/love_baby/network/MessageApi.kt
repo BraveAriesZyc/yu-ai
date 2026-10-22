@@ -3,8 +3,12 @@ package com.zyc.love_baby.network
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.data.model.MessageReadReq
 import com.zyc.love_baby.data.model.MessageRecallReq
+import com.zyc.love_baby.data.model.MessageSendCardReq
 import com.zyc.love_baby.data.model.MessageSendImageReq
 import com.zyc.love_baby.data.model.MessageSendReq
+import com.zyc.love_baby.data.model.MessageSendStickerReq
+import com.zyc.love_baby.data.model.MessageSendVideoReq
+import com.zyc.love_baby.data.model.MessageSendVoiceReq
 import com.zyc.love_baby.data.model.MessageSendWishesReq
 
 /**
@@ -38,6 +42,10 @@ internal object MessageApi {
     private const val PATH_SEND = "/love/message/send"
     private const val PATH_SEND_WISHES = "/love/message/send-wishes"
     private const val PATH_SEND_IMAGE = "/love/message/send-image"
+    private const val PATH_SEND_VOICE = "/love/message/send-voice" // M23
+    private const val PATH_SEND_VIDEO = "/love/message/send-video" // M23
+    private const val PATH_SEND_STICKER = "/love/message/send-sticker" // M23
+    private const val PATH_SEND_CARD = "/love/message/send-card" // M23
     private const val PATH_UNREAD = "/love/message/unread"
     private const val PATH_READ = "/love/message/read"
     private const val PATH_RECALL = "/love/message/recall"
@@ -83,6 +91,33 @@ internal object MessageApi {
     /** 发图片消息(kind=3,content 列存 URL,M10):回包为落库后的单个消息 VO(供乐观替换与 lastId 推进) */
     suspend fun sendImage(pager: Pager, imageUrl: String): ApiResult =
         HttpClient.request(pager, PATH_SEND_IMAGE, isPost = true, body = MessageSendImageReq(imageUrl).toJson())
+
+    /** 发语音消息(kind=4,M23):content 快照 {"url","dur"} 由服务端组装;回包语义同 sendImage */
+    suspend fun sendVoice(pager: Pager, voiceUrl: String, duration: Int): ApiResult =
+        HttpClient.request(pager, PATH_SEND_VOICE, isPost = true, body = MessageSendVoiceReq(voiceUrl, duration).toJson())
+
+    /** 发视频消息(kind=5,M23):content 快照 {"url","cover","dur"},cover 可空串;回包语义同 sendImage */
+    suspend fun sendVideo(pager: Pager, videoUrl: String, coverUrl: String, duration: Int): ApiResult =
+        HttpClient.request(pager, PATH_SEND_VIDEO, isPost = true, body = MessageSendVideoReq(videoUrl, coverUrl, duration).toJson())
+
+    /** 发贴纸消息(kind=6,M23):content = key 明文(快照式,服务端不校验字典);回包语义同 sendImage */
+    suspend fun sendSticker(pager: Pager, stickerKey: String): ApiResult =
+        HttpClient.request(pager, PATH_SEND_STICKER, isPost = true, body = MessageSendStickerReq(stickerKey).toJson())
+
+    /** 发自定义卡片消息(kind=7,M23):content 快照 {"type","title","sub","icon"};回包语义同 sendImage */
+    suspend fun sendCard(
+        pager: Pager,
+        cardType: String,
+        title: String,
+        sub: String,
+        icon: String,
+    ): ApiResult =
+        HttpClient.request(
+            pager,
+            PATH_SEND_CARD,
+            isPost = true,
+            body = MessageSendCardReq(cardType, title, sub, icon).toJson(),
+        )
 
     /**
      * 聊天未读数(红点口径,M11):回包 data 为对象 {"unread":n}。

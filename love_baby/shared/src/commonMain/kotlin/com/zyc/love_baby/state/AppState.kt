@@ -9,6 +9,8 @@ import com.tencent.kuikly.compose.ui.graphics.toArgb
 import com.tencent.kuikly.core.coroutines.CoroutineScope
 import com.tencent.kuikly.core.coroutines.Job
 import com.tencent.kuikly.core.coroutines.launch
+import com.tencent.kuikly.core.module.SharedPreferencesModule
+import com.tencent.kuikly.core.nvi.serialization.json.JSONArray
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BridgeModule
@@ -52,8 +54,10 @@ import kotlin.time.ExperimentalTime
  *    未桥接端(iOS/ohos/H5)与断线由既有 5s 轮询兜底——渐进降级,数据完整性恒由 lastId 游标保证
  *  - ChatStore 悄悄话:id String + lastId 增量游标(§5.2 message/list);心愿消息快照化
  *    (单条 wishTitle/wishKey/colorHex/iconName 四字段,§5.2 快照式),本地假回复整体移除;
- *    createTime 透传(epoch 毫秒,端上时间行/日期分组渲染用),覆盖拉按 id 对账合并防驱逐
- *    并发已落库的本端消息(F6),pull 以 Mutex 串行防下拉刷新空返回闪现(F13)
+ *    createTime 透传(epoch 毫秒,端上时间行/日期分组渲染用),覆盖拉按 id 对账三分支归并
+ *    (localOlder+serverMsgs+localNewer,防驱逐并发已落库本端消息 F6 与缓存/前插历史 M23),
+ *    pull 以 Mutex 串行防下拉刷新空返回闪现(F13);M23 本地全量缓存(SP envelope,500 条
+ *    截头保尾,uid 校验防串台)+ 富媒体四类(语音/视频/贴纸/自定义卡片)
  *  - 颜色/图标映射:Color↔hex、AppIconType↔name 双向收口在本文件(§7.6 铁律⑥,DTO 只传字符串)
  */
 
@@ -874,7 +878,14 @@ internal object MoodStore {
 
 // ---------- 聊天 ----------
 
-internal enum class MsgKind { TEXT, WISH, IMAGE }
+internal enum class MsgKind { TEXT, WISH, IMAGE, VOICE, VIDEO, STICKER, CARD }
+
+/** 本端发送状态(M24 修订 乐观发送):服务端回包入列的既有消息恒 SENT;本端即点即现的
+ *  临时消息先 SENDING(气泡旁小钟表),POST 回包 Ok 换服务端真身(回 SENT)/失败转 FAILED
+ *  (红叹号,点击原位重发,见 ChatStore.appendPending 注释) */
+internal const val MSG_SEND_SENT = 0
+internal const val MSG_SEND_SENDING = 1
+internal const val MSG_SEND_FAILED = 2
 
 /**
  * 悄悄话/心愿消息。M3 快照化:原 wishTitles 多标题结构删除,改为单条心愿消息四字段
@@ -883,7 +894,7 @@ internal enum class MsgKind { TEXT, WISH, IMAGE }
  * 双向映射并兜底,§7.6 铁律⑥)
  */
 internal data class ChatMsg(
-    val id: String, // 服务端 Long 按 String 解析(§5.1)
+    val id: String, // 服务端 Long 按 String 解析(§5.1);乐观临时消息为 local_* 前缀(见 MSG_SEND_SENDING)
     val isMine: Boolean,
     val text: String,
     val kind: MsgKind = MsgKind.TEXT,
@@ -891,9 +902,19 @@ internal data class ChatMsg(
     val wishKey: String = "",
     val colorHex: String = "",
     val iconName: String = "",
-    val imageUrl: String = "", // kind=IMAGE 时为图片完整 URL(content 列透传,M10)
+    val imageUrl: String = "", // kind=IMAGE 时为图片 URL(content 列透传,M10);乐观期为本地 file:// 副本
+    val mediaUrl: String = "", // kind=VOICE/VIDEO 共用媒体 URL(content 快照 JSON 的 url,M23);乐观期同上
+    val coverUrl: String = "", // kind=VIDEO 封面 URL(可空串,渲染灰底兜底,M23)
+    val durationSec: Int = 0, // kind=VOICE/VIDEO 时长秒(快照 JSON 的 dur;0=缺省,渲染侧隐藏时长元素)
+    val stickerKey: String = "", // kind=STICKER 贴纸 key(content 明文,ChatStickers 字典渲染,M23)
+    val cardType: String = "", // kind=CARD 卡片快照四字段(M23,type 首期仅 wishWall)
+    val cardTitle: String = "",
+    val cardSub: String = "",
+    val cardIcon: String = "",
     val createTime: Long = 0L, // epoch 毫秒(服务端 VO 回传);0 = 未回传,渲染侧整层隐藏时间元素
     val recalled: Boolean = false, // M12 墓碑:已撤回消息渲染灰条(服务端不删行,原字段保留)
+    val sendState: Int = MSG_SEND_SENT, // M24 修订 发送状态(仅本端临时消息非 SENT;TA 消息与服务端回包恒 SENT)
+    val localUri: String = "", // M24 修订 乐观媒体本地 file:// 源(失败重发重走上传链用;TEXT/STICKER/CARD 恒空)
 )
 
 internal object ChatStore {
@@ -901,6 +922,18 @@ internal object ChatStore {
     /** 停留聊天页期间的轻轮询间隔(M3 实施修正,§7.4):设计原触发点(进页/下拉/本端发送)不含
      *  停留期间自动刷新,对方发消息须切 Tab 才可见;补 5s 静默增量轮询收口(仅 BOUND 且停留本页时跑) */
     const val POLL_INTERVAL_MS = 5_000L
+
+    // ---------- M23 本地全量缓存(SharedPreferences 单 key envelope,ChatMsg 全字段直存) ----------
+
+    /** 缓存 SP key(envelope {"v","uid","lastId","msgs"};uid 校验防换号串台) */
+    private const val CACHE_KEY = "love_chat_cache"
+
+    /** 缓存条数上限:append 后截头保尾(takeLast)——更早历史下拉现拉现看不驻留;截头≠服务端无更早,
+     *  hasMore 仍由服务端回包条数驱动,重拉自愈 */
+    private const val CACHE_LIMIT = 500
+
+    /** envelope 结构版本(未来迁移用;当前 v1 = ChatMsg 全字段 JSON) */
+    private const val CACHE_VERSION = 1
 
     var messages by mutableStateOf(emptyList<ChatMsg>())
         private set
@@ -987,7 +1020,7 @@ internal object ChatStore {
                 if (listResult is ApiResult.Ok) {
                     val infos = MessageInfo.listFrom(listResult.dataArray)
                     if (infos.size < MessageApi.LIST_LIMIT) hasMore = false
-                    prependDedupe(infos.map { toMsg(it) })
+                    prependDedupe(pager, infos.map { toMsg(it) })
                 }
                 listResult
             }
@@ -999,8 +1032,9 @@ internal object ChatStore {
         return result
     }
 
-    /** 历史前插去重(M19):fresh 恒为更早消息;合并后按 id 数值序稳定排序(appendDedupe orderedMerge 同语义) */
-    private fun prependDedupe(list: List<ChatMsg>) {
+    /** 历史前插去重(M19):fresh 恒为更早消息;合并后按 id 数值序稳定排序(appendDedupe orderedMerge 同语义)。
+     *  变更后落盘(M23;不截尾——刚前插的更早历史立截无意义,上限由下次 append 收口) */
+    private fun prependDedupe(pager: Pager, list: List<ChatMsg>) {
         if (list.isEmpty()) return
         val known = HashSet<String>(messages.size + list.size)
         messages.forEach { known.add(it.id) }
@@ -1008,6 +1042,7 @@ internal object ChatStore {
         list.forEach { if (known.add(it.id)) fresh.add(it) }
         if (fresh.isEmpty()) return
         messages = (fresh + messages).sortedBy { it.id.toLongOrNull() ?: Long.MIN_VALUE }
+        persistCache(pager)
     }
 
     private suspend fun pull(pager: Pager, overwrite: Boolean): ApiResult {
@@ -1022,22 +1057,31 @@ internal object ChatStore {
             if (listResult is ApiResult.Ok) {
                 infos = MessageInfo.listFrom(listResult.dataArray)
                 if (overwrite) {
-                    // 首屏覆盖(F6):按 id 对账合并而非整表替换——覆盖拉在飞时本端 send/sendWishes 可能
-                    // 已 POST 落库并先入列(其服务端 id 必大于本页快照最大 id),整表替换会把它们驱逐,
-                    // 而 lastId 已随覆盖推进、该区间永不重拉,消息凭空消失直至冷启动;保留 id 更大的
-                    // 本端消息接在快照尾部(升序不破),下一轮增量会再拉到同 id 消息并去重
+                    // 首屏覆盖(F6):按 id 对账三分支归并而非整表替换。原「serverMsgs + localNewer」
+                    // 两分支会驱逐缓存恢复/M19 下拉前插的更早历史(切 Tab resync 后下拉历史丢失,
+                    // M23 顺带修现网既有问题),补 localOlder 保序归并——
+                    //   localOlder:缓存恢复/下拉前插的更早历史(id 全小于本页快照)
+                    //   serverMsgs:服务端最近一页快照(权威;与本地同 id 条目经区间过滤天然去重)
+                    //   localNewer:覆盖拉在飞时本端 send/sendWishes 已先入列的消息(其服务端 id 必大于
+                    //     本页快照最大 id;整表替换会驱逐且 lastId 已随覆盖推进、该区间永不重拉,
+                    //     消息凭空消失直至冷启动,F6 既有结论)
+                    // 三段各自升序且 id 区间不相交,拼接即全局有序,无需再排
                     val serverMsgs = infos.map { toMsg(it) }
+                    val minServerId =
+                        infos.minOfOrNull { it.id.toLongOrNull() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE
                     val maxServerId =
                         infos.maxOfOrNull { it.id.toLongOrNull() ?: Long.MIN_VALUE } ?: Long.MIN_VALUE
+                    val localOlder = messages.filter { (it.id.toLongOrNull() ?: Long.MIN_VALUE) < minServerId }
                     val localNewer = messages.filter { (it.id.toLongOrNull() ?: Long.MIN_VALUE) > maxServerId }
-                    messages = serverMsgs + localNewer
-                    // 覆盖后回到「最近一页」窗口:已前插历史被丢弃(M12 resync 既有语义),hasMore
-                    // 随窗口复位可重拉(条数满页=可能还有更早;不足页=已到头)
-                    hasMore = infos.size >= MessageApi.LIST_LIMIT
+                    messages = localOlder + serverMsgs + localNewer
+                    // 覆盖后回到「最近一页」窗口:hasMore = 服务端满页(可能还有更早)或本地留有更早
+                    // 历史(localOlder 非空,loadHistory 以其最小 id 继续前翻;空回包自纠 hasMore=false)
+                    hasMore = localOlder.isNotEmpty() || infos.size >= MessageApi.LIST_LIMIT
+                    truncateAndPersist(pager)
                 } else {
                     // 增量走归位合并:本端 send 不推游标后,回包含自己已入列条目(dedupe 掉)与对方并发迟到
                     // 的低 id 条目——后者须按 id 数值序插回正确位置,尾插会让时序错乱
-                    appendDedupe(infos.map { toMsg(it) }, orderedMerge = true)
+                    appendDedupe(pager, infos.map { toMsg(it) }, orderedMerge = true)
                 }
                 infos.forEach { advanceLastId(it.id) }
             }
@@ -1088,38 +1132,99 @@ internal object ChatStore {
     private fun previewOf(info: MessageInfo): String = when (info.kind) {
         MessageInfo.KIND_WISH -> "💌 ${info.content}"
         MessageInfo.KIND_IMAGE -> "[图片]"
+        // M23 富媒体摘要:语音/视频按类别文案,贴纸取字典 emoji(未知 key 占位),卡片取标题快照
+        MessageInfo.KIND_VOICE -> "[语音]"
+        MessageInfo.KIND_VIDEO -> "[视频]"
+        MessageInfo.KIND_STICKER -> "${ChatStickers.emojiOf(info.content)} [表情]"
+        MessageInfo.KIND_CARD -> {
+            val title = parseSnapshot(info.content)?.optString("title").orEmpty()
+            if (title.isEmpty()) "[卡片]" else "🏷 $title"
+        }
         else -> {
-            val flat = info.content.replace("\n", " ")
-            var end = minOf(50, flat.length)
-            while (end > 0 && flat[end - 1].isHighSurrogate()) end-- // 回退孤立高位代理项
-            flat.take(end)
+            // 未识别 kind(未来版本新增)防 JSON 整串糊脸:content 以 { 开头显「[新消息]」(与 toMsg 同口径)
+            if (info.content.startsWith("{")) "[新消息]"
+            else {
+                val flat = info.content.replace("\n", " ")
+                var end = minOf(50, flat.length)
+                while (end > 0 && flat[end - 1].isHighSurrogate()) end-- // 回退孤立高位代理项
+                flat.take(end)
+            }
         }
     }
 
     /**
      * 发文本悄悄话(§7.4 写穿透):POST 成功才用回包消息(含服务端 id)入列。**不推进游标**(见 lastId
-     * 注释:本端 id 顶游标会吞掉对方并发低 id 消息)——本条将由下轮增量拉回、appendDedupe 幂等去重;
-     * 失败不追加,调用方 toast 后输入可重发(无脏数据)
+     * 注释:本端 id 顶游标会吞掉对方并发低 id 消息)——本条将由下轮增量拉回、appendDedupe 幂等去重。
+     * M24 修订 乐观发送:pendingId 非空 = 调用方已先 appendPending 本地临时消息,回包 Ok 换服务端
+     * 真身 / 失败转 FAILED 可重试(见 finalizePending);pendingId 空 = 老路径(POST 成功才入列)
      */
-    suspend fun send(pager: Pager, text: String): ApiResult {
+    suspend fun send(pager: Pager, text: String, pendingId: String = ""): ApiResult {
         val result = MessageApi.send(pager, text)
-        if (result is ApiResult.Ok) {
-            MessageInfo.from(result.data)?.let { appendDedupe(listOf(toMsg(it))) }
-        }
+        finalizeSendResult(pager, pendingId, result)
         return result
     }
 
     /**
-     * 发图片消息(M10,§7.4 写穿透同 send):POST send-image 成功才用回包消息入列。
-     * **不推进游标**(同 send:本端 id 顶游标会吞掉对方并发低 id 消息)——本条由下轮增量拉回去重;
-     * 失败不追加,调用方 toast 后预览图保留可重发
+     * 发图片消息(M10,§7.4 写穿透同 send;M24 修订 乐观收口同 send,pendingId 语义见其注释)。
      */
-    suspend fun sendImage(pager: Pager, imageUrl: String): ApiResult {
+    suspend fun sendImage(pager: Pager, imageUrl: String, pendingId: String = ""): ApiResult {
         val result = MessageApi.sendImage(pager, imageUrl)
-        if (result is ApiResult.Ok) {
-            MessageInfo.from(result.data)?.let { appendDedupe(listOf(toMsg(it))) }
-        }
+        finalizeSendResult(pager, pendingId, result)
         return result
+    }
+
+    /** 发语音消息(M23;M24 修订 乐观收口同 send,pendingId 语义见其注释) */
+    suspend fun sendVoice(pager: Pager, voiceUrl: String, duration: Int, pendingId: String = ""): ApiResult {
+        val result = MessageApi.sendVoice(pager, voiceUrl, duration)
+        finalizeSendResult(pager, pendingId, result)
+        return result
+    }
+
+    /** 发视频消息(M23;M24 修订 乐观收口同 send,pendingId 语义见其注释) */
+    suspend fun sendVideo(pager: Pager, videoUrl: String, coverUrl: String, duration: Int, pendingId: String = ""): ApiResult {
+        val result = MessageApi.sendVideo(pager, videoUrl, coverUrl, duration)
+        finalizeSendResult(pager, pendingId, result)
+        return result
+    }
+
+    /** 发贴纸消息(M23;M24 修订 乐观收口同 send,pendingId 语义见其注释) */
+    suspend fun sendSticker(pager: Pager, stickerKey: String, pendingId: String = ""): ApiResult {
+        val result = MessageApi.sendSticker(pager, stickerKey)
+        finalizeSendResult(pager, pendingId, result)
+        return result
+    }
+
+    /** 发自定义卡片消息(M23;M24 修订 乐观收口同 send,pendingId 语义见其注释) */
+    suspend fun sendCard(pager: Pager, cardType: String, title: String, sub: String, icon: String, pendingId: String = ""): ApiResult {
+        val result = MessageApi.sendCard(pager, cardType, title, sub, icon)
+        finalizeSendResult(pager, pendingId, result)
+        return result
+    }
+
+    /**
+     * 发送收口分派(M24 修订 乐观发送):pendingId 空 = 老调用方(sendWishes 等),保持
+     * 「POST 成功才入列」老路径零行为变化;非空 = 调用方已乐观入列临时消息——Ok 用回包真身
+     * confirmPending(换掉临时消息,轮询/WS 抢先入列时 appendDedupe 幂等兜底),回包解析失败
+     * 或 Err 转 FAILED(气泡红叹号,点击原位重发)。两条路都不推游标(同 send 裁决)
+     */
+    private fun finalizeSendResult(pager: Pager, pendingId: String, result: ApiResult) {
+        if (pendingId.isEmpty()) {
+            if (result is ApiResult.Ok) {
+                MessageInfo.from(result.data)?.let { appendDedupe(pager, listOf(toMsg(it))) }
+            }
+            return
+        }
+        when (result) {
+            is ApiResult.Ok -> {
+                val info = MessageInfo.from(result.data)
+                if (info == null) {
+                    markSendFailed(pager, pendingId) // 回包缺真身(理论不可达):按失败走重试出口
+                } else {
+                    confirmPending(pager, pendingId, info)
+                }
+            }
+            else -> markSendFailed(pager, pendingId)
+        }
     }
 
     /**
@@ -1140,7 +1245,7 @@ internal object ChatStore {
             )
             if (result is ApiResult.Ok) {
                 MoodStore.toggle(wish.id)
-                MessageInfo.from(result.data)?.let { appendDedupe(listOf(toMsg(it))) } // 不推游标,同 send
+                MessageInfo.from(result.data)?.let { appendDedupe(pager, listOf(toMsg(it))) } // 不推游标,同 send
             } else {
                 return result
             }
@@ -1148,8 +1253,9 @@ internal object ChatStore {
         return ApiResult.Ok(JSONObject())
     }
 
-    /** 登出/换号清内存(MainPager 接线调用),防上会话悄悄话残留 */
-    fun reset() {
+    /** 登出/换号/解绑清场(MainPager 接线调用):内存清空 + **持久层整包删除**(M23)——restore
+     *  有 uid 校验兜底,但显式清场防同 uid 重登读旧缓存与残留膨胀 */
+    fun reset(pager: Pager) {
         messages = emptyList()
         lastId = ""
         initialLoaded = false
@@ -1160,6 +1266,13 @@ internal object ChatStore {
         partnerTyping = false // M13:typing 是纯瞬态位,登出/解绑即清(seq 不动,过期协程自灭无害)
         typingSeq = 0
         lastTypingSentAt = 0L
+        pendingSeq = 0 // M24 修订:乐观临时 id 序号随清场复位(重登重新计数,epoch 毫秒保证不重号)
+        try {
+            // 置空串即弃用(restoreCache 空串早退);SessionStore.logout 同款清持久化范式
+            pager.getModule<SharedPreferencesModule>(SharedPreferencesModule.MODULE_NAME)
+                ?.setItem(CACHE_KEY, "")
+        } catch (_: Exception) {
+        }
     }
 
     /** MessageInfo → ChatMsg:isMine 以 senderId 比对当前会话;kind=2 走快照字段,kind=3 图片
@@ -1189,20 +1302,272 @@ internal object ChatStore {
                 createTime = info.createTime,
                 recalled = info.recalled,
             )
+            // M23 富媒体快照四分支:解析失败一律回退文本气泡渲染 content 明文(服务端脏数据不崩,§11 同语义)
+            MessageInfo.KIND_VOICE -> {
+                val snap = parseSnapshot(info.content)
+                if (snap == null) textFallback(info, mine)
+                else ChatMsg(
+                    id = info.id,
+                    isMine = mine,
+                    text = "",
+                    kind = MsgKind.VOICE,
+                    mediaUrl = snap.optString("url"),
+                    durationSec = snap.optInt("dur"),
+                    createTime = info.createTime,
+                    recalled = info.recalled,
+                )
+            }
+            MessageInfo.KIND_VIDEO -> {
+                val snap = parseSnapshot(info.content)
+                if (snap == null) textFallback(info, mine)
+                else ChatMsg(
+                    id = info.id,
+                    isMine = mine,
+                    text = "",
+                    kind = MsgKind.VIDEO,
+                    mediaUrl = snap.optString("url"),
+                    coverUrl = snap.optString("cover"),
+                    durationSec = snap.optInt("dur"),
+                    createTime = info.createTime,
+                    recalled = info.recalled,
+                )
+            }
+            MessageInfo.KIND_STICKER -> ChatMsg(
+                id = info.id,
+                isMine = mine,
+                text = "",
+                kind = MsgKind.STICKER,
+                stickerKey = info.content, // key 明文透传,emoji 渲染走 ChatStickers.emojiOf(未知 key 占位)
+                createTime = info.createTime,
+                recalled = info.recalled,
+            )
+            MessageInfo.KIND_CARD -> {
+                val snap = parseSnapshot(info.content)
+                if (snap == null) textFallback(info, mine)
+                else ChatMsg(
+                    id = info.id,
+                    isMine = mine,
+                    text = "",
+                    kind = MsgKind.CARD,
+                    cardType = snap.optString("type"),
+                    cardTitle = snap.optString("title"),
+                    cardSub = snap.optString("sub"),
+                    cardIcon = snap.optString("icon"),
+                    createTime = info.createTime,
+                    recalled = info.recalled,
+                )
+            }
             else -> ChatMsg(
                 id = info.id,
                 isMine = mine,
-                text = info.content,
+                // 未识别 kind(未来版本新增)或快照缺省:content 以 { 开头视为 JSON 快照,显「[新消息]」
+                // 防整串 JSON 糊脸(M23 防御);纯文本照旧透传
+                text = if (info.content.startsWith("{")) "[新消息]" else info.content,
                 createTime = info.createTime,
                 recalled = info.recalled,
             )
         }
     }
 
+    /** content JSON 快照安全解析(M23 语音/视频/卡片):非对象形态/解析异常回 null,调用方降级渲染 */
+    private fun parseSnapshot(content: String): JSONObject? = try {
+        if (content.startsWith("{")) JSONObject(content) else null
+    } catch (_: Exception) {
+        null
+    }
+
+    /** 快照解析失败兜底:回退文本气泡渲染 content 明文(脏数据降级不崩,§11) */
+    private fun textFallback(info: MessageInfo, mine: Boolean): ChatMsg = ChatMsg(
+        id = info.id,
+        isMine = mine,
+        text = info.content,
+        createTime = info.createTime,
+        recalled = info.recalled,
+    )
+
+    // ---------- M23 本地全量缓存(读写) ----------
+
+    /**
+     * 缓存落盘(M23):messages(ChatMsg 全字段,皆原始类型无 Color)单 key envelope 全量重写——
+     * {"v","uid","lastId","msgs"}。照 SessionStore.persist 范式:可空 getModule + try/catch,
+     * **禁 acquireModule**(铁律 9:失败同步抛一次 + setTimeout 异步再抛一次,try/catch 接不住直接崩);
+     * 落盘失败静默降级(§11 同款):只影响下次冷启动回退覆盖拉,不影响本会话。
+     * uid 落 envelope:恢复时与 SessionStore.userId 比对,防换号串台(登出/解绑另有 reset 显式清)。
+     * lastId 落游标值**而非 max(消息 id)**:本端 send 不推游标、消息 id 领先游标——若落消息最大 id,
+     * 恢复后会把对方并发低 id 消息判为「已拉过」永不重拉(复刻 F6 吞消息 bug)。
+     * 调用约定:仅在 messages 确实变更后触发(各变更方法 fresh 空早退,5s 轮询空转零写入)
+     */
+    private fun persistCache(pager: Pager) {
+        try {
+            val sp = pager.getModule<SharedPreferencesModule>(SharedPreferencesModule.MODULE_NAME) ?: return
+            val envelope = JSONObject()
+                .put("v", CACHE_VERSION)
+                .put("uid", SessionStore.userId)
+                .put("lastId", lastId)
+                .put("msgs", JSONArray().apply { messages.forEach { put(chatMsgToJson(it)) } })
+            sp.setItem(CACHE_KEY, envelope.toString())
+        } catch (_: Exception) {
+            // 落盘失败静默:SP 满/序列化异常等,下次冷启动缓存缺失走覆盖拉自愈
+        }
+    }
+
+    /**
+     * 冷启动恢复(M23):ChatPage 首组合 effect 内、loadInitial 之前调。
+     * uid 不匹配(换号)/结构异常/空包 → 整包丢弃返回 false,走正常覆盖拉;
+     * 命中 → messages 整表置为缓存(id 数值序)、lastId 取 max(当前, envelope 值)(**严禁取
+     * max(消息 id)**,理由见 persistCache)、initialLoaded=true(loadInitial 幂等跳过覆盖拉,
+     * 历史秒出),返回 true 供调用方紧接主动 loadIncrement 渐进补齐缓存游标之后的缺口。
+     * 幂等:initialLoaded 已置位(重复触发)早退不整表覆盖
+     */
+    fun restoreCache(pager: Pager): Boolean {
+        if (initialLoaded) return false
+        val uid = SessionStore.userId
+        if (uid.isEmpty()) return false
+        return try {
+            val sp = pager.getModule<SharedPreferencesModule>(SharedPreferencesModule.MODULE_NAME) ?: return false
+            val raw = sp.getItem(CACHE_KEY) ?: return false
+            if (raw.isEmpty()) return false
+            val envelope = JSONObject(raw)
+            if (envelope.optString("uid") != uid) return false // 换号:缓存属上一账号,整包弃用
+            val arr = envelope.optJSONArray("msgs") ?: return false
+            val restored = ArrayList<ChatMsg>(arr.length())
+            for (i in 0 until arr.length()) {
+                chatMsgFrom(arr.optJSONObject(i))?.let { restored.add(it) }
+            }
+            if (restored.isEmpty()) return false
+            // 非数字 id(local_ 乐观临时消息)兜底排最后,同 appendDedupe 修订(排最前会把在途消息顶到列表顶)
+            messages = restored.sortedBy { it.id.toLongOrNull() ?: Long.MAX_VALUE }
+            val cachedLastId = envelope.optString("lastId")
+            if (isNewer(cachedLastId, lastId)) lastId = cachedLastId // 取 envelope 游标,见 persistCache 警示
+            initialLoaded = true
+            true
+        } catch (_: Exception) {
+            false // 缓存脏/半写:整包弃用走覆盖拉,不抛不崩
+        }
+    }
+
+    /** 截头保尾至上限后落盘(append/覆盖归并收口):更早历史下拉现拉现看不驻留 */
+    private fun truncateAndPersist(pager: Pager) {
+        if (messages.size > CACHE_LIMIT) messages = messages.takeLast(CACHE_LIMIT)
+        persistCache(pager)
+    }
+
+    /** ChatMsg → 缓存条目 JSON:全字段显式写(与 chatMsgFrom 对称,防版本演进缺字段读出脏缺省) */
+    private fun chatMsgToJson(m: ChatMsg): JSONObject = JSONObject()
+        .put("id", m.id)
+        .put("mine", m.isMine)
+        .put("text", m.text)
+        .put("kind", m.kind.name)
+        .put("wishTitle", m.wishTitle)
+        .put("wishKey", m.wishKey)
+        .put("colorHex", m.colorHex)
+        .put("iconName", m.iconName)
+        .put("imageUrl", m.imageUrl)
+        .put("mediaUrl", m.mediaUrl)
+        .put("coverUrl", m.coverUrl)
+        .put("durationSec", m.durationSec)
+        .put("stickerKey", m.stickerKey)
+        .put("cardType", m.cardType)
+        .put("cardTitle", m.cardTitle)
+        .put("cardSub", m.cardSub)
+        .put("cardIcon", m.cardIcon)
+        .put("createTime", m.createTime)
+        .put("recalled", m.recalled)
+        .put("sendState", m.sendState)
+        .put("localUri", m.localUri)
+
+    /** 缓存条目 → ChatMsg:id 空判无效条目返回 null(逐条跳过不整体失败);kind 未知(跨版本窗口)
+     *  返回 null 跳过(渲染语义未知,不强行降级成空文本气泡) */
+    private fun chatMsgFrom(o: JSONObject?): ChatMsg? {
+        if (o == null) return null
+        val id = o.optString("id")
+        if (id.isEmpty()) return null
+        val kind = try {
+            MsgKind.valueOf(o.optString("kind", "TEXT"))
+        } catch (_: Exception) {
+            return null
+        }
+        return ChatMsg(
+            id = id,
+            isMine = o.optBoolean("mine", false),
+            text = o.optString("text"),
+            kind = kind,
+            wishTitle = o.optString("wishTitle"),
+            wishKey = o.optString("wishKey"),
+            colorHex = o.optString("colorHex"),
+            iconName = o.optString("iconName"),
+            imageUrl = o.optString("imageUrl"),
+            mediaUrl = o.optString("mediaUrl"),
+            coverUrl = o.optString("coverUrl"),
+            durationSec = o.optInt("durationSec"),
+            stickerKey = o.optString("stickerKey"),
+            cardType = o.optString("cardType"),
+            cardTitle = o.optString("cardTitle"),
+            cardSub = o.optString("cardSub"),
+            cardIcon = o.optString("cardIcon"),
+            createTime = o.optLong("createTime"),
+            recalled = o.optBoolean("recalled", false),
+            // 缓存恢复态修正:上一进程发送中(1)的临时消息按失败(2)落地——发送协程已死,
+            // 钟表态永不动是死状态;转失败给红叹号重发出口(服务端可能已落库,重发仅多一份幂等消息)
+            sendState = if (o.optInt("sendState") == MSG_SEND_SENDING) MSG_SEND_FAILED else o.optInt("sendState"),
+            localUri = o.optString("localUri"),
+        )
+    }
+
+    // ---------- M24 修订 乐观发送(即点即现 + 实时状态,微信语义) ----------
+
+    /** 乐观临时 id 序号(进程内自增;与 epoch 毫秒拼串保证跨重启唯一) */
+    private var pendingSeq = 0
+
+    /**
+     * 乐观入列:调用方组好消息(isMine=true、sendState=SENDING、id 留空)即点即现,本函数赋
+     * 临时 id(local_ 前缀 + 纳秒,与服务端自增数字 id 永不撞:appendDedupe 去重安全、loadHistory
+     * 的 minOrNull 游标把非数字 id 过滤安全、orderedMerge/缓存恢复排序把非数字 id 兜底排最后)。
+     * 返回临时 id 供调用方收口(POST 回包 → [finalizeSendResult] 换真身/转失败)。
+     * send 不推游标的裁决不变:临时 id 不参与 lastId,真身入列同样不推(由下轮增量拉回去重)
+     */
+    fun appendPending(pager: Pager, msg: ChatMsg): String {
+        pendingSeq += 1 // 单线程事件循环自增即原子;与 epoch 毫秒拼串,跨进程重启也不重号
+        val localId = "local_${nowEpochMs()}_$pendingSeq"
+        messages = messages + listOf(msg.copy(id = localId))
+        truncateAndPersist(pager)
+        return localId
+    }
+
+    /** 临时消息转发送中(失败重发入口复位态用):原地改 sendState,找不到(已被换真身/清场)静默 */
+    fun markSending(pager: Pager, localId: String) {
+        mutateSendState(pager, localId, MSG_SEND_SENDING)
+    }
+
+    /** 临时消息转失败(红叹号,点击重发):POST Err / 上传链失败统一出口,原地改 sendState */
+    fun markSendFailed(pager: Pager, localId: String) {
+        mutateSendState(pager, localId, MSG_SEND_FAILED)
+    }
+
+    private fun mutateSendState(pager: Pager, localId: String, state: Int) {
+        val idx = messages.indexOfFirst { it.id == localId }
+        if (idx < 0) return // 已换真身/登出清场:晚到状态写回作废(同 pickMedia 晚到回包语义)
+        messages = messages.toMutableList().apply { this[idx] = this[idx].copy(sendState = state) }
+        truncateAndPersist(pager)
+    }
+
+    /**
+     * 回包换真身:先移除临时消息(按 id),服务端真消息走 appendDedupe 入列——轮询/WS 抢先
+     * 入列同条时幂等去重,临时消息照样移除,不重不漏;真身恒尾插(最新),临时消息本就在尾部,
+     * 视觉位置不变。落库缓存一并收口(appendDedupe 内 truncateAndPersist)
+     */
+    private fun confirmPending(pager: Pager, localId: String, info: MessageInfo) {
+        messages = messages.filterNot { it.id == localId }
+        appendDedupe(pager, listOf(toMsg(info)))
+    }
+
     /** 按 id 去重追加(并发触发/重试场景下同一条消息只入列一次;LazyColumn key 也不容重复)。
      *  orderedMerge=true 走归位合并:合并后按 id 数值序整体稳定排序,迟到低 id 消息插回正确位置
-     *  (增量路径专用;send 尾插即最新,无需排序)。id 恒为服务端自增数字串,非数字兜底排最前(不可达) */
-    private fun appendDedupe(list: List<ChatMsg>, orderedMerge: Boolean = false) {
+     *  (增量路径专用;send 尾插即最新,无需排序)。id 为服务端自增数字串;M24 修订起乐观临时 id
+     *  (local_ 前缀非数字)兜底排**最后**(消息恒最新,MIN_VALUE 排最前会把在途临时消息顶到
+     *  列表顶——2026-10-22 修订同步缓存恢复同款比较器)。
+     *  fresh 空早退不落盘(M23:5s 轮询空转零写入);有变更才截尾至上限 + 落盘 */
+    private fun appendDedupe(pager: Pager, list: List<ChatMsg>, orderedMerge: Boolean = false) {
         if (list.isEmpty()) return
         val known = HashSet<String>(messages.size + list.size)
         messages.forEach { known.add(it.id) }
@@ -1210,10 +1575,11 @@ internal object ChatStore {
         list.forEach { if (known.add(it.id)) fresh.add(it) }
         if (fresh.isEmpty()) return
         messages = if (orderedMerge) {
-            (messages + fresh).sortedBy { it.id.toLongOrNull() ?: Long.MIN_VALUE }
+            (messages + fresh).sortedBy { it.id.toLongOrNull() ?: Long.MAX_VALUE }
         } else {
             messages + fresh
         }
+        truncateAndPersist(pager)
     }
 
     /** 推进游标到最大消息 id(id 为服务端自增数字串;非数字兜底字典序比对) */
@@ -1285,7 +1651,7 @@ internal object ChatStore {
      */
     suspend fun recall(pager: Pager, messageId: String): ApiResult {
         val result = MessageApi.recall(pager, messageId)
-        if (result is ApiResult.Ok) markLocalRecalled(messageId)
+        if (result is ApiResult.Ok) markLocalRecalled(pager, messageId)
         return result
     }
 
@@ -1303,16 +1669,27 @@ internal object ChatStore {
     /**
      * WS 撤回信号入口(ChatPushStore 调,M12):本地置墓碑,不重拉——recall 信号携 messageId,
      * 数据在信号里(D-16 显式破例:增量拉拉不到老消息变更)。id 不在本地列表(未拉过/已清场)
-     * 时 map 无命中即 no-op,墓碑由下次覆盖拉(resync/首拉)补齐
+     * 时 map 无命中即 no-op,墓碑由下次覆盖拉(resync/首拉)补齐。墓碑同步落盘(M23,pager 由
+     * ChatPushStore.onEvent 的 currentPager 供给)
      */
-    fun applyRecall(messageId: String) {
+    fun applyRecall(pager: Pager, messageId: String) {
         if (messageId.isEmpty()) return
-        markLocalRecalled(messageId)
+        markLocalRecalled(pager, messageId)
     }
 
-    /** 原位替换置墓碑:key=m.id 不变,LazyColumn 无位移仅本行重组合;map 幂等,重复信号/重复 POST 无副作用 */
-    private fun markLocalRecalled(messageId: String) {
-        messages = messages.map { if (it.id == messageId) it.copy(recalled = true) else it }
+    /** 原位替换置墓碑:key=m.id 不变,LazyColumn 无位移仅本行重组合;map 幂等,重复信号/重复 POST 无副作用。
+     *  命中才落盘(M23):缓存里同条消息同步置墓碑,冷启动不复活已撤回消息;id 未入列(未拉过/已清场)no-op */
+    private fun markLocalRecalled(pager: Pager, messageId: String) {
+        var hit = false
+        messages = messages.map {
+            if (it.id == messageId) {
+                hit = true
+                it.copy(recalled = true)
+            } else {
+                it
+            }
+        }
+        if (hit) persistCache(pager)
     }
 
     // ---------- M13 正在输入 ----------
@@ -1468,7 +1845,7 @@ internal object ChatPushStore {
                     }
                     if (messageId.isNotEmpty()) {
                         launchTracked {
-                            ChatStore.applyRecall(messageId)
+                            ChatStore.applyRecall(pager, messageId)
                         }
                     }
                 } else if (type == TYPE_LOVE_TYPING) {

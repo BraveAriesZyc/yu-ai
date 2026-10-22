@@ -4,8 +4,12 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendCardReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendStickerReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendVideoReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendVoiceReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
 import cn.iocoder.yudao.module.love.service.message.MessageService;
@@ -89,6 +93,41 @@ public class AppMessageController {
                     + "发送方/接收方/audit_status/回包语义同 send（WS 推送自动继承）；错误码零新增：imageUrl 空 → 400，未绑定 → 1_003_004_003")
     public CommonResult<AppMessageRespVO> sendImage(@RequestBody @Valid AppMessageSendImageReqVO reqVO) {
         return success(messageService.sendImage(reqVO));
+    }
+    @PostMapping("/send-voice")
+    @Operation(summary = "发送语音消息（kind=4，M23）",
+            description = "voiceUrl 必填 ≤512、duration 必填 [1,600]（端上录音 60s 上限，服务端放宽至 600）；"
+                    + "content 列存服务端组装的 JSON 快照 {\"url\",\"dur\"}；"
+                    + "发送方/接收方/audit_status/回包语义同 send-image（WS 推送自动继承）；错误码零新增：参数空 → 400，未绑定 → 1_003_004_003")
+    public CommonResult<AppMessageRespVO> sendVoice(@RequestBody @Valid AppMessageSendVoiceReqVO reqVO) {
+        return success(messageService.sendVoice(reqVO));
+    }
+
+    @PostMapping("/send-video")
+    @Operation(summary = "发送视频消息（kind=5，M23）",
+            description = "videoUrl 必填 ≤512、coverUrl 可空 ≤512（端上抽帧封面）、duration 必填 [1,600]；"
+                    + "content 列存服务端组装的 JSON 快照 {\"url\",\"cover\",\"dur\"}；"
+                    + "发送方/接收方/audit_status/回包语义同 send-image（WS 推送自动继承）；错误码零新增：参数空 → 400，未绑定 → 1_003_004_003")
+    public CommonResult<AppMessageRespVO> sendVideo(@RequestBody @Valid AppMessageSendVideoReqVO reqVO) {
+        return success(messageService.sendVideo(reqVO));
+    }
+
+    @PostMapping("/send-sticker")
+    @Operation(summary = "发送贴纸消息（kind=6，M23）",
+            description = "stickerKey 必填 ≤64，content 列存 key 明文（快照式同 wishKey：服务端不校验字典归属，"
+                    + "端上按 key 对齐同版本内置字典渲染，未知 key 端上占位降级）；"
+                    + "发送方/接收方/audit_status/回包语义同 send-image（WS 推送自动继承）；错误码零新增：参数空 → 400，未绑定 → 1_003_004_003")
+    public CommonResult<AppMessageRespVO> sendSticker(@RequestBody @Valid AppMessageSendStickerReqVO reqVO) {
+        return success(messageService.sendSticker(reqVO));
+    }
+
+    @PostMapping("/send-card")
+    @Operation(summary = "发送自定义卡片消息（kind=7，M23）",
+            description = "cardType/title 必填（sub/icon 可空），content 列存服务端组装的 JSON 快照 {\"type\",\"title\",\"sub\",\"icon\"}；"
+                    + "cardType 服务端不做白名单校验（快照哲学，端上按 type 分派渲染，首期仅 wishWall）；"
+                    + "发送方/接收方/audit_status/回包语义同 send-image（WS 推送自动继承）；错误码零新增：参数空 → 400, 未绑定 → 1_003_004_003")
+    public CommonResult<AppMessageRespVO> sendCard(@RequestBody @Valid AppMessageSendCardReqVO reqVO) {
+        return success(messageService.sendCard(reqVO));
     }
 
     @GetMapping("/unread")

@@ -155,7 +155,7 @@ CREATE TABLE `love_message`  (
   `couple_id` bigint NOT NULL COMMENT '情侣关系编号（增量扫按 couple_id + id 游标）',
   `sender_id` bigint NOT NULL COMMENT '发送方用户编号',
   `receiver_id` bigint NOT NULL COMMENT '接收方用户编号（快照，解绑后审计归对）',
-  `kind` tinyint NOT NULL COMMENT '消息类型（1文本悄悄话 2心愿消息）',
+  `kind` tinyint NOT NULL COMMENT '消息类型（1文本悄悄话 2心愿消息 3图片消息 4语音 5视频 6贴纸 7自定义卡片，M23 补 4-7：语音/视频为 {"url","dur"/"cover","dur"} JSON 快照、贴纸为 key 明文、卡片为 {"type","title","sub","icon"} 快照）',
   `content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文本内容，或心愿文案快照',
   `wish_key` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '心愿 key 快照（kind=2 时有值）',
   `color` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '心愿颜色快照（hex，kind=2 时有值）',
@@ -905,3 +905,31 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('配置新增', 'love:config:create', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('配置编辑', 'love:config:update', 3, 3, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('配置删除', 'love:config:delete', 3, 4, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+
+-- ============================================================================
+-- M24 段：love_moment 加首图宽高两列（2026-10-22，相册页瀑布流 M24）
+-- 端上 MomentCard 图块按「首图压缩后宽高比」自适应高度（瀑布流错落），宽高取自
+-- App 端 Glide 压缩（centerInside + EXIF 自动矫正）后的 Bitmap，随 uploadImage
+-- 回包顶层 width/height 键带回 → 发布端点透传落库。
+-- 0 = 未知（存量行 / 老版 App / 非常规链路）→ 端上降级 140dp 定高（M9 现状），
+-- 双向兼容零迁移：旧数据列默认 0、老版 App 不传、新 App 读 0 走降级。
+-- 本段追加于 M23 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- 上线顺序沿 M15 段惯例 SQL 先于新代码（本段列带 DEFAULT 0，实际双向兼容）。
+-- ============================================================================
+SET @m24_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_moment' AND COLUMN_NAME = 'image_width');
+SET @m24_ddl := IF(@m24_col = 0,
+    'ALTER TABLE `love_moment` ADD COLUMN `image_width` int NOT NULL DEFAULT 0 COMMENT ''首图压缩后宽（px，EXIF 矫正；M24；0=未知→端上瀑布流降级 140dp 定高）''',
+    'SELECT 1');
+PREPARE m24_stmt FROM @m24_ddl;
+EXECUTE m24_stmt;
+DEALLOCATE PREPARE m24_stmt;
+
+SET @m24_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'love_moment' AND COLUMN_NAME = 'image_height');
+SET @m24_ddl := IF(@m24_col = 0,
+    'ALTER TABLE `love_moment` ADD COLUMN `image_height` int NOT NULL DEFAULT 0 COMMENT ''首图压缩后高（px，EXIF 矫正；M24；0=未知→端上瀑布流降级 140dp 定高）''',
+    'SELECT 1');
+PREPARE m24_stmt FROM @m24_ddl;
+EXECUTE m24_stmt;
+DEALLOCATE PREPARE m24_stmt;

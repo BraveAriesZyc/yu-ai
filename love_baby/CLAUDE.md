@@ -51,24 +51,27 @@ love_baby/
 ├── ohosApp/             # 鸿蒙宿主壳
 ├── shared/              # ★ 核心跨端业务模块(KMP),业务代码都在这
 │   └── src/commonMain/kotlin/com/zyc/love_baby/
-│       ├── base/            # 基建 8 件:BasePager、BridgeModule、WebSocketModule、NotificationModule、
-│       │                    #   FileModule、Utils(含 Pager.openLovePage 路由收口)、IPagerIdKtx、PlatformExternalModules
+│       ├── base/            # 基建 9 件:BasePager、BridgeModule(M23 +openUrlExternally 视频外放)、WebSocketModule、NotificationModule、
+│       │                    #   FileModule(M23 +pickVideo/uploadMedia/videoCover/recordAudio 媒体四件)、AudioModule(M23 语音播放单飞)、
+│       │                    #   Utils(含 Pager.openLovePage 路由收口)、IPagerIdKtx、PlatformExternalModules
 │       ├── main/MainPager.kt      # @Page("main") 主容器:底栏五 Tab,HorizontalPager 左右滑切换(五页全驻留)
-│       ├── components/      # 28 件:AppTheme(含 ThemeStore 主题切换)/AppIcons(矢量图标)/AppBottomBar(浮岛底栏)+ 通用组件库(AppGradientHeader/AppCheckbox/AppTag/AppAvatar/AppMenu/AppStats/AppSection/AppCards + AppStatus/AppGestures/AppButton/AppInputField/AppOverlayCard/AppPullRefresh/AppSegmentedChips/AppCalendar/AppDateCapsule/AppGhostIconButton/AppKeyboard/AppFeedback/AppPillChip/AppBrandIntroScreen——新浮层一律走 AppOverlayCard 壳,组件清单见画廊 6 大类分区)
-│       ├── state/           # 全局状态 6 件:AppState.kt(TodoStore/MoodStore/ChatStore + ChatPushStore WS 推送)、
-│       │                    #   CoupleStore、SessionStore、StatsStore、LoveConfigStore、TimeKit(时间工具)
+│       ├── components/      # 28 件:AppTheme(含 ThemeStore 主题切换)/AppIcons(矢量图标)/AppBottomBar(浮岛底栏)+ 通用组件库(AppGradientHeader/AppCheckbox/AppTag/AppAvatar/AppMenu/AppStats/AppSection/AppCards + AppStatus/AppGestures/AppButton/AppInputField/AppOverlayCard/AppPullRefresh/AppStaggeredPullRefresh(24 瀑布流自绘下拉刷新,官方件只挂 LazyListScope)/AppSegmentedChips/AppCalendar/AppDateCapsule/AppGhostIconButton/AppKeyboard/AppFeedback/AppPillChip/AppBrandIntroScreen——新浮层一律走 AppOverlayCard 壳,组件清单见画廊 6 大类分区)
+│       ├── state/           # 全局状态 7 件:AppState.kt(TodoStore/MoodStore/ChatStore + ChatPushStore WS 推送;
+│       │                    #   M23 ChatStore 本地全量缓存:SharedPreferences 500 条截尾/冷启动秒出/换号 uid 校验)、
+│       │                    #   CoupleStore、SessionStore、StatsStore、LoveConfigStore、TimeKit(时间工具)、
+│       │                    #   ChatStickers.kt(M23 聊天贴纸字典,append-only 只增不改不删)
 │       ├── features/        # 15 个业务域(每域 = @Page 页面 + 域内 Widgets 小件)
 │       │   ├── home/ HomePage.kt         # 首页(渐变头部+统计+快捷入口+今日打卡条)
 │       │   ├── todo/ TodoPage.kt         # 待办清单
 │       │   ├── mood/ MoodPage.kt 等      # 心情页 + 时间线 MoodTimelinePage/选项管理浮层/心愿时间线 WishTimelinePage
-│       │   ├── chat/ ChatPage.kt         # 悄悄话(气泡+心愿卡+WS 推送+正在输入+大图预览/撤回)
+│       │   ├── chat/ ChatPage.kt         # 悄悄话(气泡+心愿卡+语音/视频/贴纸/心愿卡富媒体气泡与本地缓存[M23,气泡单源 ChatBubbles.kt]+WS 推送+正在输入+大图预览/撤回;M24 输入区微信化:按住说话胶囊+中央录音 HUD/表情 3×8 网格面板[输入行下方贴底]/动作面板仅心愿墙卡/发送钮有字才现身;三轮修订:全链乐观发送[appendPending 临时 id+点击原位重发;图/视频气泡自带发送状态蒙层+真实进度环 ChatMediaStateOverlay,原生 uploadProgress 查询桥 200ms 轮询]+媒体直发不落预览条[pickMedia 混选图/视频]+媒体工作副本落 filesDir 拒 cacheDir;四轮修订:六链「乐观入列永不被拦+上传 while(sending) 排队等闸」[旧 sending guard 使上传在飞时选图/视频/贴纸/语音收口全部静默丢弃]+起录打断播放/录音中禁播[微信语义防回声];五轮修订:选图走系统照片选择器[ACTION_PICK_IMAGES 优先,无 DocumentsUI 底部进度条]+声音开关图标随态换 Mic↔Keyboard[语音态聊天框不显场]+表情面板点选即插入输入框[删专显预览行,右下退格键];六轮修订:图片钮撤出输入行+加号面板三卡[心愿墙/图片/拍照,新增 takePhoto 原生桥:ACTION_IMAGE_CAPTURE+FileProvider 直落 filesDir/camera 全量原图,收口同图片链]+表情钮仅文本态在场;七轮修订:进度环弧矩形显式内缩绘[drawArc 缺省取画布全域+描边越界被裁=圈圈四角被裁实锤,外层 Box 36dp 兜底+内缩描边半径+1dp]+加号↔发送末位槽同槽互换[有字=发送钮替加号原位,非并列追加;有字时面板不可开需先清空文字]+动作面板正方卡[aspectRatio(1f) icon 上文字下居中,一行三个];八轮修订:进度环恒在场[SENDING 态一律画底环,压缩/排队窗口=空环+「上传中…」删钟表分支——小图亚秒上传钟表一闪被误读进度条,环恒在场图/视频观感一致];九轮修订:选图回退链重排[ACTION_PICK_IMAGES→ACTION_PICK 系统相册(无照片选择器设备如 HarmonyOS,干净无加载条,仅图片)→GET_CONTENT 文件管理器最后兜底——用户设备未解析照片选择器仍静默落文件管理器,其浏览/打开文件自带系统加载条=连续三轮反馈的「进度条」真身];十轮修订:应用内媒体选择器[KRMediaPickerActivity 微信式自建相册页:MediaStore 自读+3 列网格 Glide 缩略图+视频时长角标,读库运行时权限[拒绝降级九轮系统选择器三级链],交付复用 onPickResult 契约零改动+退出路径恰好交付一次[delivered 闸防 common 悬挂]——绕开系统选择器天花板(文件管理器加载条/系统相册仅图片);十一轮修订:修选择器首开即崩[lateinit adapter 赋值曾写于 RecyclerView.apply 内 `.also{adapter=it}`——裸名被内层接收者 RV 同名属性遮蔽,Activity 字段永不赋值,媒体查询回来 notifyDataSetChanged 即 UninitializedPropertyAccessException 崩进程(真机 MIUI FATAL 实证);赋值挪出 apply 块落 Activity 方法作用域,警示「lateinit 字段勿在 apply/also 内同名遮蔽赋值」];十二轮修订:亮色微信式改版+部分授权适配[白底 4 列/1dp 白缝/按压波纹/视频胶囊角标/状态栏反色;Android14「仅允许选中的照片」= MediaStore 只回勾选项(真机实证一图一视频),部分授权态顶栏下蓝色横幅一键重请求升级全量,空态文案联动];十三轮修订:图片卡改**应用内相册弹层多选**[MediaPickerSheet 新件:官方 material3 ModalBottomSheet 底部弹层+LazyVerticalGrid 4 列网格,多选 ≤9 序号圆标按选择顺序编号/视频时长角标/视频>16MB 选中时拦截/顶栏取消↔发送(N)/430dp 定高+底部安全垫;缩略图零原生工作——content:// 直出走 KRImageAdapter Glide 分支降采样+视频帧;新双桥 queryMediaLibrary[未授权自动挂系统申请,静态桥 REQUEST_CODE_MEDIA=2003 第三槽,33+ 附 VISUAL_USER_SELECTED 部分授权 any-granted 放行,Images+Video 归并 DATE_ADDED DESC 1000 条,纯查询不占 inFlight]/copyMedia[发送交回 content uri 列表逐张落盘 pick_cache 转 file://+mime 判型+时长体量回读];sendPickedMedia 替代 pickMedia 单选链,逐张分派 launchImageSend/launchVideoSend 乐观排队语义自动继承;KRMediaPickerActivity+pickMedia 桥退役保留回滚安全网;十四轮修订:相册弹层微信化打磨[**默认单选**(点格 radio 对勾圆标,再点取消)+**长按进多选**(combinedClickable,点格 toggle 序号圆标 ≤9,长按那张同时选中,复开复位单选)+顶栏重构(左 ✕ 关闭/中标题随分类/右分类 icon[AppIconType.Category 新增]+发送(N) 灰态不可点)+分类下拉(queryMediaLibrary 回包 +bucket=BUCKET_DISPLAY_NAME,「全部+各相册」面板遮罩点收,切分类清选)+流畅性(格子恒挂浅灰底防白闪/contentType 稳定/key=uri)+圆角 16→8dp+动作面板「图片」改名「相册」;十五轮修订:弹层滚动与缩略图两根因修复[**dismissOnDrag 必须 false**——true 时官方实现把 detectVerticalDragGestures 挂整个 sheet Surface,父层拖拽与 LazyVerticalGrid 滚动抢事件网格滚不动,官方 demo 可滚正因默认 false,关闭走 ✕/遮罩;**KRImageAdapter content:// 分支强制 override(320)+centerCrop**——rememberAsyncImagePainter 无尺寸约束 Glide 全尺寸解码 4000px 原图每张数十 MB 滚动卡顿,原生选择器 320 流畅对照];⚠ 该两坑为 ModalBottomSheet+滚动内容组合的定式,后续弹层内嵌滚动容器照此办;十六轮修订:分类功能整体移除[用户裁决删无用按钮:分类 icon+下拉面板+bucket 全链(原生投影/回包字段/解析/AppIconType.Category)全删,顶栏定稿=左 ✕/中「图片和视频」/右发送(N)];按 kuikly-recomposition-analyzer skill 优化[格子选中序号改 derivedStateOf 派生——直读 selected.indexOf 使全部可见格随任一 toggle 级联重组,remember(item.uri){derivedStateOf{}} 拆订阅粒度,其他格变动本格不重组])
 │       │   ├── mine/ MinePage.kt         # 我的(主题切换/资料/心愿时间线入口;「组件列表」路由到画廊)
 │       │   ├── auth/ LoginPanel.kt 等    # 登录/注册/重置面板 + GatePanel 引导门 + AuthWidgets(接 auth-api)
 │       │   ├── couple/ BindingPanel.kt   # 绑定引导层/绑定浮层 + BindWidgets 薄壳小件
 │       │   ├── profile/ ProfilePage.kt   # 资料卡/资料详情页 + ProfileEditFields
 │       │   ├── anniversary/ AnniversaryPage.kt # 纪念日(@Page 二级页)
 │       │   ├── checkin/ CheckinPage.kt   # 每日打卡(@Page 二级页)
-│       │   ├── moment/ MomentPage.kt     # 我们的相册(M9,@Page 二级页)
+│       │   ├── moment/ MomentPage.kt     # 我们的相册(M9,@Page 二级页;M24 双列瀑布流 LazyVerticalStaggeredGrid,卡高随首图压缩宽高比自适应、0 降级 140dp,自绘下拉刷新)
 │       │   ├── wish/ WishListPage.kt     # 恋爱清单(M14,@Page 二级页)
 │       │   ├── inspiration/ QuotePage.kt # 今日情话 QuotePage + 约会灵感 InspirationPage(M17,@Page 二级页)
 │       │   ├── permission/ PermissionPage.kt # 权限管理(M22,@Page 二级页)

@@ -3,10 +3,14 @@ package cn.iocoder.yudao.module.love.service.message;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
-import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendCardReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendStickerReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendVideoReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendVoiceReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
 
 import java.util.List;
 
@@ -70,6 +74,46 @@ public interface MessageService {
      * @return 落库后的完整消息 VO（含 id，语义同 {@link #sendMessage}）
      */
     AppMessageRespVO sendImage(AppMessageSendImageReqVO reqVO);
+
+    /**
+     * 发送语音消息（kind=4，M23）：content 列存 JSON 快照 {"url":<语音URL>,"dur":<秒>}（服务端组装，
+     * 组装后 >512 抛 BAD_REQUEST 兜底）；发送方/接收方/audit_status/回包语义同 {@link #sendMessage}，
+     * 错误码零新增
+     *
+     * @param reqVO 语音 URL + 时长秒
+     * @return 落库后的完整消息 VO（含 id，语义同 {@link #sendMessage}）
+     */
+    AppMessageRespVO sendVoice(AppMessageSendVoiceReqVO reqVO);
+
+    /**
+     * 发送视频消息（kind=5，M23）：content 列存 JSON 快照 {"url":<视频URL>,"cover":<封面URL>,"dur":<秒>}
+     * （cover 可空 = 缺省，端上灰底兜底）；发送方/接收方/audit_status/回包语义同 {@link #sendMessage}，
+     * 错误码零新增
+     *
+     * @param reqVO 视频 URL + 封面 URL（可空）+ 时长秒
+     * @return 落库后的完整消息 VO（含 id，语义同 {@link #sendMessage}）
+     */
+    AppMessageRespVO sendVideo(AppMessageSendVideoReqVO reqVO);
+
+    /**
+     * 发送贴纸消息（kind=6，M23）：content 列存贴纸 key 明文（快照式同 kind=2 wishKey——服务端
+     * 不校验字典归属，端上按 key 对齐同版本内置字典渲染，未知 key 端上占位降级）；
+     * 发送方/接收方/audit_status/回包语义同 {@link #sendMessage}，错误码零新增
+     *
+     * @param reqVO 贴纸 key（≤64）
+     * @return 落库后的完整消息 VO（含 id，语义同 {@link #sendMessage}）
+     */
+    AppMessageRespVO sendSticker(AppMessageSendStickerReqVO reqVO);
+
+    /**
+     * 发送自定义卡片消息（kind=7，M23）：content 列存 JSON 快照 {"type":<卡片类型>,"title":<标题>,
+     * "sub":<副文案>,"icon":<icon name>}；cardType 服务端不做白名单校验（快照哲学，端上按 type 分派
+     * 渲染，首期仅 wishWall）；发送方/接收方/audit_status/回包语义同 {@link #sendMessage}，错误码零新增
+     *
+     * @param reqVO 卡片类型 + 标题/副文案/图标快照
+     * @return 落库后的完整消息 VO（含 id，语义同 {@link #sendMessage}）
+     */
+    AppMessageRespVO sendCard(AppMessageSendCardReqVO reqVO);
 
     /**
      * 聊天未读数（M11 红点口径）：couple 内 id &gt; 我方 chat_read_cursor 且非本人发送，

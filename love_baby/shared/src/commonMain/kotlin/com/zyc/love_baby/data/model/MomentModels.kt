@@ -29,16 +29,21 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
  *    D-20d,零新增错误码)
  */
 
-/** 发布瞬间(moment/create;M15 多图):imageUrl 仍传首张(满足服务端 @NotBlank 兼容),imageUrls 为全列表 */
+/** 发布瞬间(moment/create;M15 多图):imageUrl 仍传首张(满足服务端 @NotBlank 兼容),imageUrls 为全列表;
+ *  M24 imageWidth/imageHeight 为首图压缩后像素(EXIF 矫正,0=未知,服务端落 0 端上降级定高) */
 internal data class MomentCreateReq(
     val imageUrl: String,
     val imageUrls: List<String>,
     val text: String, // 可空配文,空串 = 无配文(服务端 trim 后落库)
+    val imageWidth: Int = 0,
+    val imageHeight: Int = 0,
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("imageUrl", imageUrl)
         .put("imageUrls", JSONArray().apply { imageUrls.forEach { put(it) } })
         .put("text", text)
+        .put("imageWidth", imageWidth)
+        .put("imageHeight", imageHeight)
 }
 
 /** 删除瞬间(moment/delete;仅上传者本人,POST body 同 todo 组口径) */
@@ -71,6 +76,8 @@ internal data class MomentInfo(
     val createTime: Long,
     val likeCount: Int = 0,
     val liked: Boolean = false,
+    val imageWidth: Int = 0, // M24 首图压缩后宽高(0=未知→瀑布流卡片降级 140dp 定高;默认值参与 equals,轮询对账判等一致)
+    val imageHeight: Int = 0,
 ) {
     companion object {
 
@@ -98,6 +105,8 @@ internal data class MomentInfo(
                 createTime = data.optLong("createTime"),
                 likeCount = data.optInt("likeCount"),
                 liked = data.optBoolean("liked"),
+                imageWidth = data.optInt("imageWidth"),
+                imageHeight = data.optInt("imageHeight"),
             )
         }
 

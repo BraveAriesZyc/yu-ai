@@ -41,9 +41,10 @@ internal object MomentApi {
         HttpClient.request(pager, "$PATH_LIST?beforeId=$beforeId&limit=$limit", isPost = false)
 
     /** 发布瞬间(M15 多图):回包 data 为瞬间 VO(含服务端 id/createTime);
-     *  imageUrl 仍传首张充 @NotBlank 字段,imageUrls 为全列表(服务端归一恒非空) */
-    suspend fun create(pager: Pager, imageUrls: List<String>, text: String): ApiResult =
-        HttpClient.request(pager, PATH_CREATE, isPost = true, body = MomentCreateReq(imageUrls.first(), imageUrls, text).toJson())
+     *  imageUrl 仍传首张充 @NotBlank 字段,imageUrls 为全列表(服务端归一恒非空);
+     *  M24:imageWidth/imageHeight 为首图压缩后像素(0=未知,服务端落 0) */
+    suspend fun create(pager: Pager, imageUrls: List<String>, text: String, imageWidth: Int = 0, imageHeight: Int = 0): ApiResult =
+        HttpClient.request(pager, PATH_CREATE, isPost = true, body = MomentCreateReq(imageUrls.first(), imageUrls, text, imageWidth, imageHeight).toJson())
 
     /** 删除瞬间(仅上传者本人):传 {"id"} */
     suspend fun delete(pager: Pager, id: String): ApiResult =

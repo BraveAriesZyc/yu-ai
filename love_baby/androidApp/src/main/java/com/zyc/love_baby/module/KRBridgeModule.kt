@@ -3,6 +3,8 @@ package com.zyc.love_baby.module
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import com.tencent.kuikly.core.render.android.export.KuiklyRenderBaseModule
@@ -70,6 +72,12 @@ class KRBridgeModule : KuiklyRenderBaseModule() {
                 dateFormatter(params)
             }
 
+            "openUrlExternally" -> {
+                // M23 视频消息外放:ACTION_VIEW 交系统分派(浏览器/播放器),App 内不建播放器;
+                // catch 收口(ACTION 无接收方抛 ActivityNotFoundException 不让它穿透杀进程)
+                openUrlExternally(params)
+            }
+
             else -> callback?.invoke(
                 mapOf(
                     "code" to -1,
@@ -128,6 +136,29 @@ class KRBridgeModule : KuiklyRenderBaseModule() {
 
     private fun closePage(params: String?) {
         activity?.finish()
+    }
+
+    /** 系统外部打开(M23):优先宿主 Activity 起跳,无宿主退 application context 补 NEW_TASK 标记 */
+    private fun openUrlExternally(params: String?) {
+        if (params == null) {
+            return
+        }
+        val url = JSONObject(params).optString("url")
+        if (url.isEmpty()) {
+            return
+        }
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            val host = activity
+            if (host != null) {
+                host.startActivity(intent)
+            } else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                KRApplication.application.startActivity(intent)
+            }
+        } catch (_: Exception) {
+            // 无浏览器/无播放器可接:静默(common 侧不依赖回执)
+        }
     }
 
     private fun showAlert(params: String?, callback: KuiklyRenderCallback?) {

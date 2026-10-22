@@ -71,6 +71,17 @@ internal class BridgeModule : Module() {
         callNativeMethod("toast", methodArgs, null)
     }
 
+    /**
+     * 系统外部打开(M23,视频消息外放):url 交系统 Intent(ACTION_VIEW)分派——浏览器/视频播放器
+     * 皆由系统接管,App 内不建播放器。未桥接端 callNativeMethod 无接收方=静默 no-op(调用方
+     * toast 降级由业务层收口);⚠ dev 明文 http 可能被 cleartext 策略拦,生产 https 无虞
+     */
+    fun openUrlExternally(url: String) {
+        val methodArgs = JSONObject()
+        methodArgs.put("url", url)
+        callNativeMethod(OPEN_URL_EXTERNALLY, methodArgs, null)
+    }
+
     fun openPage(
         url: String,
         closeCurPage: Boolean = false,
@@ -352,6 +363,7 @@ internal class BridgeModule : Module() {
         const val URL_DECODE = "urlDecode"
         const val SHOW_PHOTO_BROWSER = "showPhotoBrowser"
         const val HUMAN_VERIFICATION = "humanVerification"
+        const val OPEN_URL_EXTERNALLY = "openUrlExternally" // M23 视频消息外放
     }
 
 }

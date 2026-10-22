@@ -6,6 +6,16 @@
 	     请求(KuiklyRenderActivity 主页 onCreate)与权限管理页(「我的」页入口)双通道申请;
 	     未授权场景 KRNotificationModule 静默降级,红点兜底 -->
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+	<!-- 悄悄话语音消息(M23):录音运行时权限,聊天页动作面板发起录音时经 KRFileModule 主动申请;
+	     拒绝回错误码,端上 toast 降级(不发语音,其余功能不受影响) -->
+	<uses-permission android:name="android.permission.RECORD_AUDIO"/>
+	<!-- 应用内媒体选择器(M24 十轮,微信式自建相册页):读媒体库运行时权限——33+ 细分媒体权限
+	     (VISUAL_USER_SELECTED 兼容 Android14「仅选中照片」部分授权),33- 传统存储权限;
+	     拒绝时选择器内部降级 KRPickImageActivity 系统选择器三级链,功能不断 -->
+	<uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+	<uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+	<uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
 
 	<application
 			android:name=".KRApplication"
@@ -30,5 +40,25 @@
 				android:name=".KRPickImageActivity"
 				android:exported="false"
 				android:theme="@style/Theme.KRPickImage"/>
+		<!-- 应用内媒体选择器(M24 十轮,微信式自建相册页):聊天图片卡主路径,选完即 finish;
+		     ⚠ name 与类实际 package 一致(根包 com.zyc.love_baby,文件在 module/ 目录)
+		     M24 十三轮起休眠(保留回滚安全网):聊天发送改走应用内相册弹层多选
+		     (Kuikly MediaPickerSheet + queryMediaLibrary/copyMedia 桥),本页暂无调用方 -->
+		<activity
+				android:name=".KRMediaPickerActivity"
+				android:exported="false"
+				android:theme="@style/Theme.LoveBaby"/>
+		<!-- 拍照输出(M24 六轮):FileProvider 授权系统相机写 filesDir/camera 原图(ACTION_IMAGE_CAPTURE
+		     EXTRA_OUTPUT),exported=false 仅 grantUriPermissions 临时授权;应用未声明 CAMERA 权限,
+		     调系统相机免运行时申请 -->
+		<provider
+				android:name="androidx.core.content.FileProvider"
+				android:authorities="${applicationId}.fileprovider"
+				android:exported="false"
+				android:grantUriPermissions="true">
+			<meta-data
+					android:name="android.support.FILE_PROVIDER_PATHS"
+					android:resource="@xml/file_paths"/>
+		</provider>
 	</application>
 </manifest>

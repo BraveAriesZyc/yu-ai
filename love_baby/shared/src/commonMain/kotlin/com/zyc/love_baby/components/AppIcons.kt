@@ -22,12 +22,14 @@ enum class AppIconType {
     Home, Todo, Shop, Mine,          // 底部导航
     ChevronRight, ChevronLeft, Plus, Search, // 通用
     Close, Check, Chat, Send,        // 通用
-    Image,                           // 通用(M10 聊天发图入口)
+    Image,                           // 通用(M24 修订:聊天图片钮直选混选入口,图/视频同屏)
     Pin, Wallet, Service, Info,      // 我的页
     Components,                      // 组件列表入口
     Flag,                            // 我的页(M14 恋爱清单入口)
     GenderFemale, GenderMale,        // 性别选择(资料编辑卡,M16 美化轮)
     Star, Heart, Bell, Moon, Sun,    // 业务装饰
+    Emoji, Play, Pause, Mic, Keyboard, Camera, // 聊天富媒体(M23:贴纸面板入口/语音气泡播放暂停态/录音入口;M24 五轮 Keyboard 语音模式切回文本供能;M24 六轮 Camera 加号面板拍照卡)
+    Clock,                           // 聊天乐观发送(M24 修订:气泡旁「发送中」状态件)
 }
 
 /**
@@ -350,6 +352,71 @@ fun DrawScope.drawAppIcon(type: AppIconType, color: Color, filled: Boolean = fal
             }
         }
 
+        // M23 聊天富媒体四件(Emoji 面板入口/语音气泡播放暂停/录音入口)
+        AppIconType.Emoji -> {
+            drawCircle(color, radius = f(8.2f), center = off(12f, 12f), style = strokeStyle)
+            drawCircle(color, radius = f(1.3f), center = off(9.2f, 10.2f))
+            drawCircle(color, radius = f(1.3f), center = off(14.8f, 10.2f))
+            val smile = Path().apply {
+                moveTo(f(8.4f), f(13.8f))
+                quadraticBezierTo(f(12f), f(17f), f(15.6f), f(13.8f))
+            }
+            drawPath(smile, color, style = strokeStyle)
+        }
+
+        AppIconType.Play -> {
+            val triangle = Path().apply {
+                moveTo(f(8.5f), f(5.5f))
+                lineTo(f(18.5f), f(12f))
+                lineTo(f(8.5f), f(18.5f))
+                close()
+            }
+            drawPath(triangle, color)
+        }
+
+        AppIconType.Pause -> {
+            val left = Path().apply {
+                moveTo(f(7.5f), f(5.5f))
+                lineTo(f(10.5f), f(5.5f))
+                lineTo(f(10.5f), f(18.5f))
+                lineTo(f(7.5f), f(18.5f))
+                close()
+            }
+            drawPath(left, color)
+            val right = Path().apply {
+                moveTo(f(13.5f), f(5.5f))
+                lineTo(f(16.5f), f(5.5f))
+                lineTo(f(16.5f), f(18.5f))
+                lineTo(f(13.5f), f(18.5f))
+                close()
+            }
+            drawPath(right, color)
+        }
+
+        AppIconType.Mic -> {
+            // 拾音胶囊
+            val body = Path().apply {
+                moveTo(f(9f), f(11f))
+                lineTo(f(9f), f(7f))
+                quadraticBezierTo(f(9f), f(4.5f), f(12f), f(4.5f))
+                quadraticBezierTo(f(15f), f(4.5f), f(15f), f(7f))
+                lineTo(f(15f), f(11f))
+                quadraticBezierTo(f(15f), f(14f), f(12f), f(14f))
+                quadraticBezierTo(f(9f), f(14f), f(9f), f(11f))
+                close()
+            }
+            drawPath(body, color, style = strokeStyle)
+            // 弧形支架 + 立杆 + 底座
+            val holder = Path().apply {
+                moveTo(f(5.5f), f(11.5f))
+                quadraticBezierTo(f(5.5f), f(17f), f(12f), f(17f))
+                quadraticBezierTo(f(18.5f), f(17f), f(18.5f), f(11.5f))
+            }
+            drawPath(holder, color, style = strokeStyle)
+            drawLine(color, off(12f, 17f), off(12f, 20f), strokeWidth = f(2f), cap = StrokeCap.Round)
+            drawLine(color, off(9f, 20f), off(15f, 20f), strokeWidth = f(2f), cap = StrokeCap.Round)
+        }
+
         AppIconType.Chat -> {
             val bubble = Path().apply {
                 moveTo(f(5.5f), f(4.5f))
@@ -381,6 +448,68 @@ fun DrawScope.drawAppIcon(type: AppIconType, color: Color, filled: Boolean = fal
                 close()
             }
             drawPath(plane, color)
+        }
+
+        AppIconType.Camera -> {
+            // M24 六轮 相机外形(加号面板「拍照」卡):机身圆角矩形 + 顶部取景凸台 + 镜头双圆
+            val body = Path().apply {
+                moveTo(f(6f), f(7.5f))
+                lineTo(f(9f), f(7.5f))
+                lineTo(f(10.5f), f(5.5f))
+                lineTo(f(13.5f), f(5.5f))
+                lineTo(f(15f), f(7.5f))
+                lineTo(f(18f), f(7.5f))
+                quadraticBezierTo(f(20f), f(7.5f), f(20f), f(9.5f))
+                lineTo(f(20f), f(16.5f))
+                quadraticBezierTo(f(20f), f(18.5f), f(18f), f(18.5f))
+                lineTo(f(6f), f(18.5f))
+                quadraticBezierTo(f(4f), f(18.5f), f(4f), f(16.5f))
+                lineTo(f(4f), f(9.5f))
+                quadraticBezierTo(f(4f), f(7.5f), f(6f), f(7.5f))
+                close()
+            }
+            drawPath(body, color, style = strokeStyle)
+            drawCircle(color, radius = f(3.5f), center = off(12f, 13f), style = strokeStyle) // 镜头外环
+            drawCircle(color, radius = f(1.3f), center = off(12f, 13f)) // 镜头芯(填充)
+        }
+
+        AppIconType.Keyboard -> {
+            // M24 五轮 键盘外形(语音模式切回文本的显式供能,微信式图标随态切换):
+            // 圆角外壳 + 两排键位点(填充圆)+ 空格条(描边线)
+            val shell = Path().apply {
+                moveTo(f(5.5f), f(6.5f))
+                lineTo(f(18.5f), f(6.5f))
+                quadraticBezierTo(f(21f), f(6.5f), f(21f), f(9f))
+                lineTo(f(21f), f(16f))
+                quadraticBezierTo(f(21f), f(18.5f), f(18.5f), f(18.5f))
+                lineTo(f(5.5f), f(18.5f))
+                quadraticBezierTo(f(3f), f(18.5f), f(3f), f(16f))
+                lineTo(f(3f), f(9f))
+                quadraticBezierTo(f(3f), f(6.5f), f(5.5f), f(6.5f))
+                close()
+            }
+            drawPath(shell, color, style = strokeStyle)
+            // 键位点(填充圆,DrawScope 直画——Kuikly Path 无 addCircle)
+            listOf(10f, 12.6f).forEach { y ->
+                listOf(7.5f, 10f, 12.5f, 15f).forEach { x -> drawCircle(color, radius = f(0.9f), center = off(x, y)) }
+            }
+            val space = Path().apply {
+                moveTo(f(9f), f(15.4f))
+                lineTo(f(15f), f(15.4f))
+            }
+            drawPath(space, color, style = strokeStyle) // 空格条
+        }
+
+        AppIconType.Clock -> {
+            // M24 修订 描边圆 + 时针分针(发送中状态件)
+            drawCircle(color, radius = f(8f), center = off(12f, 12f), style = strokeStyle)
+            val hands = Path().apply {
+                moveTo(f(12f), f(12f))
+                lineTo(f(12f), f(7.5f)) // 分针(竖)
+                moveTo(f(12f), f(12f))
+                lineTo(f(15.5f), f(13.5f)) // 时针(斜)
+            }
+            drawPath(hands, color, style = strokeStyle)
         }
 
         AppIconType.Image -> {

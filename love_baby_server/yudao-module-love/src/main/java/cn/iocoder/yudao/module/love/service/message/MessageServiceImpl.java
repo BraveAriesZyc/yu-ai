@@ -9,7 +9,11 @@ import cn.iocoder.yudao.framework.websocket.core.sender.WebSocketMessageSender;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageReadReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRecallReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageRespVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendCardReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendImageReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendStickerReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendVideoReqVO;
+import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendVoiceReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageUnreadRespVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendReqVO;
 import cn.iocoder.yudao.module.love.controller.app.message.vo.AppMessageSendWishesReqVO;
@@ -25,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -165,6 +170,82 @@ public class MessageServiceImpl implements MessageService {
             throw exception(BAD_REQUEST);
         }
         return insertAndBuildRespVO(LoveMessageDO.KIND_IMAGE, imageUrl, null, null, null);
+    }
+
+    @Override
+    public AppMessageRespVO sendVoice(AppMessageSendVoiceReqVO reqVO) {
+        // trim 后非空（sendImage 同款空白串打回）；duration 非空/区间由 VO 校验早拦
+        String voiceUrl = reqVO.getVoiceUrl().trim();
+        if (voiceUrl.isEmpty()) {
+            throw exception(BAD_REQUEST);
+        }
+        // content = JSON 快照（M23）：LinkedHashMap 组装（Map.of 键序不定，两端 schema 对齐依赖稳定键序），
+        // 组装后 >512 打回 BAD_REQUEST（列 varchar(512) 兜底）
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("url", voiceUrl);
+        snapshot.put("dur", reqVO.getDuration());
+        String content = JsonUtils.toJsonString(snapshot);
+        if (content.length() > 512) {
+            throw exception(BAD_REQUEST);
+        }
+        return insertAndBuildRespVO(LoveMessageDO.KIND_VOICE, content, null, null, null);
+    }
+
+    @Override
+    public AppMessageRespVO sendVideo(AppMessageSendVideoReqVO reqVO) {
+        // trim 后非空（sendImage 同款空白串打回）；duration 由 VO 校验早拦；coverUrl 允许缺省（null 归一空串，端上灰底兜底）
+        String videoUrl = reqVO.getVideoUrl().trim();
+        if (videoUrl.isEmpty()) {
+            throw exception(BAD_REQUEST);
+        }
+        // content = JSON 快照（M23）：LinkedHashMap 组装（Map.of 键序不定），组装后 >512 打回 BAD_REQUEST（列 varchar(512) 兜底）
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("url", videoUrl);
+        snapshot.put("cover", reqVO.getCoverUrl() != null ? reqVO.getCoverUrl().trim() : "");
+        snapshot.put("dur", reqVO.getDuration());
+        String content = JsonUtils.toJsonString(snapshot);
+        if (content.length() > 512) {
+            throw exception(BAD_REQUEST);
+        }
+        return insertAndBuildRespVO(LoveMessageDO.KIND_VIDEO, content, null, null, null);
+    }
+
+    @Override
+    public AppMessageRespVO sendSticker(AppMessageSendStickerReqVO reqVO) {
+        // trim 后非空；content = 贴纸 key 明文（快照式同 wishKey，服务端不校验字典归属）
+        String stickerKey = reqVO.getStickerKey().trim();
+        if (stickerKey.isEmpty()) {
+            throw exception(BAD_REQUEST);
+        }
+        return insertAndBuildRespVO(LoveMessageDO.KIND_STICKER, stickerKey, null, null, null);
+    }
+
+    @Override
+    public AppMessageRespVO sendCard(AppMessageSendCardReqVO reqVO) {
+        // cardType/title trim 后非空；sub/icon 允许缺省（composeCardContent 内归一空串）
+        String cardType = reqVO.getCardType().trim();
+        String title = reqVO.getTitle().trim();
+        if (cardType.isEmpty() || title.isEmpty()) {
+            throw exception(BAD_REQUEST);
+        }
+        return insertAndBuildRespVO(LoveMessageDO.KIND_CARD, composeCardContent(reqVO), null, null, null);
+    }
+
+    /**
+     * 组装卡片消息 content JSON 快照（M23）：{"type","title","sub","icon"} 四键 LinkedHashMap 稳定键序，
+     * sub/icon null 归一空串（端上 optString 缺省语义）；组装后 >512 打回 BAD_REQUEST
+     */
+    private String composeCardContent(AppMessageSendCardReqVO reqVO) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("type", reqVO.getCardType().trim());
+        snapshot.put("title", reqVO.getTitle().trim());
+        snapshot.put("sub", reqVO.getSub() != null ? reqVO.getSub().trim() : "");
+        snapshot.put("icon", reqVO.getIcon() != null ? reqVO.getIcon().trim() : "");
+        String content = JsonUtils.toJsonString(snapshot);
+        if (content.length() > 512) {
+            throw exception(BAD_REQUEST);
+        }
+        return content;
     }
 
     @Override

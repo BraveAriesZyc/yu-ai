@@ -51,6 +51,31 @@ public class LoveMessageDO extends BaseDO {
     public static final Integer KIND_IMAGE = 3;
 
     /**
+     * 消息类型 - 语音消息（M23：content 存 JSON 快照 {"url":<语音URL>,"dur":<秒>}，
+     * 服务端组装不校验语义，端上解析还原；录音时长端上 60s 上限、服务端校验放宽至 600）
+     */
+    public static final Integer KIND_VOICE = 4;
+
+    /**
+     * 消息类型 - 视频消息（M23：content 存 JSON 快照 {"url":<视频URL>,"cover":<封面URL>,"dur":<秒>}，
+     * cover 可空串（端上灰底兜底）；与语音同为富媒体快照格式）
+     */
+    public static final Integer KIND_VIDEO = 5;
+
+    /**
+     * 消息类型 - 贴纸消息（M23：content 存贴纸 key 明文，≤64 字符；快照式同 kind=2 wishKey——
+     * 服务端不校验字典归属，端上按 key 对齐同版本内置字典渲染，未知 key 占位降级）
+     */
+    public static final Integer KIND_STICKER = 6;
+
+    /**
+     * 消息类型 - 自定义卡片消息（M23：content 存 JSON 快照 {"type":<卡片类型>,
+     * "title":<标题>,"sub":<副文案>,"icon":<icon name>}；type 首期仅 wishWall（心愿墙入口卡），
+     * 后续自定义类型（红包/约会邀请等）复用本 kind 加 type 值，不再新增 kind 常量）
+     */
+    public static final Integer KIND_CARD = 7;
+
+    /**
      * 审核状态 - 待审
      */
     public static final Integer AUDIT_STATUS_PENDING = 0;
@@ -89,13 +114,15 @@ public class LoveMessageDO extends BaseDO {
     /**
      * 消息类型
      *
-     * 枚举 {@link #KIND_TEXT} / {@link #KIND_WISH} / {@link #KIND_IMAGE}
+     * 枚举 {@link #KIND_TEXT} / {@link #KIND_WISH} / {@link #KIND_IMAGE} /
+     * {@link #KIND_VOICE} / {@link #KIND_VIDEO} / {@link #KIND_STICKER} / {@link #KIND_CARD}（M23）
      */
     private Integer kind;
     /**
-     * 文本内容，或心愿文案快照，或图片完整 URL（kind=3）
+     * 文本内容，或心愿文案快照，或图片完整 URL（kind=3），或语音/视频/卡片 JSON 快照、贴纸 key 明文（kind=4-7，M23）
      *
-     * 列 content varchar(512)（M10 500→512，URL 按 ≤512 设计，同 love_moment.image_url 口径）
+     * 列 content varchar(512)（M10 500→512，URL 按 ≤512 设计，同 love_moment.image_url 口径；
+     * M23 语音/视频/卡片为服务端从 VO 字段组装的紧凑 JSON 快照，组装后 >512 抛 BAD_REQUEST 兜底）
      */
     private String content;
     /**

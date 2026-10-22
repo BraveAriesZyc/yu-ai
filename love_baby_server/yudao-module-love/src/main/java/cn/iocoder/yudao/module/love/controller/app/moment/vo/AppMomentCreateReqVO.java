@@ -35,4 +35,10 @@ public class AppMomentCreateReqVO {
     @Length(max = 64, message = "配文不能超过 64 字")
     private String text;
 
+    @Schema(description = "首图压缩后宽（px，M24，EXIF 矫正；可空/0 = 未知，端上瀑布流降级定高）", example = "1080")
+    private Integer imageWidth;
+
+    @Schema(description = "首图压缩后高（px，M24，EXIF 矫正；可空/0 = 未知）", example = "810")
+    private Integer imageHeight;
+
 }

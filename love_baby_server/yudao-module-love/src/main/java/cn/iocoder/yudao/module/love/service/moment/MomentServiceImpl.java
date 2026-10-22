@@ -93,7 +93,10 @@ public class MomentServiceImpl implements MomentService {
                 .setText(reqVO.getText() == null ? "" : reqVO.getText().trim())
                 // image_url 恒 = 首图冗余（admin LoveMomentRespVO/web 管理页只读此列，零改动根基）
                 .setImageUrl(urls.get(0))
-                .setImageUrls(JsonUtils.toJsonString(urls));
+                .setImageUrls(JsonUtils.toJsonString(urls))
+                // M24 首图宽高（端上瀑布流比例；null 统一落 0 = 未知，端上降级 140dp 定高）
+                .setImageWidth(reqVO.getImageWidth() == null ? 0 : reqVO.getImageWidth())
+                .setImageHeight(reqVO.getImageHeight() == null ? 0 : reqVO.getImageHeight());
         momentMapper.insert(moment);
         // insert 后 id（MySQL AUTO 回填）与 createTime（BaseDO insertFill 回填）已在 DO 上，直接转 VO
         AppMomentRespVO vo = BeanUtils.toBean(moment, AppMomentRespVO.class);

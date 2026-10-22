@@ -480,7 +480,7 @@ internal fun MainPageImpl(pager: BasePager) {
                 TodoStore.reset()
                 AnniversaryStore.reset()
                 CheckinStore.reset()
-                ChatStore.reset()
+                ChatStore.reset(pager)
                 MoodStore.reset()
             }
         }
@@ -492,7 +492,7 @@ internal fun MainPageImpl(pager: BasePager) {
         // UNBOUND 驱动,与上方登出清场同范式;UNBOUND 态四 Store 必空,重复清幂等无副作用
         LaunchedEffect(CoupleStore.bindState) {
             if (CoupleStore.bindState == CoupleBindState.UNBOUND) {
-                ChatStore.reset()
+                ChatStore.reset(pager)
                 TodoStore.reset()
                 AnniversaryStore.reset()
                 CheckinStore.reset()

@@ -13,4 +13,5 @@ internal actual fun platformExternalModules(): Map<String, Module> = mapOf(
     WebSocketModule.MODULE_NAME to WebSocketModule(),
     FileModule.MODULE_NAME to FileModule(),
     NotificationModule.MODULE_NAME to NotificationModule(),
+    AudioModule.MODULE_NAME to AudioModule(), // M23 语音播放(跨气泡生命周期,原生单飞收口)
 )

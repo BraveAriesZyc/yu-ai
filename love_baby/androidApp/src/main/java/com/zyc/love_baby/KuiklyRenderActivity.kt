@@ -27,6 +27,7 @@ import com.zyc.love_baby.adapter.KRLogAdapter
 import com.zyc.love_baby.adapter.KRRouterAdapter
 import com.zyc.love_baby.adapter.KRThreadAdapter
 import com.zyc.love_baby.adapter.KRUncaughtExceptionHandlerAdapter
+import com.zyc.love_baby.module.KRAudioModule
 import com.zyc.love_baby.module.KRBridgeModule
 import com.zyc.love_baby.module.KRFileModule
 import com.zyc.love_baby.module.KRNotificationModule
@@ -121,10 +122,14 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
     }
 
     /** 权限申请结果统一转发:页面主动申请(METHOD_REQUEST)经 KRNotificationModule 静态
-     *  桥回传 common;自动请求(本类 onCreate)无 pending 静默丢弃 */
+     *  桥回传 common;自动请求(本类 onCreate)无 pending 静默丢弃。
+     *  M23 录音(RECORD_AUDIO)转发 KRFileModule 静态桥(request code 错开,双静态槽互不误收);
+     *  M24 十三轮相册弹层读库权限同款第三槽(2003) */
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         KRNotificationModule.onPermissionResult(requestCode, grantResults)
+        KRFileModule.onRecordPermissionResult(requestCode, grantResults)
+        KRFileModule.onMediaPermissionResult(requestCode, grantResults)
     }
 
     override fun onDestroy() {
@@ -163,6 +168,10 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
             // 前台 no-op(KRApplication started 计数),App 后台才发系统通知
             moduleExport(KRNotificationModule.MODULE_NAME) {
                 KRNotificationModule()
+            }
+            // 语音播放(M23):common base/AudioModule 声明,聊天语音气泡起播/单飞切换/停播
+            moduleExport(KRAudioModule.MODULE_NAME) {
+                KRAudioModule()
             }
         }
     }

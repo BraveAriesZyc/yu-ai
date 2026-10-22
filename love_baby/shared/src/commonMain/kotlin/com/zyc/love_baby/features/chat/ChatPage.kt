@@ -4,10 +4,12 @@ package com.zyc.love_baby.features.chat
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.tencent.kuikly.compose.BackHandler
@@ -16,9 +18,12 @@ import com.tencent.kuikly.compose.foundation.Image
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.combinedClickable
+import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
+import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
+import com.tencent.kuikly.compose.foundation.layout.aspectRatio
 import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
@@ -45,16 +50,23 @@ import com.tencent.kuikly.compose.ui.draw.clip
 import com.tencent.kuikly.compose.ui.graphics.Brush
 import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.graphics.SolidColor
+import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
 import com.tencent.kuikly.compose.ui.layout.ContentScale
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
+import com.tencent.kuikly.core.nvi.serialization.json.JSONArray
+import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
 import com.zyc.love_baby.TextField
+import com.zyc.love_baby.base.AudioModule
+import com.zyc.love_baby.base.BridgeModule
 import com.zyc.love_baby.base.FileModule
+import com.zyc.love_baby.base.openLovePage
+import com.zyc.love_baby.base.setTimeout
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppDateCapsule
 import com.zyc.love_baby.components.AppEmptyHint
@@ -78,9 +90,13 @@ import com.zyc.love_baby.network.ApiConfig
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.ChatMsg
+import com.zyc.love_baby.state.ChatStickers
 import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.MSG_SEND_FAILED
+import com.zyc.love_baby.state.MSG_SEND_SENDING
+import com.zyc.love_baby.state.MSG_SEND_SENT
 import com.zyc.love_baby.state.MsgKind
 import com.zyc.love_baby.state.SessionStore
 import com.zyc.love_baby.state.appIconFromName
@@ -91,6 +107,7 @@ import com.zyc.love_baby.state.colorFromHex
 import com.zyc.love_baby.state.nowEpochMs
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -132,11 +149,18 @@ import kotlinx.coroutines.withTimeoutOrNull
  *  - 拖拽收键盘(2026-10-16 Q3):键盘开着手指拖列表竖向越 touchSlop 即 clearFocus(微信语义),
  *    列表容器被动观察器不消费事件不扰原生滚动;程序化滚底无指针事件天然不误伤(LazyColumn 注释)
  *  - 下拉刷新/停留 5s 轮询/切 Tab 补拉在 ChatStore 串行(指示器不闪现);文本 500 字上限 + 3 行输入
- *  - 图片消息(M10 预览确认流程,M15 真机反馈改「发送时才上传」):输入行图片按钮 → pickImages
- *    仅选图回本地 file:// 副本(零网络,原生落盘规避 content URI 授权衰减)→ 输入条上方浮
- *    「预览条」(缩略图+✕取消+发送)→ 点发送才热身+uploadImage(1080) 上传 → ChatStore.sendImage
- *    入聊天(M12 起发送后 2 分钟内可长按撤回,确认条防误发)。上传动作收口页内 sendPendingImage
- *    (瞬态 UI 态不进 ChatStore,同 pendingSendScroll 裁决;取消/重选零孤儿文件);
+ *  - 图片消息(M10 起步;M24 修订二轮:乐观直发,预览确认流程弃用):输入行图片按钮 → pickMedia
+ *    系统照片选择器混选(图片/视频同屏单选,本地 file:// 副本,原生落盘规避 content URI 授权
+ *    衰减)→ 回包按 kind 分派 launchImageSend/launchVideoSend:乐观入列(临时 local_ id,气泡
+ *    即现——图片直接渲染本地源;视频先抽帧封面再入列带真缩略图)→ 在途上传(压缩 1080/双上传)
+ *    → POST 回包 confirmPending 换真身(消息状态见下条);M15「发送时才上传」与 M10/M23 预览条
+ *    (ChatImagePreviewBar/ChatVideoPreviewBar)整体删除(用户裁决「选完直接在信息列表里」)
+ *  - 乐观发送(M24 修订二轮,微信语义):所有出站消息(文本/贴纸/卡片/媒体)即点即现——
+ *    ChatStore.appendPending 乐观入列(临时 id,sendState=SENDING)→ POST 回包 finalizeSendResult
+ *    收口:成功 confirmPending 换真身/失败 markSendFailed。气泡左侧状态件:SENDING=灰钟表、
+ *    FAILED=红圆白「!」点击原位重发(resendChatMsg,媒体重走上传链);失败态媒体气泡点击一律
+ *    改派重发(不开大图/不播放/不外放/不跳页);乐观在途/失败消息不可长按撤回(无服务端 id)。
+ *    缓存恢复时上一进程的 SENDING 死态强制转 FAILED(AppState chatMsgFrom)
  *  - 消息撤回(M12):发送后 2 分钟内长按自己发的气泡(文本/心愿/图片)→ 确认浮层(挂 MainPager
  *    根,见参数注释)→ ChatStore.recall(POST recall,服务端权威校验归属+时间窗,recalled 墓碑列
  *    不删行);本端 Ok
@@ -148,6 +172,14 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    发送收口 ChatStore.sendImage(appendDedupe/不推游标语义单源)。图片气泡 180dp 定方 Crop(高度恒定,
  *    LazyColumn item 不随加载跳动),点击开全屏大图浮层(黑 0.9+Fit+点击关闭;F6:浮层开着列表
  *    userScrollEnabled=false,MainPager 横滑随浮层开合经 overlayActive 一并关——遮罩只吃 tap 不吃拖拽)
+ *  - M24 输入区微信化(用户裁决;同日多轮修订):voiceMode 声音开关切「按住 说话」胶囊——按下即录/
+ *    松开发送/上滑超阈翻红取消/滑回恢复(HoldToTalkCapsule 主动消费手势 + RecordHudOverlay
+ *    中央 HUD,M23 录音条 UI 弃用;五轮:开关图标随态换 Mic↔Keyboard[微信式切回供能],
+ *    语音态聊天框不显场——「只有在输入的时候可以有」);表情面板 3×8 网格点选即插入输入框
+ *    (五轮裁决「选择的表情包在输入框里,不应该有个专门显示的」——删专显预览行,发送走输入行
+ *    发送钮,右下退格键删改);mediaPanel 三态(0 快捷贴纸条[输入行上方]/1 表情网格/2 动作面板
+ *    仅剩心愿墙卡——1/2 移到输入行下方微信式贴底整幅 CardBg 面板,修订裁决「表情包弹出来后
+ *    在输入框下面」);图片钮直选混选(修订裁决「不要弹框,点击图片 icon 直接选择」,见图片消息条)
  *  - ⚠ partnerReply 本地假回复已随 M3 整体移除,TA 的消息靠 message/list 增量拉取(§7.4)
  */
 private val quickStickers = listOf("贴贴", "mua~", "想你了", "举高高", "晚安鸭")
@@ -157,6 +189,18 @@ private const val INPUT_MAX_LENGTH = 500
 
 /** 聊天图片上传压缩上限(maxEdge,与 M9 相册同口径 1080):气泡/预览条按方图展示,服务端 content 列 ≤512 存 URL */
 private const val CHAT_IMAGE_MAX_EDGE = 1080
+
+/** 视频体量守卫(M23):16MB = 服务端请求体上限(与头像/图片上传同源限制),超限拒选不白传 */
+private const val VIDEO_MAX_BYTES = 16L * 1024 * 1024
+
+/** 语音单条时长上限(秒):原生 setMaxDuration 到点自动停 + 端上秒表双保险;服务端 @Max(600) 富余 */
+private const val VOICE_MAX_SECONDS = 60
+
+/** M24 按住说话上滑取消阈值(dp,down 起点绝对差):越阈 HUD 翻红「松开手指 取消发送」,滑回自然恢复 */
+private const val VOICE_CANCEL_SLIDE_DP = 72
+
+/** M24 录音 HUD 波纹条高度档(dp):recordSeconds 逐秒轮转取档,1fps 确定性摆动(铁律 10① 零动画 API) */
+private val RECORD_WAVE_HEIGHTS_DP = listOf(8, 18, 26, 16)
 
 /** 图片气泡定方边长(180dp):高度恒定 → LazyColumn item 高度不随图片加载变化不跳;与输入区上限协调 */
 private val IMAGE_BUBBLE_SIZE = 180.dp
@@ -168,15 +212,8 @@ private const val RECALL_WINDOW_MS = 120_000L
 // 本地服务端往返几十 ms,不设下限则「刷新中…」一闪而过,用户无法确认刷新是否发生
 private const val REFRESH_MIN_VISIBLE_MS = 600L
 
-/**
- * TA 气泡底:同色渐变(视觉=纯白,AppAvatar 同款先例)。⚠ 必须与我方 brandBrush 同走
- * background(brush=) 重载——Kuikly 的 background(color=) 与 background(brush=) 写两个不同
- * 原生 prop(backgroundColor/backgroundImage),映射原生视图 LayerDrawable 的两个独立图层且
- * 层序首次创建后冻结:同一气泡视图若先后走过两重载(Lazy 槽位跨 mine/TA 复用),白实色层会
- * 冻结在渐变层上方,此后该视图上所有我方气泡被白层遮盖成「纯白气泡+白字」(2026-10-16 真机
- * 概率复现,Q2)。纯色一律同色渐变归一,仅参数值切换、重载类型不得切换(铁律⑦)
- */
-private val taBubbleBrush = Brush.linearGradient(listOf(AppTheme.CardBg, AppTheme.CardBg))
+// M23:taBubbleBrush(TA 气泡底同色渐变)迁 ChatBubbles.kt 单源——富媒体四类气泡与 TextBubble
+// 共用,完整 color/brush 重载冻结事故注释见该文件(internal 同包引用)
 
 @Composable
 fun ChatPage(
@@ -200,15 +237,33 @@ fun ChatPage(
     var refreshing by remember { mutableStateOf(false) }
     var loadFailed by remember { mutableStateOf(false) }
     var keyboardHeight by remember { mutableStateOf(0f) } // 键盘高度(dp,KeyboardParams.height),0 = 收起
-    // M10 图片消息三态(瞬态 UI 态留页内,同 pendingSendScroll 裁决;ChatStore 只收最终发送):
-    // M15 真机反馈「没上传不调接口,点击发送才是上传」——选图与上传拆开:pickImage 仅选图零网络
-    // (imagePicking 系统相册往返中,拦重复点图片钮);pendingImageUri 预览条本地 URI(空串=无待
-    // 发图,✕ 取消/发送成功即清,取消零孤儿文件);imageUploading 仅发送时点的原生上传中(预览条
-    // 蒙层+禁取消/重发)。全屏大图浮层状态(imagePreviewUrl)不在此持有——2026-10-17 二轮修复
-    // 起由 MainPager 持有并经参数下传(见上方参数注释)
-    var imagePicking by remember { mutableStateOf(false) }
-    var imageUploading by remember { mutableStateOf(false) }
-    var pendingImageUri by remember { mutableStateOf("") }
+    // M24 修订 直选直发(微信语义,用户裁决「选择后直接进信息列表」):pickMedia 回包不经预览
+    // 确认,直接乐观入列(ChatStore.appendPending 即点即现)→ 原生上传链 → POST 回包换真身/
+    // 失败转红叹号重发(状态实时显示在气泡旁,见 launchImageSend 等)。mediaPicking 选媒体系统
+    // 往返中拦重复点图片钮;sending 覆盖上传+POST 全链(输入条 Send 钮 loading 视觉一致,
+    // 乐观发送后立即可打字发下一条,上传链不再长时间霸占 sending——发送收口即释放)。
+    // 全屏大图浮层状态(imagePreviewUrl)不在此持有——2026-10-17 二轮修复起由 MainPager 持有
+    // 并经参数下传(见上方参数注释)
+    var mediaPicking by remember { mutableStateOf(false) }
+    // M24 十三轮 相册弹层(MediaPickerSheet)开关:点图片钮不再走系统选择器链,改开应用内
+    // 多选弹层(微信语义);发送回包经 sendPickedMedia 落盘分派既有上传链
+    var showMediaPicker by remember { mutableStateOf(false) }
+    // M24 修订 上传进度(微信语义「进度就是那个状态」):当前原生上传百分比 0-100;
+    // -1 = 未知/非网络窗口(压缩/抽帧/热身/POST 阶段)。原生 inFlight 单飞 → 全局单进度无歧义
+    var mediaProgress by remember { mutableStateOf(-1) }
+    // M23 富媒体页内态(瞬态 UI 态留页内,同 image 三态裁决;ChatStore 只收最终发送):
+    // mediaPanel 底部面板(M24 修订:0=快捷贴纸条 1=表情网格 2=动作面板[仅心愿墙卡],
+    // 互斥共用槽位,普通 Column 节点非浮层;M24 修订起面板整体移到输入行下方——微信语义
+    // 「表情包弹出来后在输入框下面」);录音 M24 改微信式按住说话(voiceMode 切按住说话胶囊,
+    // recordStopRequested 防停止双击,收口统一走发起回调,见 startRecord 注释);
+    // playingVoiceId 播放中语音消息 id(AudioModule 原生单飞兜底,自然播完按时长定时收)
+    var mediaPanel by remember { mutableStateOf(0) }
+    var recordMode by remember { mutableStateOf(false) }
+    var recordStopRequested by remember { mutableStateOf(false) }
+    var recordSeconds by remember { mutableStateOf(0) }
+    var playingVoiceId by remember { mutableStateOf("") }
+    var voiceMode by remember { mutableStateOf(false) } // M24 声音模式:true=输入框槽换「按住 说话」胶囊(微信语义)
+    var recordCancelZone by remember { mutableStateOf(false) } // M24 录音 HUD 取消态(上滑越阈 true=红态;松手按态分叉发送/取消)
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     // P3a 发送滚底标志(2026-10-16):本端发送(文本/贴纸)POST 成功置位,由 messages.size effect
@@ -250,62 +305,68 @@ fun ChatPage(
     // 程序化滚底(scrollToItem 只写原生偏移)不产生任何指针事件,天然不误伤跟随滚底(铁律13)
     val focusManager = LocalFocusManager.current
 
-    // M15 仅选图(pickImages,零网络):guard 选图中/上传中 → clearFocus 收键盘 → getModule 判空
-    // 降级(iOS/ohos/H5 未桥接端 toast)→ suspendCoroutine 包 pickImages(1)。成功且仍处登录+BOUND
-    // 才落 pendingImageUri(防登出/解绑竞态晚到回包写回脏态);已有待发图时再点 = 重选覆盖;
-    // code=1 用户取消静默(反复试探动作,不 toast)。热身/上传已挪发送时点(用户裁决)
-    fun pickImage() {
-        if (imagePicking || imageUploading) return
-        focusManager.clearFocus()
-        imagePicking = true
-        scope.launch {
-            var failMsg = "选择图片失败,请重试"
-            var cancelled = false
-            val pickedUri = try {
-                val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
-                if (module == null) {
-                    failMsg = "当前端暂不支持选择照片"
-                    null
-                } else {
-                    suspendCoroutine<String?> { cont ->
-                        module.pickImages(1) { result ->
-                            val code = result?.optInt("code", -1) ?: -1
-                            val data = result?.optString("data").orEmpty()
-                            if (code == 0 && data.isNotEmpty()) {
-                                cont.resume(data)
-                            } else {
-                                if (code == 1) cancelled = true // 用户取消:静默
-                                else result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
-                                cont.resume(null)
-                            }
-                        }
+    // ── M24 修订 直选直发三链(微信语义,用户裁决「选择后直接进信息列表」):乐观入列
+    // (ChatStore.appendPending 本地 file:// 即点即现)→ 原生上传链(发送时点不变,M15 裁决)→
+    // POST 回包换真身(ChatStore.finalizeSendResult)/ 上传失败转红叹号。sending 只作链路互斥
+    // (同时只跑一条上传链,原生 FileModule inFlight 单飞会拒并发),上传完即释放,POST 阶段
+    // 不占 sending(乐观语义:气泡已现身,用户可立即打字发下一条)。重发(红叹号点击)走同链,
+    // existingId 非空 = 原位复用临时 id(markSending→收口),不新建气泡。
+    // 三轮修订:上传窗口挂进度轮询(蒙层进度环实时推进,200ms 一拍;压缩/抽帧阶段原生报 -1
+    // → 蒙层显「上传中…」)
+
+    /** 上传进度轮询(M24 三轮修订):200ms 一拍向原生查当前上传百分比写 mediaProgress。
+     *  走独立 uploadProgress 查询方法,uploadImage/uploadMedia 单一收口契约零改动;
+     *  原生 inFlight 单飞 → 全局单进度无歧义。调用方在上传收口后 cancel + 归位 -1 */
+    fun startUploadProgressPoll(): Job = scope.launch {
+        while (true) {
+            val m = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+            if (m != null) {
+                val pct = suspendCoroutine { cont ->
+                    m.uploadProgress { r ->
+                        val d = r?.optString("data").orEmpty()
+                        cont.resume(
+                            try {
+                                JSONObject(d.ifEmpty { "{}" }).optInt("progress", -1)
+                            } catch (_: Exception) {
+                                -1
+                            },
+                        )
                     }
                 }
-            } catch (_: Exception) {
-                null
+                mediaProgress = pct
             }
-            imagePicking = false
-            if (cancelled) return@launch
-            if (pickedUri.isNullOrEmpty()) {
-                toastCouple(pager, failMsg)
-            } else if (SessionStore.userId.isNotEmpty() &&
-                CoupleStore.bindState == CoupleBindState.BOUND
-            ) {
-                pendingImageUri = pickedUri
-            }
+            delay(200)
         }
     }
 
-    // M15 预览条发送 = 上传时点(用户裁决):热身(原生直传不经 HttpClient,无 401 单飞刷新,
-    // 先焐热 token)→ uploadImage 单张压缩上传(后台线程压缩)→ ChatStore.sendImage 入列。
-    // 上传失败 toast 保留预览图可重发(重试重新上传,服务端多一份无引用文件可接受);
-    // 复用 sending 态:发送期间输入条 Send 钮同步 loading,视觉一致
-    fun sendPendingImage() {
-        if (sending || imageUploading || imagePicking || pendingImageUri.isEmpty()) return
-        sending = true
-        imageUploading = true
+    /** 图片链:乐观入列 → 热身 → uploadImage 压缩上传(1080)→ POST send-image。
+     *  M24 四轮 取闸队列化:乐观入列永不被 sending 拦(旧 guard 使上传链在飞时再选图=已选
+     *  媒体静默丢弃),上传在协程内排队等闸——主线程 dispatcher 下 check-then-set 之间无悬挂点
+     *  即原子,双链不会同时取闸触发原生 inFlight 单飞拒绝 */
+    fun launchImageSend(uri: String, existingId: String = "") {
+        val localId = if (existingId.isNotEmpty()) {
+            ChatStore.markSending(pager, existingId)
+            existingId
+        } else {
+            ChatStore.appendPending(
+                pager,
+                ChatMsg(
+                    id = "",
+                    isMine = true,
+                    text = "",
+                    kind = MsgKind.IMAGE,
+                    imageUrl = uri,
+                    createTime = nowEpochMs(),
+                    sendState = MSG_SEND_SENDING,
+                    localUri = uri,
+                ),
+            ).also { triggerSendScroll() }
+        }
         scope.launch {
+            while (sending) delay(150) // 排队等上传闸(队列化语义见 KDoc;不 drop)
+            sending = true
             UserApi.getUser(pager) // 热身:焐热 token(选图阶段零 API 调用,热身属发送动作一部分)
+            val progressJob = startUploadProgressPoll() // 上传窗口开表(Glide 压缩期原生报 -1 显上传中)
             var failMsg = "上传失败,请重试"
             var fileUrl: String? = null
             try {
@@ -317,7 +378,7 @@ fun ChatPage(
                         module.uploadImage(
                             ApiConfig.url(pager, "/infra/file/upload"),
                             SessionStore.accessToken,
-                            pendingImageUri,
+                            uri,
                             CHAT_IMAGE_MAX_EDGE,
                             directory = FileModule.DIR_CHAT,
                         ) { result ->
@@ -335,23 +396,508 @@ fun ChatPage(
             } catch (_: Exception) {
                 null
             }
+            progressJob.cancel() // 上传收口停表归位(POST 阶段蒙层回「上传中…」)
+            mediaProgress = -1
+            sending = false
             if (fileUrl.isNullOrEmpty()) {
-                imageUploading = false
-                sending = false
+                ChatStore.markSendFailed(pager, localId)
+                toastCouple(pager, failMsg)
+            } else {
+                val result = ChatStore.sendImage(pager, fileUrl, localId)
+                if (result is ApiResult.Ok) {
+                    triggerSendScroll()
+                } else {
+                    toastCoupleResult(pager, result)
+                }
+            }
+        }
+    }
+
+    /** 视频链:热身 → ①抽帧封面(就绪即乐观入列,气泡带真缩略图;失败降级灰底兜底照常入列)
+     *  → ②uploadMedia 传视频 → ③uploadMedia 传封面(可选)→ POST send-video(②③ 期间蒙层进度环)。
+     *  三步串行(FileModule inFlight 单飞,并发会被「上传进行中」拒);抽帧/封面上传失败不阻断
+     *  发送(M23 同裁决);重试重走全链,服务端多份无引用文件可接受。
+     *  M24 四轮 取闸队列化(同 launchImageSend):选到视频遇上传链在飞=排队而非静默丢弃;
+     *  抽帧留在闸内(不与在飞上传入原生并发) */
+    fun launchVideoSend(uri: String, durationSec: Int, existingId: String = "") {
+        scope.launch {
+            while (sending) delay(150) // 排队等上传闸(队列化语义见 KDoc;不 drop)
+            sending = true
+            UserApi.getUser(pager) // 热身:焐热 token(原生直传不经 HttpClient 无 401 单飞刷新)
+            var failMsg = "上传失败,请重试"
+            var coverLocal = ""
+            var videoUrl = ""
+            var coverUrl = ""
+            val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+            if (module == null) {
+                failMsg = "当前端暂不支持发送视频"
+            } else {
+                // ① 抽帧封面(失败降级空串:封面缺失仅影响展示,不阻断发送)
+                coverLocal = try {
+                    suspendCoroutine { cont ->
+                        module.videoCover(uri) { result ->
+                            if ((result?.optInt("code", -1) ?: -1) == 0) {
+                                cont.resume(result?.optString("data").orEmpty())
+                            } else {
+                                cont.resume("")
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    ""
+                }
+            }
+            // M24 三轮修订:抽帧后即乐观入列(气泡带本地封面即现,②③ 上传期间蒙层进度环实时
+            // 推进——原实现误置整链上传完成后才入列,与「直接在信息列表里」裁决相悖)
+            val localId = if (existingId.isNotEmpty()) {
+                ChatStore.markSending(pager, existingId)
+                existingId
+            } else {
+                ChatStore.appendPending(
+                    pager,
+                    ChatMsg(
+                        id = "",
+                        isMine = true,
+                        text = "",
+                        kind = MsgKind.VIDEO,
+                        mediaUrl = uri,
+                        coverUrl = coverLocal,
+                        durationSec = durationSec,
+                        createTime = nowEpochMs(),
+                        sendState = MSG_SEND_SENDING,
+                        localUri = uri,
+                    ),
+                ).also { triggerSendScroll() }
+            }
+            val progressJob = startUploadProgressPoll()
+            if (module != null) {
+                // ② 上传视频(必须成功,消息主体)
+                videoUrl = try {
+                    suspendCoroutine<String?> { cont ->
+                        module.uploadMedia(
+                            ApiConfig.url(pager, "/infra/file/upload"),
+                            SessionStore.accessToken,
+                            uri,
+                            "vid_${nowEpochMs()}.mp4",
+                            "video/mp4",
+                            directory = FileModule.DIR_CHAT,
+                        ) { result ->
+                            val code = result?.optInt("code", -1) ?: -1
+                            val data = result?.optString("data").orEmpty()
+                            if (code == 0 && data.isNotEmpty()) {
+                                cont.resume(data)
+                            } else {
+                                result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
+                                cont.resume(null)
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    null
+                } ?: ""
+                // ③ 上传封面(可选,失败降级空串)
+                if (videoUrl.isNotEmpty() && coverLocal.isNotEmpty()) {
+                    coverUrl = try {
+                        suspendCoroutine { cont ->
+                            module.uploadMedia(
+                                ApiConfig.url(pager, "/infra/file/upload"),
+                                SessionStore.accessToken,
+                                coverLocal,
+                                "cover_${nowEpochMs()}.jpg",
+                                "image/jpeg",
+                                directory = FileModule.DIR_CHAT,
+                            ) { result ->
+                                if ((result?.optInt("code", -1) ?: -1) == 0) {
+                                    cont.resume(result?.optString("data").orEmpty())
+                                } else {
+                                    cont.resume("")
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {
+                        ""
+                    }
+                }
+            }
+            progressJob.cancel() // 上传收口停表归位(POST 阶段蒙层回「上传中…」)
+            mediaProgress = -1
+            sending = false
+            if (videoUrl.isEmpty()) {
+                ChatStore.markSendFailed(pager, localId)
+                toastCouple(pager, failMsg)
+            } else {
+                val result = ChatStore.sendVideo(pager, videoUrl, coverUrl, durationSec.coerceAtLeast(1), localId)
+                if (result is ApiResult.Ok) {
+                    triggerSendScroll()
+                } else {
+                    toastCoupleResult(pager, result)
+                }
+            }
+        }
+    }
+
+    /** 语音链:乐观入列(本地 file:// 即点即现可播)→ 热身 → uploadMedia 直传 → POST send-voice
+     *  (startRecord 收口与新发共用;60s 自动停同走此链自动发送)。
+     *  M24 四轮 取闸队列化(语音对齐微信之一):录音收口遇上传链在飞,旧 guard 整条静默丢弃
+     *  (无气泡无 toast 的消息丢失)——现乐观入列永不被 sending 拦,上传在协程内排队等闸;
+     *  主线程 dispatcher 下 check-then-set 之间无悬挂点即原子(防双语音链并发取闸触发原生
+     *  inFlight 单飞拒绝) */
+    fun launchVoiceSend(uri: String, durationSec: Int, existingId: String = "") {
+        val localId = if (existingId.isNotEmpty()) {
+            ChatStore.markSending(pager, existingId)
+            existingId
+        } else {
+            ChatStore.appendPending(
+                pager,
+                ChatMsg(
+                    id = "",
+                    isMine = true,
+                    text = "",
+                    kind = MsgKind.VOICE,
+                    mediaUrl = uri,
+                    durationSec = durationSec,
+                    createTime = nowEpochMs(),
+                    sendState = MSG_SEND_SENDING,
+                    localUri = uri,
+                ),
+            ).also { triggerSendScroll() }
+        }
+        scope.launch {
+            while (sending) delay(150) // 排队等上传闸(队列化语义见 KDoc;不 drop)
+            sending = true
+            UserApi.getUser(pager) // 热身(录音阶段零 API 调用,热身属发送动作一部分)
+            var uploadFail = "上传失败,请重试"
+            var fileUrl: String? = null
+            try {
+                val m = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+                if (m == null) {
+                    uploadFail = "当前端暂不支持发送语音"
+                } else {
+                    fileUrl = suspendCoroutine { cont ->
+                        m.uploadMedia(
+                            ApiConfig.url(pager, "/infra/file/upload"),
+                            SessionStore.accessToken,
+                            uri,
+                            "voice_${nowEpochMs()}.m4a",
+                            "audio/mp4",
+                            directory = FileModule.DIR_CHAT,
+                        ) { result2 ->
+                            val c = result2?.optInt("code", -1) ?: -1
+                            val d = result2?.optString("data").orEmpty()
+                            if (c == 0 && d.isNotEmpty()) {
+                                cont.resume(d)
+                            } else {
+                                result2?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { uploadFail = it }
+                                cont.resume(null)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                null
+            }
+            sending = false
+            if (fileUrl.isNullOrEmpty()) {
+                ChatStore.markSendFailed(pager, localId)
+                toastCouple(pager, uploadFail)
+            } else {
+                val sendResult = ChatStore.sendVoice(pager, fileUrl, durationSec, localId)
+                if (sendResult is ApiResult.Ok) {
+                    triggerSendScroll()
+                } else {
+                    toastCoupleResult(pager, sendResult)
+                }
+            }
+        }
+    }
+
+    /** M24 修订 失败重发分派(气泡旁红叹号 / 失败媒体气泡点击):按 kind 重走各自链,
+     *  existingId 原位复用临时 id(markSending → 收口换真身/再败仍 FAILED)。TEXT/STICKER/CARD
+     *  无上传链直接重 POST(不占 sending,POST 快且乐观气泡已在);WISH 不走乐观(心情页
+     *  sendWishes 老路径)恒 SENT 不可达此分派 */
+    fun resendChatMsg(msg: ChatMsg) {
+        when (msg.kind) {
+            MsgKind.IMAGE -> launchImageSend(msg.localUri.ifEmpty { msg.imageUrl }, msg.id)
+            MsgKind.VIDEO -> launchVideoSend(msg.localUri.ifEmpty { msg.mediaUrl }, msg.durationSec, msg.id)
+            MsgKind.VOICE -> launchVoiceSend(msg.localUri.ifEmpty { msg.mediaUrl }, msg.durationSec, msg.id)
+            MsgKind.TEXT -> {
+                ChatStore.markSending(pager, msg.id)
+                scope.launch {
+                    val result = ChatStore.send(pager, msg.text, msg.id)
+                    if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
+                }
+            }
+            MsgKind.STICKER -> {
+                ChatStore.markSending(pager, msg.id)
+                scope.launch {
+                    val result = ChatStore.sendSticker(pager, msg.stickerKey, msg.id)
+                    if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
+                }
+            }
+            MsgKind.CARD -> {
+                ChatStore.markSending(pager, msg.id)
+                scope.launch {
+                    val result = ChatStore.sendCard(pager, msg.cardType, msg.cardTitle, msg.cardSub, msg.cardIcon, msg.id)
+                    if (result !is ApiResult.Ok) toastCoupleResult(pager, result)
+                }
+            }
+            else -> Unit
+        }
+    }
+
+    // M24 十三轮 相册弹层多选发送(sendPickedMedia,替代原 pickMedia 单选链——十轮应用内选择器
+    // 与系统选择器三级链一并退役为回滚安全网):MediaPickerSheet「发送(N)」回调 uris(content://
+    // 选择顺序)→ copyMedia 桥落盘收口(suspendCoroutine;原生逐张转 file:// + mime 判型 + 时长
+    // 体量回读,JSON 数组回包)→ 登录+BOUND 检查 → 逐张分派既有链:video → launchVideoSend
+    // (>16MB toast 跳过该张,不拦整批)/ image → launchImageSend——乐观入列 + while(sending)
+    // 排队等闸语义自动继承。mediaPicking 复用防连点;个别张失败原生跳过,全失败 toast
+    fun sendPickedMedia(uris: List<String>) {
+        if (mediaPicking || uris.isEmpty()) return
+        mediaPicking = true
+        scope.launch {
+            var failMsg = "发送失败,请重试"
+            var picked: List<PickedMedia> = emptyList()
+            val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+            if (module == null) {
+                failMsg = "当前端暂不支持发送照片/视频"
+            } else {
+                try {
+                    picked = suspendCoroutine { cont ->
+                        module.copyMedia(uris) { result ->
+                            val code = result?.optInt("code", -1) ?: -1
+                            val data = result?.optString("data").orEmpty()
+                            if (code == 0 && data.isNotEmpty()) {
+                                val list = mutableListOf<PickedMedia>()
+                                try {
+                                    val arr = JSONArray(data)
+                                    for (i in 0 until arr.length()) {
+                                        val o = arr.optJSONObject(i) ?: continue
+                                        list.add(
+                                            PickedMedia(
+                                                o.optString("uri"),
+                                                o.optString("kind", "image"),
+                                                o.optInt("duration"),
+                                                o.optLong("size"),
+                                            ),
+                                        )
+                                    }
+                                } catch (_: Exception) {
+                                }
+                                cont.resume(list)
+                            } else {
+                                result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
+                                cont.resume(emptyList())
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    emptyList<PickedMedia>()
+                }
+            }
+            mediaPicking = false
+            val ok = picked.filter { it.uri.isNotEmpty() }
+            if (ok.isEmpty()) {
                 toastCouple(pager, failMsg)
                 return@launch
             }
-            imageUploading = false
-            val result = ChatStore.sendImage(pager, fileUrl)
-            sending = false
+            if (SessionStore.userId.isNotEmpty() &&
+                CoupleStore.bindState == CoupleBindState.BOUND
+            ) {
+                ok.forEach { p ->
+                    if (p.kind == "video") {
+                        if (p.size > VIDEO_MAX_BYTES) {
+                            toastCouple(pager, "视频过大(超过 16MB),请压缩后再发")
+                        } else {
+                            launchVideoSend(p.uri, p.duration)
+                        }
+                    } else {
+                        launchImageSend(p.uri)
+                    }
+                }
+            }
+        }
+    }
+
+    // M24 六轮 拍照(加号面板「拍照」卡):takePhoto 桥(ACTION_IMAGE_CAPTURE,FileProvider
+    // EXTRA_OUTPUT 直落 filesDir/camera 全量原图)→ 收口走 launchImageSend 同图片链。结构同
+    // pickMedia(声明位须在其后:launchImageSend 前向引用禁,同 pickMedia 教训);mediaPicking
+    // 复用防连点(原生 inFlight 模块级单飞双保险),未登录/未绑定静默不派发
+    fun takePhoto() {
+        if (mediaPicking) return
+        focusManager.clearFocus()
+        mediaPicking = true
+        scope.launch {
+            var failMsg = "拍照失败,请重试"
+            var cancelled = false
+            var uri = ""
+            val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+            if (module == null) {
+                failMsg = "当前端暂不支持拍照"
+            } else {
+                try {
+                    uri = suspendCoroutine { cont ->
+                        module.takePhoto { result ->
+                            val code = result?.optInt("code", -1) ?: -1
+                            val data = result?.optString("data").orEmpty()
+                            if (code == 0 && data.isNotEmpty()) {
+                                cont.resume(data)
+                            } else {
+                                if (code == 1) cancelled = true // 用户取消:静默
+                                else result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
+                                cont.resume("")
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    ""
+                }
+            }
+            mediaPicking = false
+            if (cancelled) return@launch
+            if (uri.isEmpty()) {
+                toastCouple(pager, failMsg)
+            } else if (SessionStore.userId.isNotEmpty() &&
+                CoupleStore.bindState == CoupleBindState.BOUND
+            ) {
+                launchImageSend(uri)
+            }
+        }
+    }
+
+    // M23 语音播放切换:AudioModule 单飞(原生起播前先停上一条,同刻至多一个实例);
+    // playingVoiceId 页内态渲染播放/暂停图标——自然播完/被顶掉原生不回调(契约见 base/AudioModule),
+    // 按消息时长 +1s 定时收口;提前点同一条 = 手动暂停即时清;未桥接端 toast 降级
+    fun toggleVoicePlay(msg: ChatMsg) {
+        if (recordMode) return // 录音中禁播(M24 四轮 微信语义;防扬声器回声灌麦,HUD 场景静默忽略)
+        val module = pager.getModule<AudioModule>(AudioModule.MODULE_NAME)
+        if (module == null) {
+            toastCouple(pager, "当前端暂不支持播放语音")
+            return
+        }
+        if (playingVoiceId == msg.id) {
+            module.stopPlay()
+            playingVoiceId = ""
+            return
+        }
+        module.startPlay(msg.mediaUrl) { result ->
+            val code = result?.optInt("code", -1) ?: -1
+            if (code != 0) {
+                playingVoiceId = ""
+                toastCouple(pager, result?.optString("msg")?.takeIf { it.isNotEmpty() } ?: "语音播放失败")
+            }
+        }
+        playingVoiceId = msg.id
+        scope.launch {
+            delay((msg.durationSec.coerceAtLeast(1) + 1) * 1000L)
+            if (playingVoiceId == msg.id) playingVoiceId = "" // 自然播完收口(手动暂停/切播已先行改写)
+        }
+    }
+
+    // M23 视频外放:BridgeModule.openUrlExternally(ACTION_VIEW 交系统播放器,App 内不建播放器);
+    // Android 宿主已实现,iOS/ohos/H5 后续补齐(未实现分支静默 no-op,common 不依赖回执)
+    fun openVideoExternally(url: String) {
+        if (url.isEmpty()) return
+        focusManager.clearFocus()
+        pager.getModule<BridgeModule>(BridgeModule.MODULE_NAME)?.openUrlExternally(url)
+    }
+
+    // M23 录音(微信语义):起录即挂「唯一收口回调」——到 60s 原生自动停 / 松开
+    // recordAudioStop(false) / 上滑取消 recordAudioStop(true) 三路结果统一从发起回调收口
+    // (原生不偷换回调,stop 调用仅 ack,见 base/FileModule 单一收口通道注记)。code=0 定稿 →
+    // launchVoiceSend 全链收口(到点自动停亦自动发,微信满 60s 自动发语义);code=1 取消静默;
+    // 其余失败 toast。进入先 clearFocus 收键盘。
+    // M24 四轮 语音对齐微信:①sending 出列 guard(录音域与上传 inFlight 分域可并发,旧 guard
+    // 使上传期间按住说话静默无反应;上传互斥由 launchVoiceSend 队列化自持);②起录打断播放
+    // (播放中按住说话即停声收播放态,兼防扬声器回声灌麦)
+    fun startRecord() {
+        if (recordMode || recordStopRequested) return
+        focusManager.clearFocus()
+        val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+        if (module == null) {
+            toastCouple(pager, "当前端暂不支持发语音")
+            return
+        }
+        playingVoiceId = "" // 起录打断播放(微信语义):清页内播放态
+        pager.getModule<AudioModule>(AudioModule.MODULE_NAME)?.stopPlay() // 停原生播放(未在播 no-op)
+        recordMode = true
+        recordStopRequested = false
+        recordSeconds = 0
+        recordCancelZone = false // M24 HUD 复位点 1/3:起录即黑态
+        module.recordAudioStart(VOICE_MAX_SECONDS) { result ->
+            // 单一收口(三路同此):先复位录音条形态再分支
+            val code = result?.optInt("code", -1) ?: -1
+            val data = result?.optString("data").orEmpty()
+            val failMsg = result?.optString("msg").orEmpty()
+            recordMode = false
+            recordStopRequested = false
+            recordSeconds = 0
+            recordCancelZone = false // M24 HUD 复位点 2/3:三路收口统一归黑态(下轮起录再置)
+            if (code == 1) {
+                return@recordAudioStart // 用户取消:静默(与 pickImage 同语义)
+            }
+            val parsed = try {
+                if (code == 0 && data.isNotEmpty()) JSONObject(data) else null
+            } catch (_: Exception) {
+                null
+            }
+            if (parsed == null) {
+                if (failMsg.isNotEmpty()) toastCouple(pager, failMsg)
+                return@recordAudioStart
+            }
+            // M24 修订 乐观发送:定稿语音即入列现身(本地 file:// 即点即现可播),上传+POST
+            // 收口换真身/失败转红叹号,全链收口 launchVoiceSend(重发共用)
+            launchVoiceSend(parsed.optString("uri"), parsed.optInt("duration").coerceAtLeast(1))
+        }
+    }
+
+    // M23 录音停止/取消:recordStopRequested 防停止双击(原生二次 stop「未在录音中」no-op 兜底);
+    // 结果统一走发起回调(见 startRecord 注释),本调用回调仅 ack 占位
+    fun recordStop(cancel: Boolean) {
+        if (!recordMode || recordStopRequested) return
+        recordStopRequested = true
+        val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
+        if (module == null) {
+            // 理论不可达(startRecord 已判空):兜底复位防卡录音态
+            recordMode = false
+            recordStopRequested = false
+            recordSeconds = 0
+            return
+        }
+        module.recordAudioStop(cancel) { }
+    }
+
+    // M23 心愿墙卡片直发(动作面板,固定快照):不做心愿挑选器,避免与 kind=2 心愿消息语义
+    // 混淆;点气泡跳 wishListPage(渲染分支 onClick)。type=wishWall 为服务端/端上约定的首个卡型。
+    // M24 修订 乐观发送(即点即现→POST 回包换真身;M24 四轮 sending guard 出列:纯 POST 不碰
+    // 原生上传,上传闸不拦)
+    fun sendWishWallCard() {
+        val localId = ChatStore.appendPending(
+            pager,
+            ChatMsg(
+                id = "",
+                isMine = true,
+                text = "",
+                kind = MsgKind.CARD,
+                cardType = "wishWall",
+                cardTitle = "我们的心愿墙",
+                cardSub = "一起去实现愿望吧",
+                cardIcon = "Star",
+                createTime = nowEpochMs(),
+                sendState = MSG_SEND_SENDING,
+            ),
+        )
+        triggerSendScroll()
+        scope.launch {
+            val result = ChatStore.sendCard(pager, "wishWall", "我们的心愿墙", "一起去实现愿望吧", "Star", localId)
             if (result is ApiResult.Ok) {
-                pendingImageUri = ""
+                mediaPanel = 0
                 triggerSendScroll()
             } else {
                 toastCoupleResult(pager, result)
             }
         }
     }
+
 
     // M12 撤回提交随浮层状态提升迁往 MainPager(submitChatRecall):浮层与提交态同属浮层语言
     // 的一个整体,页内只保留「开浮层」的动作(onRecallTargetChange)
@@ -382,10 +928,22 @@ fun ChatPage(
     LaunchedEffect(SessionStore.userId, CoupleStore.bindState) {
         if (SessionStore.userId.isEmpty() || CoupleStore.bindState != CoupleBindState.BOUND) {
             loadFailed = false
-            pendingImageUri = "" // M10 登出/解绑清场:待发图弃
+            // M24 修订 待发媒体预览态已删(选图/视频直入消息列表乐观发送);在途乐观消息
+            // (sendState=SENDING/FAILED)随 messages 全量复位,无需单独清场
+            mediaPanel = 0
+            playingVoiceId = ""
+            voiceMode = false // M24 声音模式随登出/解绑复位
+            recordCancelZone = false // M24 HUD 取消态复位
+            pager.getModule<AudioModule>(AudioModule.MODULE_NAME)?.stopPlay()
+            if (recordMode) recordStop(true) // 录音中登出/解绑:取消录音(收口统一走发起回调)
             onImagePreviewChange("")
             onRecallTargetChange("") // M12 浮层清场走回写(MainPager 清态;在飞提交结果落 ChatStore 幂等无害)
             return@LaunchedEffect
+        }
+        // M23 本地缓存恢复:命中(initialLoaded=true)则 loadInitial 幂等跳过覆盖拉,历史秒出;
+        // 紧接主动增量一次补齐缓存游标之后的缺口(不等 5s 心跳;失败静默,轮询兜底);未命中走原覆盖拉
+        if (ChatStore.restoreCache(pager)) {
+            ChatStore.loadIncrement(pager)
         }
         loadFailed = ChatStore.loadInitial(pager) !is ApiResult.Ok
         ChatStore.setChatVisible(pager, pageVisible) // M11:翻 BOUND 后重断言可见态(reset 清 false 而 pageVisible 未变的停留场景)
@@ -397,6 +955,13 @@ fun ChatPage(
         if (!pageVisible) {
             onImagePreviewChange("")
             onRecallTargetChange("") // M12 撤回确认浮层同随离页收口(回写 MainPager)
+            // M23 离页收口:语音播放即停(五页常驻,不收口会跨 Tab 继续出声);面板/录音条复位
+            // (录音中离页取消录音,收口统一走发起回调);待发视频预览保留(同待发图,回来即绪)
+            playingVoiceId = ""
+            pager.getModule<AudioModule>(AudioModule.MODULE_NAME)?.stopPlay()
+            mediaPanel = 0
+            recordCancelZone = false // M24 HUD 取消态离页复位(录音取消收口走发起回调;非录音态防滞留)
+            if (recordMode) recordStop(true)
         }
         ChatStore.setChatVisible(pager, pageVisible) // M11:进出页上报,置 true 即主动 sync 一次(与补拉尾钩子双保险,D6)
     }
@@ -484,6 +1049,7 @@ fun ChatPage(
         { params: KeyboardParams ->
             val rising = params.height > keyboardHeight // 写前读 = 上一帧键盘高
             if (rising && params.height > 0f) {
+                mediaPanel = 0 // M23 键盘弹起即收面板(微信语义:键盘与底部面板互斥)
                 val info = listState.layoutInfo // 收缩前快照(此帧重组/测量尚未发生)
                 val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
                 kbFollowNearBottom = !listState.canScrollForward ||
@@ -492,6 +1058,14 @@ fun ChatPage(
                 kbFollowSeq++
             }
             keyboardHeight = params.height
+        }
+    }
+    // M23 录音秒表:recordMode 驱动每秒 +1,仅供 UI 显示——60s 到点由原生 setMaxDuration 自动停
+    // (收口统一走发起回调,见 startRecord 注释),端上计时到顶不收口(双保险中原生为准)
+    LaunchedEffect(recordMode) {
+        while (recordMode && recordSeconds < VOICE_MAX_SECONDS) {
+            delay(1000)
+            recordSeconds++
         }
     }
 
@@ -619,14 +1193,18 @@ fun ChatPage(
                 itemsIndexed(
                     messages,
                     key = { _, m -> m.id }, // appendDedupe 保证唯一
-                    // contentType 五池(2026-10-16 Q2 起隔离;M10 加 image-mine/image-ta):wish/图片/文本
-                    // 各自再按 mine/TA 隔离,气泡视图槽位永不跨池复用——即便未来引入 color 路径背景或
-                    // 图片气泡做 mine/TA 分化,池子隔离也兜底(每池上限 7,聊天量级无感)
+                    // contentType 池(2026-10-16 Q2 起隔离;M10 加 image;M23 加 voice/video/sticker/card,
+                    // 各再按 mine/TA 隔离共 13 池):气泡视图槽位永不跨池复用——即便未来引入 color 路径
+                    // 背景或同池内背景重载分化,池子隔离也兜底(每池上限 7,聊天量级无感)
                     contentType = { _, m ->
                         when {
                             m.recalled -> "recall" // M12 墓碑行独立池(灰条布局与气泡完全不同,槽位隔离)
                             m.kind == MsgKind.WISH -> "wish"
                             m.kind == MsgKind.IMAGE -> if (m.isMine) "image-mine" else "image-ta"
+                            m.kind == MsgKind.VOICE -> if (m.isMine) "voice-mine" else "voice-ta"
+                            m.kind == MsgKind.VIDEO -> if (m.isMine) "video-mine" else "video-ta"
+                            m.kind == MsgKind.STICKER -> if (m.isMine) "sticker-mine" else "sticker-ta"
+                            m.kind == MsgKind.CARD -> if (m.isMine) "card-mine" else "card-ta"
                             m.isMine -> "text-mine"
                             else -> "text-ta"
                         }
@@ -652,10 +1230,11 @@ fun ChatPage(
                     val topPad = when {
                         showDayDivider -> 8.dp // 分隔条自带与上组的呼吸
                         groupStart -> 10.dp // 组间
-                        // 图片是大块实体(边缘即气泡边缘,无文字气泡 9dp 内边距缓冲),3dp 组内距
+                        // 图片/视频是大块实体(边缘即气泡边缘,无文字气泡 9dp 内边距缓冲),3dp 组内距
                         // 视觉上与相邻消息贴死(2026-10-22 真机反馈「图片和其他聊天没有间距」)
-                        // → 图片上下一律按组间 10dp 呼吸;下一侧由下一条的 prev 判定天然覆盖
-                        msg.kind == MsgKind.IMAGE || prev?.kind == MsgKind.IMAGE -> 10.dp
+                        // → 此类上下一律按组间 10dp 呼吸;下一侧由下一条的 prev 判定天然覆盖
+                        msg.kind == MsgKind.IMAGE || msg.kind == MsgKind.VIDEO ||
+                            prev?.kind == MsgKind.IMAGE || prev?.kind == MsgKind.VIDEO -> 10.dp
                         else -> 3.dp // 组内紧凑
                     }
                     Column(
@@ -682,8 +1261,10 @@ fun ChatPage(
                         } else {
                             // M12 长按撤回:仅自己发的消息且在 2 分钟窗内可长按(else 分支已排除
                             // recalled;超窗在屏消息长按无反应、服务端权威兜底,不做定时驱逐);
-                            // onRecall 先收键盘再开浮层,浮层不被键盘顶住
+                            // onRecall 先收键盘再开浮层,浮层不被键盘顶住。M24 修订:乐观在途
+                            // (SENDING)/失败(FAILED)消息无服务端 id 不可撤回——失败走红叹号重发
                             val canRecall = msg.isMine && msg.createTime > 0L &&
+                                msg.sendState == MSG_SEND_SENT &&
                                 nowEpochMs() - msg.createTime <= RECALL_WINDOW_MS
                             val onRecall: (() -> Unit)? = if (canRecall) {
                                 {
@@ -707,6 +1288,32 @@ fun ChatPage(
                                         Spacer(modifier = Modifier.width(42.dp))
                                     }
                                 }
+                                // M24 修订 发送状态件(微信语义,仅本端乐观消息,气泡左侧贴底对齐):
+                                // SENDING=灰钟表(发送中,随回包/失败自动消失);FAILED=红圆白「!」
+                                // 点击原位重发(重走上传链/重 POST,见 resendChatMsg)。
+                                // M24 修订美化:图/视频气泡自带状态蒙层(上传中/红!),不再叠加本件
+                                // 避双份示能;语音画幅小不蒙层,维持左侧件
+                                val mediaSelfIndicated = msg.kind == MsgKind.IMAGE || msg.kind == MsgKind.VIDEO
+                                if (msg.isMine && msg.sendState != MSG_SEND_SENT && !mediaSelfIndicated) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    if (msg.sendState == MSG_SEND_SENDING) {
+                                        AppIcon(AppIconType.Clock, AppTheme.TextTertiary, Modifier.size(16.dp))
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.size(18.dp)
+                                                .background(AppTheme.Danger, RoundedCornerShape(9.dp))
+                                                .clickable { resendChatMsg(msg) },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(
+                                                "!",
+                                                color = Color.White,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                        }
+                                    }
+                                }
                                 when (msg.kind) {
                                     MsgKind.TEXT -> TextBubble(
                                         msg.text,
@@ -716,13 +1323,64 @@ fun ChatPage(
                                         onLongClick = onRecall,
                                     )
                                     MsgKind.WISH -> WishBubble(msg, theme = theme, onLongClick = onRecall) // 卡片语言,不吃撇角
-                                    // M10 图片气泡:定方 Crop 不吃撇角;点击开全屏大图(先收键盘),长按可撤回(M12)
+                                    // M10 图片气泡:定方 Crop 不吃撇角;点击开全屏大图(先收键盘),长按可撤回(M12)。
+                                    // M24 修订:失败态点击改派原位重发(本地源无大图可开);状态蒙层随 sendState
                                     MsgKind.IMAGE -> ImageBubble(
                                         msg.imageUrl,
                                         mine = msg.isMine,
+                                        sendState = msg.sendState,
+                                        progress = mediaProgress, // SENDING 蒙层进度环(sending 单飞链全局单进度)
                                         onClick = {
-                                            focusManager.clearFocus()
-                                            onImagePreviewChange(msg.imageUrl) // M12 二轮:回写 MainPager
+                                            if (msg.sendState == MSG_SEND_FAILED) {
+                                                resendChatMsg(msg)
+                                            } else {
+                                                focusManager.clearFocus()
+                                                onImagePreviewChange(msg.imageUrl) // M12 二轮:回写 MainPager
+                                            }
+                                        },
+                                        onLongClick = onRecall,
+                                    )
+                                    // M23 富媒体四类正式气泡(ChatBubbles.kt 单源):语音点击切播放
+                                    // (playingVoiceId 页内态),视频点击外放,卡片点击跳恋爱清单;
+                                    // 长按撤回 onRecall 通用(超窗 null,槽位复用安全)。
+                                    // M24 修订:失败态点击统一改派原位重发(不播放/不外放/不跳页)
+                                    MsgKind.VOICE -> VoiceBubble(
+                                        msg,
+                                        mine = msg.isMine,
+                                        theme = theme,
+                                        playing = playingVoiceId == msg.id,
+                                        onClick = {
+                                            if (msg.sendState == MSG_SEND_FAILED) {
+                                                resendChatMsg(msg)
+                                            } else {
+                                                toggleVoicePlay(msg)
+                                            }
+                                        },
+                                        onLongClick = onRecall,
+                                    )
+                                    MsgKind.VIDEO -> VideoBubble(
+                                        msg,
+                                        progress = mediaProgress, // SENDING 蒙层进度环(sending 单飞链全局单进度)
+                                        onClick = {
+                                            if (msg.sendState == MSG_SEND_FAILED) {
+                                                resendChatMsg(msg)
+                                            } else {
+                                                openVideoExternally(msg.mediaUrl)
+                                            }
+                                        },
+                                        onLongClick = onRecall,
+                                    )
+                                    MsgKind.STICKER -> StickerBubble(msg, onLongClick = onRecall)
+                                    MsgKind.CARD -> CardBubble(
+                                        msg,
+                                        theme = theme,
+                                        onClick = {
+                                            if (msg.sendState == MSG_SEND_FAILED) {
+                                                resendChatMsg(msg)
+                                            } else {
+                                                focusManager.clearFocus()
+                                                pager.openLovePage("wishListPage") // M23 wishWall 卡点跳恋爱清单
+                                            }
                                         },
                                         onLongClick = onRecall,
                                     )
@@ -758,48 +1416,50 @@ fun ChatPage(
                 item { Spacer(modifier = Modifier.height(10.dp)) }
             }
 
-            // 快捷贴纸(F17:白底胶囊在近白页底上对比度过低改 Divider 实底;sending 期间拦点击)
-            LazyRow(
-                modifier = Modifier.padding(horizontal = AppTheme.PageHPadding, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(quickStickers) { sticker ->
-                    Box(
-                        modifier = Modifier.background(AppTheme.Divider, RoundedCornerShape(15.dp))
-                            .clickable {
-                                if (!sending) {
-                                    sending = true
-                                    scope.launch {
-                                        val result = ChatStore.send(pager, sticker)
-                                        sending = false
-                                        if (result is ApiResult.Ok) {
-                                            // 本端发送:置标志 + 直接兜底滚底(轮询抢先入列导致
-                                            // size 不变时 size effect 不触发,见 triggerSendScroll)
-                                            triggerSendScroll()
-                                        } else {
-                                            toastCoupleResult(pager, result)
+            // ── 快捷贴纸文本条(F17:白底胶囊在近白页底上对比度过低改 Divider 实底;sending 期间
+            // 拦点击)。M24 修订:仅 mediaPanel==0 时显示——表情/动作面板移到输入行下方(微信式
+            // 布局,用户裁决「表情包弹出来后在输入框下面」),不再共用此槽位。点击乐观发送:
+            // 即点即现(乐观入列)→ POST 回包换真身/失败红叹号(同文本钮)
+            if (mediaPanel == 0) {
+                LazyRow(
+                    modifier = Modifier.padding(horizontal = AppTheme.PageHPadding, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(quickStickers) { sticker ->
+                        Box(
+                            modifier = Modifier.background(AppTheme.Divider, RoundedCornerShape(15.dp))
+                                .clickable {
+                                    if (!sending) {
+                                        val localId = ChatStore.appendPending(
+                                            pager,
+                                            ChatMsg(
+                                                id = "",
+                                                isMine = true,
+                                                text = sticker,
+                                                kind = MsgKind.TEXT,
+                                                createTime = nowEpochMs(),
+                                                sendState = MSG_SEND_SENDING,
+                                            ),
+                                        )
+                                        triggerSendScroll()
+                                        scope.launch {
+                                            val result = ChatStore.send(pager, sticker, localId)
+                                            if (result is ApiResult.Ok) {
+                                                // 本端发送:直接兜底滚底(轮询抢先入列导致 size 不变时
+                                                // size effect 不触发,见 triggerSendScroll)
+                                                triggerSendScroll()
+                                            } else {
+                                                toastCoupleResult(pager, result)
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .padding(horizontal = 13.dp, vertical = 6.dp),
-                    ) {
-                        Text(sticker, color = AppTheme.TextSecondary, fontSize = 12.sp)
+                                .padding(horizontal = 13.dp, vertical = 6.dp),
+                        ) {
+                            Text(sticker, color = AppTheme.TextSecondary, fontSize = 12.sp)
+                        }
                     }
                 }
-            }
-
-            // M10 图片预览条(预览确认流程防误发;M12 起发送后 2 分钟内可长按撤回):有待发图时
-            // 显示在输入条上方(发送上传中蒙层同条),随输入行键盘避让 padding 整体顶起(普通
-            // Column 节点,无需特殊处理)
-            if (imageUploading || pendingImageUri.isNotEmpty()) {
-                ChatImagePreviewBar(
-                    url = pendingImageUri,
-                    uploading = imageUploading,
-                    sending = sending,
-                    onCancel = { if (!imageUploading) pendingImageUri = "" },
-                    onSend = { sendPendingImage() },
-                )
             }
 
             // 输入行(F2/F7 软键盘避让):keyboardHeightChange 回传键盘高度(dp)。⚠ 原生 Android11PlusKeyboardWatcher
@@ -807,7 +1467,10 @@ fun ChatPage(
             // 键盘实际顶边比它高出一条 navBar,故须再叠加 navBarSafePaddingDp() 补齐,否则输入框
             // 下缘被导航栏区域上方的键盘盖住一条(实测「少一点」的根因);弹起时 bottom 切到
             // 「键盘高 + navBar + 12dp」把贴纸行/输入行整体顶到键盘上方(列表随 weight 压缩),
-            // 收起回调归零恢复 86dp 浮岛底栏清让常数
+            // 收起回调归零恢复 86dp 浮岛底栏清让常数。M23:recordMode 时左簇与输入框槽整体替换为
+            // 录音条(取消 ghost + 计时胶囊 + 发送 brand 钮,形态切换非浮层无 z 序问题)。
+            // M24 修订:表情/动作面板移到本行下方(微信式布局)——面板开着时本行只留 4dp 小间距
+            // (面板自带 dock 清让 bottom padding),无面板时维持键盘避让公式
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .padding(horizontal = AppTheme.PageHPadding)
@@ -815,82 +1478,407 @@ fun ChatPage(
                         top = 4.dp,
                         // 输入条 bottom 避让公式单源化(max(rest 86dp, 键盘高 + navBar + 12dp),
                         // 与原件逐字一致;⚠ 键盘 height 不含导航栏区域的补偿已在组件内收口)
-                        bottom = inputBarBottomPaddingDp(keyboardHeight),
+                        bottom = if (mediaPanel != 0) 4.dp else inputBarBottomPaddingDp(keyboardHeight),
                     ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // M10 图片入口:36dp 轻量 ghost 钮(与 44dp brand 渐变发送钮区分主次;
-                // AppGhostIconButton 透明底与 clickable 同节点铁律⑤);
-                // guard 选图中/上传中拦重复点击(pickImage 内也拦,双保险)
+                // M24 六轮 图片钮撤出输入行(用户裁决「图片不要在输入框左边,点击加号后下面显示
+                // 很多选项」)——图片/拍照入口并入加号面板(mediaPanel==2,见下方动作面板)
+
+                // M24 声音开关(微信语义):切「按住 说话」胶囊/文本输入。铁律 16:voiceMode 翻转
+                // 会卸载持焦 TextField,clearFocus 后 setTimeout(0) 迟一拍再翻转(GatePanel.switchPanel
+                // 范式)让原生 blur 批处理先落;真机回归点:待办页输入框不抢焦不自滚。
+                // M24 五轮(用户反馈「语音模式不显示聊天框,只有在输入的时候可以有」):图标随态换——
+                // 文本态 Mic(进语音),语音态 Keyboard(微信同款显式切回出口,聊天框仅在输入态在场)
                 AppGhostIconButton(
-                    AppIconType.Image,
-                    onClick = { if (!imagePicking && !imageUploading) pickImage() },
+                    if (voiceMode) AppIconType.Keyboard else AppIconType.Mic,
+                    onClick = {
+                        if (recordMode) return@AppGhostIconButton
+                        focusManager.clearFocus()
+                        pager.setTimeout(0) {
+                            voiceMode = !voiceMode
+                            mediaPanel = 0
+                            if (voiceMode) recordCancelZone = false
+                        }
+                    },
                     size = 36.dp,
                     iconSize = 20.dp,
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .background(AppTheme.CardBg, RoundedCornerShape(22.dp)),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    TextField(
-                        value = inputText,
-                        onValueChange = {
-                            inputText = it
-                            // M13 输入上报(无停止信号,3s 节流在 Store):有输入才报(清空不算输入中),
-                            // fire-and-forget 失败静默
-                            if (it.isNotEmpty()) ChatStore.noteTyping(pager)
+                if (voiceMode) {
+                    // M24 按住说话胶囊(与 TextField 同槽互斥):按下即录/松开发送/上滑取消,见组件注释
+                    HoldToTalkCapsule(
+                        onStart = { startRecord() },
+                        onRelease = { cancel -> recordStop(cancel) },
+                        onCancelZoneChange = { recordCancelZone = it },
+                        modifier = Modifier.weight(1f).height(44.dp),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.weight(1f)
+                            .background(AppTheme.CardBg, RoundedCornerShape(22.dp)),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        TextField(
+                            value = inputText,
+                            onValueChange = {
+                                inputText = it
+                                // M13 输入上报(无停止信号,3s 节流在 Store):有输入才报(清空不算输入中),
+                                // fire-and-forget 失败静默
+                                if (it.isNotEmpty()) ChatStore.noteTyping(pager)
+                            },
+                            placeholder = "说点什么甜甜的…",
+                            autoFocus = false,
+                            placeholderColor = AppTheme.TextTertiary,
+                            textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 13.sp),
+                            maxLines = 3, // 长文本限 3 行竖向生长,不在 22dp 胶囊里无限撑高(F15)
+                            maxLength = INPUT_MAX_LENGTH, // 渲染层拒超限输入(F15;勿在 onValueChange take 截断,光标 bug)
+                            keyboardHeightChange = onKeyboardHeightChange, // 写高度 + 捕获贴底快照(见上)
+                            cursorBrush = remember(theme.brandStart) { SolidColor(theme.brandStart) }, // 光标随主题(§5)
+                            modifier = Modifier.fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 13.dp) // 单行≈44dp 与发送钮等高、触达舒适;3 行时自然长高
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                // M24 表情面板开关(面板 M24 改 3×8 网格;与动作面板互斥,再点收起;先清键盘——面板与键盘互斥)。
+                // M24 六轮(用户裁决「文字输入框的时候才能点击表情包按钮,语音的时候不显示」):
+                // 仅文本输入态在场(voiceMode 隐藏;尾随 Spacer 同进 if 保 voiceMode 间距单份)
+                if (!voiceMode) {
+                    AppGhostIconButton(
+                        AppIconType.Emoji,
+                        onClick = {
+                            focusManager.clearFocus()
+                            mediaPanel = if (mediaPanel == 1) 0 else 1
                         },
-                        placeholder = "说点什么甜甜的…",
-                        autoFocus = false,
-                        placeholderColor = AppTheme.TextTertiary,
-                        textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 13.sp),
-                        maxLines = 3, // 长文本限 3 行竖向生长,不在 22dp 胶囊里无限撑高(F15)
-                        maxLength = INPUT_MAX_LENGTH, // 渲染层拒超限输入(F15;勿在 onValueChange take 截断,光标 bug)
-                        keyboardHeightChange = onKeyboardHeightChange, // 写高度 + 捕获贴底快照(见上)
-                        cursorBrush = remember(theme.brandStart) { SolidColor(theme.brandStart) }, // 光标随主题(§5)
-                        modifier = Modifier.fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 13.dp) // 单行≈44dp 与发送钮等高、触达舒适;3 行时自然长高
+                        size = 36.dp,
+                        iconSize = 20.dp,
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                // M24 七轮修订(用户裁决「输入框有文字的时候不是新加一个发送按钮而是直接不显示
+                // 加号然后显示发送按钮,这样不会显示的比较挤」):末位按钮槽二态互换——有文字=
+                // 发送钮(乐观发送),无文字=加号动作面板开关(心愿墙/图片/拍照三卡)。任意时刻
+                // 恰好一个按钮,行宽稳定不挤。⚠ 交互代价(微信同款):有文字时加号面板不可开,
+                // 需先清空文字;语音态恒加号(六轮语义不变)。表情面板内发送胶囊属面板域,面板
+                // 开着时键盘收起、点输入框唤键盘即收面板,与发送钮不同时在场
+                if (!voiceMode && inputText.trim().isNotEmpty()) {
+                    // 发送:M24 修订 乐观发送(微信语义)——即点即现:乐观入列(临时 id)+ 立即清
+                    // 输入,POST 回包换真身/失败红叹号原位重发(旧「POST 成功才清输入,失败保留
+                    // 文案」语义废弃)。sending(媒体上传链互斥)期间按钮降透明+加载圈不响应
+                    // 点击(F12)。M24:voiceMode 时隐藏(槽位被按住说话胶囊占据)
+                    AppIconButton(
+                        AppIconType.Send,
+                        onClick = {
+                            val text = inputText.trim()
+                            if (text.isNotEmpty() && !sending) {
+                                inputText = ""
+                                val localId = ChatStore.appendPending(
+                                    pager,
+                                    ChatMsg(
+                                        id = "",
+                                        isMine = true,
+                                        text = text,
+                                        kind = MsgKind.TEXT,
+                                        createTime = nowEpochMs(),
+                                        sendState = MSG_SEND_SENDING,
+                                    ),
+                                )
+                                triggerSendScroll()
+                                scope.launch {
+                                    val result = ChatStore.send(pager, text, localId)
+                                    if (result is ApiResult.Ok) {
+                                        // P3a:send 返回 Ok 时回包真身已 confirmPending 入列(AppState)。
+                                        // 直接启动兜底滚底——若轮询抢先把同条消息入列则列表不增、
+                                        // size effect 不触发,兜底承接(见 triggerSendScroll);先
+                                        // awaitMeasured 等 measure 落地再滚,防 stale totalItemsCount 吞点
+                                        triggerSendScroll()
+                                    } else {
+                                        toastCoupleResult(pager, result)
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !sending,
+                        loading = sending,
+                    )
+                } else {
+                    // M24 动作面板开关(心愿墙/图片/拍照三卡;与表情面板互斥)
+                    AppGhostIconButton(
+                        AppIconType.Plus,
+                        onClick = {
+                            focusManager.clearFocus()
+                            mediaPanel = if (mediaPanel == 2) 0 else 2
+                        },
+                        size = 36.dp,
+                        iconSize = 20.dp,
                     )
                 }
-                Spacer(modifier = Modifier.width(10.dp))
-                // 发送:POST 成功才清输入(失败保留文案可重发,无脏数据 §7.4);发送中按钮降透明 +
-                // 加载圈且不响应点击(F12),不靠静默吞点
-                AppIconButton(
-                    AppIconType.Send,
-                    onClick = {
-                        val text = inputText.trim()
-                        if (text.isNotEmpty() && !sending) {
-                            sending = true
-                            scope.launch {
-                                val result = ChatStore.send(pager, text)
-                                sending = false
-                                if (result is ApiResult.Ok) {
-                                    inputText = ""
-                                    // P3a:send 返回 Ok 时新消息已 appendDedupe 入列(AppState ChatStore)。
-                                    // 置标志交由 messages.size effect 消费,并直接启动兜底滚底——若轮询
-                                    // 抢先把同条消息入列则 size 不变、effect 不触发,兜底承接(见
-                                    // triggerSendScroll);先 awaitMeasured 等 measure 落地再滚,防
-                                    // stale totalItemsCount 吞点
-                                    triggerSendScroll()
-                                } else {
-                                    toastCoupleResult(pager, result)
+            }
+
+            // ── 表情/动作面板(M24 修订 移到输入行下方,微信式布局——用户裁决「表情包弹出来后
+            // 在输入框下面」):mediaPanel 1=表情网格 2=动作面板[仅心愿墙卡](表情/加号钮开关,
+            // 再点收起;键盘弹起在 onKeyboardHeightChange 内关面板互斥)。普通 Column 节点非浮层
+            // (无铁律14 z 序问题);贴底整幅 CardBg 实底(微信式,与页面底区分),自带 dock 清让
+            // bottom padding(面板开着时输入行只留 4dp 小间距,见输入行注释)。互斥下面板打开时
+            // 键盘必收起,inputBarBottomPaddingDp(0)=86dp 浮岛底栏常数
+            if (mediaPanel == 1) {
+                // M24 表情面板(微信式,替代 M23 快捷贴纸 LazyRow):ChatStickers.ORDER 24 枚
+                // 恰 3×8 静态网格(无滚动容器)。M24 五轮修订(用户裁决「选择的表情包在输入框里,
+                // 不应该有个专门显示的」):点选即 append 进输入框(微信语义;发送走输入行发送钮,
+                // 与快捷贴纸条同为 TEXT 链),删「选中底/底部预览行/品牌发送胶囊」专显——右侧
+                // 退格键供面板内删改(面板开着键盘收起,无系统删除途径;emoji 代理对整体删)
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(AppTheme.CardBg) // 贴底整幅实底(微信式面板)
+                        .padding(horizontal = AppTheme.PageHPadding, vertical = 8.dp)
+                        .padding(bottom = inputBarBottomPaddingDp(keyboardHeight)), // dock 清让,CardBg 随之铺满
+                ) {
+                    ChatStickers.ORDER.chunked(8).forEach { rowKeys ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            rowKeys.forEach { key ->
+                                Box(
+                                    modifier = Modifier.weight(1f)
+                                        .padding(3.dp)
+                                        .clickable {
+                                            // 插入输入框(超长拒插,与 TextField maxLength 同源守卫)
+                                            if (inputText.length + ChatStickers.emojiOf(key).length <= INPUT_MAX_LENGTH) {
+                                                inputText += ChatStickers.emojiOf(key)
+                                            }
+                                        }
+                                        .height(40.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(ChatStickers.emojiOf(key), fontSize = 24.sp)
                                 }
                             }
                         }
-                    },
-                    enabled = !sending,
-                    loading = sending,
-                )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        // 退格键(微信式右下角):删一个「字」——emoji 代理对整体删(dropLast(1) 会
+                        // 留孤儿低代理渲染成豆腐块;检测尾部高低代理对后整对删)
+                        Box(
+                            modifier = Modifier.size(40.dp)
+                                .clickable {
+                                    val s = inputText
+                                    inputText = when {
+                                        s.isEmpty() -> s
+                                        s.length >= 2 && s[s.length - 2].isHighSurrogate() && s[s.length - 1].isLowSurrogate() -> s.dropLast(2)
+                                        else -> s.dropLast(1)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("⌫", fontSize = 20.sp, color = AppTheme.TextSecondary)
+                        }
+                    }
+                }
+            }
+            if (mediaPanel == 2) {
+                // M24 六轮 动作面板微信化(用户裁决「点击加号后有很多选项,许愿墙,图片,拍照等」):
+                // 图片钮撤出输入行并入本面板(M24 十三轮起图片卡改开相册弹层多选,原 pickMedia
+                // 混选链退役),拍照卡走 takePhoto 桥(收口同图片链)。图片/拍照卡点卡先收面板
+                // 再动作(微信语义);心愿墙卡失败 toast 留面板可重试(sendWishWallCard 自管)
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(AppTheme.CardBg) // 贴底整幅实底(与表情面板同形态)
+                        .padding(horizontal = AppTheme.PageHPadding, vertical = 8.dp)
+                        .padding(bottom = inputBarBottomPaddingDp(keyboardHeight)), // dock 清让,CardBg 随之铺满
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ChatActionCard(AppIconType.Star, "心愿墙卡片", Modifier.weight(1f)) { sendWishWallCard() }
+                    ChatActionCard(AppIconType.Image, "相册", Modifier.weight(1f)) {
+                        focusManager.clearFocus()
+                        mediaPanel = 0
+                        showMediaPicker = true
+                    }
+                    ChatActionCard(AppIconType.Camera, "拍照", Modifier.weight(1f)) {
+                        mediaPanel = 0
+                        takePhoto()
+                    }
+                }
             }
         }
+
+        // M24 录音 HUD(微信式按住说话反馈):recordMode 时页内中央浮动胶囊,取消态黑↔红同节点
+        // background 属性切换(铁律 7);无全屏黑幕(中央区不与浮岛底栏重叠,不触铁律 14),
+        // 不拦底层触摸(HUD 无 pointerInput,事件穿透无害——录音手势由按住说话胶囊 consume)
+        if (recordMode) {
+            RecordHudOverlay(
+                cancelZone = recordCancelZone,
+                seconds = recordSeconds,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
+        // M24 十三轮 相册弹层(微信式多选):官方 ModalBottomSheet + LazyVerticalGrid 网格,
+        // 打开时 queryMediaLibrary 拉库(content:// 缩略图 Glide 直出),多选(≤9)发送交回
+        // sendPickedMedia 落盘分派既有上传链(乐观入列排队语义自动继承)
+        MediaPickerSheet(
+            visible = showMediaPicker,
+            pager = pager,
+            maxVideoBytes = VIDEO_MAX_BYTES,
+            onToast = { toastCouple(pager, it) },
+            onDismiss = { showMediaPicker = false },
+            onSend = { uris ->
+                showMediaPicker = false
+                sendPickedMedia(uris)
+            },
+        )
 
         // M10/M12 全屏大图预览与撤回确认两枚浮层不再页内挂载——2026-10-17 二轮修复(真机反馈
         // 页内浮层盖不住浮岛底栏)起状态提升 MainPager 根 Box(底栏之后)统一挂载,见 MainPager;
         // 本页仅经 imagePreviewUrl/recallTargetId 参数驱动列表滚动门(userScrollEnabled)
     }
 }
+
+/**
+ * ChatActionCard — 动作面板单卡(M23;M24 七轮 微信式改版,用户裁决「文字与 icon 上下对齐,
+ * 一行三个的正方形」):正方形单元格(aspectRatio(1f) 由列宽推导边长),icon 上/标题下居中
+ * 纵排;Divider 实底圆角方卡,背景与 clickable 同节点(铁律⑦),weight 由调用方经 modifier
+ * 传入(RowScope,一行三个即 weight(1f)×3)
+ */
+@Composable
+private fun ChatActionCard(
+    icon: AppIconType,
+    title: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .background(AppTheme.Divider, RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .aspectRatio(1f),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        AppIcon(icon, AppTheme.TextSecondary, Modifier.size(26.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(title, color = AppTheme.TextSecondary, fontSize = 12.sp)
+    }
+}
+
+/** pickMedia 回包小载体(M24 修订):uri 本地 file:// 副本 / kind "image"|"video"(原生 mime
+ *  判型)/ duration 秒(图片恒 0)/ size 字节(视频 16MB 守卫用,common 无文件 stat 能力) */
+private data class PickedMedia(val uri: String, val kind: String, val duration: Int, val size: Long)
+
+/**
+ * HoldToTalkCapsule — 「按住 说话」胶囊(M24 微信语义,替代 M23 录音条):按下即起录、松手按
+ * 取消态分叉发送/取消、上滑超阈翻取消态(滑回自然恢复)。主动消费版手势(按钮不在滚动容器,
+ * 但需阻 MainPager 横滑把「按住」拖成「切 Tab」;dragDismissKeyboard 被动版不适用)。
+ * ⚠ 手势基建三铁律:①pointerInput key 恒 Unit——voiceMode/recordMode 等易变状态作 key 会杀
+ * 进行中手势循环致 up 丢失录音悬挂,回调经 rememberUpdatedState 包装读最新值(BasicWidget 先例);
+ * ②down 即 consume + 全程 consume——阻父级横滑/下层点击穿透;③手势协程内勿用 withTimeoutOrNull
+ * (2.29 no-op 存根)。取消判定用 down 起点绝对差(累计位移会因滑回不恢复)。
+ * 竞态零新增:60s 原生自动停先到 → 发起回调复位 recordMode,HUD 消失+自动发送,迟到 up 被
+ * recordStop 首行 !recordMode 拦截;up 先到 → recordStopRequested 闸 + 原生 recording 闸
+ */
+@Composable
+private fun HoldToTalkCapsule(
+    onStart: () -> Unit,
+    onRelease: (cancel: Boolean) -> Unit,
+    onCancelZoneChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val startRef = rememberUpdatedState(onStart)
+    val releaseRef = rememberUpdatedState(onRelease)
+    val zoneRef = rememberUpdatedState(onCancelZoneChange)
+    Box(
+        modifier = modifier
+            // 背景与手势同节点(铁律 7);CardBg 22dp 圆角与 TextField 槽同形态,切换无跳变
+            .background(AppTheme.CardBg, RoundedCornerShape(22.dp))
+            .holdToTalkGesture(startRef, releaseRef, zoneRef),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("按住 说话", color = AppTheme.TextSecondary, fontSize = 13.sp)
+    }
+}
+
+/** 按住说话手势(阈值 px 换算在手势协程内,PointerInputScope 自带 Density):见组件注释 */
+private fun Modifier.holdToTalkGesture(
+    startRef: State<() -> Unit>,
+    releaseRef: State<(Boolean) -> Unit>,
+    zoneRef: State<(Boolean) -> Unit>,
+): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        down.consume()
+        startRef.value() // 按下即起录(内含 recordMode/sending guard 与未桥接端降级 toast)
+        var cancel = false
+        while (true) {
+            val event = awaitPointerEvent()
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            if (!change.pressed) {
+                releaseRef.value(cancel) // 松手:红态=true 取消(静默),黑态=false 发送(recordStop 双击闸)
+                change.consume()
+                break
+            }
+            val inZone = (down.position.y - change.position.y) > VOICE_CANCEL_SLIDE_DP.dp.toPx()
+            if (inZone != cancel) {
+                cancel = inZone
+                zoneRef.value(inZone)
+            }
+            change.consume() // 全程消费:阻 MainPager 横滑与下层点击
+        }
+    }
+}
+
+/**
+ * RecordHudOverlay — 录音中央 HUD(M24):按住说话时页内中央浮动反馈;取消态黑↔红同节点
+ * background 属性切换(两支均 color 重载,铁律 7 禁 .then 增删节点)。黑态 = Mic 图标 +
+ * 4 根波纹条(recordSeconds 逐秒轮转高度档,1fps 确定性摆动零动画 API 铁律 10①)+ 计时 +
+ * 操作提示;红态 = Close 图标 + 「松开手指 取消发送」
+ */
+@Composable
+private fun RecordHudOverlay(cancelZone: Boolean, seconds: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .background(
+                if (cancelZone) AppTheme.Danger.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.75f),
+                RoundedCornerShape(20.dp),
+            )
+            .padding(horizontal = 26.dp, vertical = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (cancelZone) {
+                AppIcon(AppIconType.Close, Color.White, Modifier.size(32.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("松开手指 取消发送", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            } else {
+                AppIcon(AppIconType.Mic, Color.White, Modifier.size(26.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    repeat(4) { i ->
+                        val h = RECORD_WAVE_HEIGHTS_DP[(seconds + i) % RECORD_WAVE_HEIGHTS_DP.size]
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 3.dp)
+                                .size(width = 4.dp, height = h.dp)
+                                .background(Color.White, RoundedCornerShape(2.dp)),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(recordTimeLabel(seconds), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "松开发送 · 上滑取消 · ${VOICE_MAX_SECONDS}s 自动发送",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 11.sp,
+                )
+            }
+        }
+    }
+}
+
+/** 录音计时标签(M23):秒 → m:ss(60s 上限,分钟位恒 0/1) */
+private fun recordTimeLabel(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)
 
 /**
  * 等列表对「包含目标条数」的那次 measure 真正落地再放行(聊天页所有程序化滚底的公共前置):
@@ -1102,12 +2090,16 @@ private fun WishBubble(msg: ChatMsg, theme: KuiklyTheme, onLongClick: (() -> Uni
  * ⚠ 不做 mine/TA 背景分化(mine 参数仅留签名占位):占位底恒 background(color=) 单值,
  * 规避 Q2 color/brush 重载混用坑;不吃 TextBubble 的撇角(图片无方向语义)。
  * M12:clickable 换 combinedClickable 短重载(onClick 开大图 + onLongClick 撤回)——短重载
- * 取 LocalIndication 与原 clickable 指示器行为持平,长按语义新增不改变点击视觉
+ * 取 LocalIndication 与原 clickable 指示器行为持平,长按语义新增不改变点击视觉。
+ * M24 修订美化:乐观发送/失败走 ChatMediaStateOverlay 蒙层(黑 28%+白钟表「上传中…」/黑 50%+
+ * 红!),乐观期渲染本地 file:// 源蒙层下即见,点击落宿主手势(失败=重发/常态=开大图)
  */
 @Composable
 private fun ImageBubble(
     url: String,
     mine: Boolean,
+    sendState: Int = MSG_SEND_SENT, // M24 修订:乐观发送状态驱动蒙层(SENT 恒不渲染)
+    progress: Int = -1, // M24 三轮修订:SENDING 蒙层进度环读数(-1=未知/压缩/非上传窗口)
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null, // M12:非空 = 可撤回,长按弹确认浮层
 ) {
@@ -1123,77 +2115,7 @@ private fun ImageBubble(
             contentDescription = null,
             contentScale = ContentScale.Crop,
         )
-    }
-}
-
-/**
- * ChatImagePreviewBar — 待发图片预览条(M10 预览确认流程;M15 真机反馈改「发送时才上传」):
- * 选图(仅本地预览)→此处确认→点发送才压缩上传+入聊天(确认条防误发;M12 起发送后 2 分钟内
- * 可长按撤回)。缩略图 56dp 方(浅灰底恒驻;发送上传中黑 28% 蒙层+「上传中…」,MomentAddOverlay
- * 同款);✕ 取消仅非上传中可点(上传不可中断,取消/重选零孤儿文件);发送胶囊
- * uploading/sending 降透明禁用(guard 另在 sendPendingImage)。背景与 clickable 同节点(铁律⑦)
- */
-@Composable
-private fun ChatImagePreviewBar(
-    url: String,
-    uploading: Boolean,
-    sending: Boolean,
-    onCancel: () -> Unit,
-    onSend: () -> Unit,
-) {
-    val theme = ThemeStore.current
-    Row(
-        modifier = Modifier.fillMaxWidth()
-            .padding(horizontal = AppTheme.PageHPadding, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier.size(56.dp)
-                .background(Color(0xFFF5F6FA), RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (url.isNotEmpty()) {
-                Image(
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
-                    painter = rememberAsyncImagePainter(url),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                )
-            }
-            if (uploading) {
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("上传中…", color = Color.White, fontSize = 11.sp)
-                }
-            }
-        }
-        Spacer(modifier = Modifier.width(10.dp))
-        Text("发送后 2 分钟内可长按撤回", color = AppTheme.TextTertiary, fontSize = 11.sp) // M12 文案回改(D9)
-        Spacer(modifier = Modifier.weight(1f))
-        // ✕ 取消:清预览条(AppGhostIconButton 单源,30dp/TextTertiary/18dp 与原件一致)
-        AppGhostIconButton(
-            AppIconType.Close,
-            onClick = onCancel,
-            tint = AppTheme.TextTertiary,
-            iconSize = 18.dp,
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        // 发送胶囊:上传中/发送中降透明禁用
-        Box(
-            modifier = Modifier.background(theme.brandBrush, RoundedCornerShape(17.dp))
-                .clickable(enabled = !uploading && !sending) { onSend() }
-                .padding(horizontal = 18.dp, vertical = 8.dp),
-        ) {
-            Text(
-                "发送",
-                color = Color.White.copy(alpha = if (uploading || sending) 0.6f else 1f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
+        ChatMediaStateOverlay(sendState, progress)
     }
 }
 

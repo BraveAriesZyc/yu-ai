@@ -36,6 +36,29 @@ import kotlinx.coroutines.launch
  */
 internal const val REFRESH_MIN_VISIBLE_MS = 600L
 
+/**
+ * 刷新执行单源(M24 从 AppPullRefreshItem 抽出,瀑布流下拉刷新 AppStaggeredPullRefresh 同用):
+ * 最短驻留(请求耗时不足 REFRESH_MIN_VISIBLE_MS 补齐再收,「刷新中…」至少完整显示一拍)+
+ * 失败 toast(成功不 toast,数据自己会更新,肉眼可辨);setRefreshing 回写调用方 refreshing 布尔
+ */
+internal fun launchPullRefresh(
+    scope: CoroutineScope,
+    setRefreshing: (Boolean) -> Unit,
+    pager: Pager,
+    onRefresh: suspend () -> Boolean,
+    failToast: String = "刷新失败，请重试",
+) {
+    setRefreshing(true)
+    scope.launch {
+        val t0 = nowEpochMs()
+        val ok = onRefresh()
+        val elapsed = nowEpochMs() - t0
+        if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
+        if (!ok) AppFeedback.toast(pager, failToast)
+        setRefreshing(false)
+    }
+}
+
 internal fun LazyListScope.AppPullRefreshItem(
     pullState: PullToRefreshState,
     listState: LazyListState,
@@ -49,17 +72,7 @@ internal fun LazyListScope.AppPullRefreshItem(
 ) {
     pullToRefreshItem(
         state = pullState,
-        onRefresh = {
-            setRefreshing(true)
-            scope.launch {
-                val t0 = nowEpochMs()
-                val ok = onRefresh()
-                val elapsed = nowEpochMs() - t0
-                if (elapsed < REFRESH_MIN_VISIBLE_MS) delay(REFRESH_MIN_VISIBLE_MS - elapsed)
-                if (!ok) AppFeedback.toast(pager, failToast)
-                setRefreshing(false)
-            }
-        },
+        onRefresh = { launchPullRefresh(scope, setRefreshing, pager, onRefresh, failToast) },
         scrollState = listState,
     ) { _, isRefreshing, _ ->
         Text(

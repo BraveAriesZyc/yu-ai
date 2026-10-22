@@ -81,6 +81,13 @@ class KRImageAdapter(val context: Context) : IKRImageAdapter {
                 ImageView.ScaleType.FIT_CENTER -> requestBuilder.fitCenter()
                 else -> {}
             }
+        } else if (src.startsWith("content:")) {
+            // M24 十五轮:content:// 相册缩略图(相册弹层网格独占消费方)无尺寸约束,原图动辄
+            // 4000×3000,Glide 全尺寸解码每张数十 MB → 网格滚动卡顿(真机「好卡」实锤,官方
+            // demo 不卡因用的是资源小图);强制降采样小图(原生选择器 ThumbAdapter 同款 320,
+            // 正方格 centerCrop 省内存;contentScale=Crop 由 Kuikly Image 侧再裁)
+            requestBuilder.override(320)
+            requestBuilder.centerCrop()
         }
         requestBuilder
             .into(object : CustomTarget<Drawable>() {

@@ -45,4 +45,10 @@ public class AppMomentRespVO {
     @Schema(description = "当前用户是否已赞（M15，按人算）", requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
     private Boolean liked;
 
+    @Schema(description = "首图压缩后宽（px，M24，EXIF 矫正；0 = 未知→端上瀑布流降级 140dp 定高）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1080")
+    private Integer imageWidth;
+
+    @Schema(description = "首图压缩后高（px，M24，EXIF 矫正；0 = 未知）", requiredMode = Schema.RequiredMode.REQUIRED, example = "810")
+    private Integer imageHeight;
+
 }

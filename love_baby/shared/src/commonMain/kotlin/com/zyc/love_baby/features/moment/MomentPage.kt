@@ -1,3 +1,5 @@
+@file:OptIn(com.tencent.kuikly.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.zyc.love_baby.features.moment
 
 import androidx.compose.runtime.Composable
@@ -15,23 +17,27 @@ import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
+import com.tencent.kuikly.compose.foundation.layout.aspectRatio
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
-import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.lazy.LazyRow
 import com.tencent.kuikly.compose.foundation.lazy.itemsIndexed
-import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
+import com.tencent.kuikly.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import com.tencent.kuikly.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import com.tencent.kuikly.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import com.tencent.kuikly.compose.foundation.lazy.staggeredgrid.items
+import com.tencent.kuikly.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import com.tencent.kuikly.compose.foundation.pager.HorizontalPager
 import com.tencent.kuikly.compose.foundation.pager.rememberPagerState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
-import com.tencent.kuikly.compose.material3.rememberPullToRefreshState
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
@@ -57,13 +63,16 @@ import com.zyc.love_baby.components.AppInputField
 import com.zyc.love_baby.components.AppLoading
 import com.zyc.love_baby.components.AppLoadFailed
 import com.zyc.love_baby.components.AppPrimaryButton
-import com.zyc.love_baby.components.AppPullRefreshItem
 import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTheme
+import com.zyc.love_baby.components.StaggeredPullIndicator
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.keyboardLiftBottomDp
+import com.zyc.love_baby.components.launchPullRefresh
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.components.rememberKeyboardHeight
+import com.zyc.love_baby.components.rememberPullRefreshThresholdPx
+import com.zyc.love_baby.components.staggeredPullRefresh
 import com.zyc.love_baby.data.model.MomentInfo
 import com.zyc.love_baby.state.chatDayLabelFriendly
 import com.zyc.love_baby.features.couple.toastCouple
@@ -79,33 +88,38 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * MomentPage — 我们的相册页(@Page 注册名 "momentPage"):双列瞬间墙 + 发布浮层 + 大图预览(M9)
+ * MomentPage — 我们的相册页(@Page 注册名 "momentPage"):双列瀑布流瞬间墙 + 发布浮层 + 大图预览(M9;M24 瀑布流改造)
  * 用法:我的页「我们的相册」菜单 RouterModule.openPage 打开;返回键 closePage。
  *      独立二级页(CheckinPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:MomentApi/MomentInfo(页内自持不进 AppState,M7 时间线页先例——页销毁即弃,登出/解绑零
- *      reset);FileModule.pickImages/uploadImage(maxEdge=1080,选图本地预览+发布时上传,M15);couple 组 toast;
- *      chat.chatDayLabelFriendly(时间文案);components.AppLoading/AppLoadFailed(原 mood.Timeline
- *      同款,收编单源);RouterModule(返回)
+ *      reset);FileModule.pickImages/uploadImage(maxEdge=1080,选图本地预览+发布时上传,M15;回包
+ *      附压缩后宽高 M24);couple 组 toast;chat.chatDayLabelFriendly(时间文案);components.
+ *      AppLoading/AppLoadFailed(原 mood.Timeline 同款,收编单源);AppStaggeredPullRefresh(瀑布流
+ *      下拉刷新,M24 自绘——官方 pullToRefreshItem 只挂 LazyListScope 挂不上 staggered grid);
+ *      RouterModule(返回)
  * 事件:返回钮 closePage;卡片点击开大图预览;FAB「+」开发布浮层;失败态「重试」重拉;
- *      「加载更多」beforeId=当前最小 id 翻页;下拉刷新(官方 pullToRefreshItem,ChatPage 先例)重拉首页
+ *      「加载更多」beforeId=当前最小 id 翻页;下拉刷新(自绘被动观察器,到顶下拉越阈松手)重拉首页
  * 功能:
- *  - 双列瞬间墙:LazyColumn + chunked(2) Row 自排(CheckinPage 日历同款自排,非 LazyVerticalGrid
- *    ——2.29 官方 pullToRefreshItem 只挂 LazyListScope(反编译 javap 锤实,scrollState 参数即
- *    LazyListState),计划里「网格+官方下拉刷新」二者取官方下拉刷新;M15 多图后行高随图数变高,
- *    生产等价先例同行有/无配文,Row 缺省 Top 对齐)
- *  - 卡片:图块统一 140dp 全宽 Crop+多图右上「N张」黑胶囊角标(2026-10-17 真机反馈二轮:三列
- *    迷你九宫格在半宽卡内 cell 过小弃用,全部图进预览横滑看)+ 配文(空串不显,maxLines=2)+
+ *  - 双列瀑布流:M24 起 LazyVerticalStaggeredGrid(StaggeredGridCells.Fixed(2)),卡片高度随首图
+ *    比例错落(用户需求「相册页可以使用瀑布流」,动态卡片瀑布流形态——图+配文+点赞全保留);
+ *    弃用 LazyColumn+chunked(2) Row 自排(M9~M23 现状,行高随同行最高卡齐平无法错落)。
+ *    下拉刷新为自绘 staggeredPullRefresh 被动观察器(铁律 13④ 范式,canScrollBackward 判顶)+
+ *    悬浮胶囊指示器(launchPullRefresh 单源:600ms 最短驻留+失败 toast)
+ *  - 卡片:图块 imageWidth/Height>0 时 aspectRatio 按压缩后比例自适应(EXIF 矫正),0=旧数据/
+ *    老版 App 降级 140dp 定高双向兼容;多图右上「N张」黑胶囊角标(2026-10-17 真机反馈二轮:
+ *    三列迷你九宫格在半宽卡内 cell 过小弃用,全部图进预览横滑看)+ 配文(空串不显,maxLines=2)+
  *    我/TA 与时间 + 纯展示红心;点击进大图预览
  *  - 可见期 5s 静默轮询对账(M15,D-20c:点赞/对方增删不发 WS 靠轮询感知,M14 心愿清单同款;
  *    恒拉首页合并删账/增改账,data class 相等跳过,失败静默自愈)
  *  - 发布浮层:选图仅本地预览零网络(pickImages 回 content:// URI,KRImageAdapter 已扩 content:
  *    分支直载;M15 真机反馈「没上传不调接口,点击发布才是上传」)+ LazyRow 缩略条(右上 X 删除/
- *    条尾 Plus 追加)+ 发布时点热身+逐张 uploadImage(进度「上传中 i/N」,失败重试跳过已传张)
- *    → POST create(回包头插落态不重拉)
+ *    条尾 Plus 追加)+ 发布时点热身+逐张 uploadImage(进度「上传中 i/N」,失败重试跳过已传张;
+ *    M24 回包读顶层 width/height 存 UploadedPhoto)→ POST create 附首图压缩后宽高(回包头插落态
+ *    不重拉)
  *  - 大图预览:黑底 0.9 全屏 HorizontalPager 逐页 Fit + 多图页码胶囊 + 底部信息卡(配文/
  *    发布者/时间/点赞钮双方均可 D-20e 回包真值原位替换/删除钮仅上传者本人——服务端
  *    1_003_008_001 兜底,端上只显不拦校验);点击黑底关闭,信息卡 clickable 吞透传
- *  - F6 铁律:任一浮层开着 LazyColumn userScrollEnabled=false(遮罩只吃 tap 不吃拖拽)
+ *  - F6 铁律:任一浮层开着 staggered grid userScrollEnabled=false(遮罩只吃 tap 不吃拖拽)
  */
 @Page("momentPage", supportInLocal = true)
 internal class MomentPager : BasePager() {
@@ -150,10 +164,12 @@ internal fun MomentPage(pager: Pager) {
     var likeToggling by remember { mutableStateOf(false) }
     // 页内自持(M7 时间线页先例):id 倒序新→旧,服务端序原样保留不重排
     val moments = remember { mutableStateListOf<MomentInfo>() }
-    // 官方下拉刷新与列表手势共享同一 state 实例(2.29 pullToRefreshItem 的 scrollState 参数
-    // 必须是 LazyColumn 自身的 LazyListState,否则手势判定错位)
-    val listState = rememberLazyListState()
-    val pullState = rememberPullToRefreshState(isRefreshing = refreshing)
+    // M24 瀑布流:staggered grid state(下拉刷新手势到顶判定 + 指示器拉距;remember 恒稳定实例,
+    // 手势 key 依赖)。官方 pullToRefreshItem 只挂 LazyListScope 挂不上 staggered grid,
+    // 下拉刷新自绘(AppStaggeredPullRefresh 被动观察器 + 悬浮胶囊指示器)
+    val gridState = rememberLazyStaggeredGridState()
+    val pullPx = remember { mutableStateOf(0f) } // 逐帧拉距 px(指示器消费;独立组件读,页面不重组)
+    val pullThresholdPx = rememberPullRefreshThresholdPx()
 
     // 拉首页(beforeId=0):load 进页 / 下拉刷新共用;成功清空重填,失败置 loadFailed(刷新静默)。
     // 回 ok 供下拉刷新分支做最短驻留与失败 toast;loadFailed 仅在列表为空时才置——
@@ -298,26 +314,37 @@ internal fun MomentPage(pager: Pager) {
             AppSubPageHeader("我们的相册", "每一帧都值得收藏", onBack = {
                 pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
             })
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                state = listState,
+            // M24 瀑布流:LazyVerticalStaggeredGrid 双列(替代原 LazyColumn+chunked(2) Row 自排
+            // ——图块 140dp 定高不随图比例,用户要求瀑布流错落)。⚠ 2.29 签名无 reverseLayout/
+            // flingBehavior 参数(源码锤实被注释),勿按 Jetpack 新版文档补写
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(2),
+                modifier = Modifier.weight(1f).fillMaxWidth()
+                    // 下拉刷新自绘(被动观察器,见 AppStaggeredPullRefresh;拉距逐帧上报指示器,
+                    // 松手越阈走 launchPullRefresh 最短驻留+失败 toast 单源)
+                    .staggeredPullRefresh(
+                        gridState,
+                        refreshing = { refreshing },
+                        onPull = { pullPx.value = it },
+                        onRelease = {
+                            // ⚠ launchPullRefresh 末参是 failToast:String,trailing lambda 会错配到它
+                            // ——onRefresh 必须第 4 位显式传(编译器已锤实)
+                            launchPullRefresh(scope, { refreshing = it }, pager, { fetchFirst() })
+                        },
+                    ),
+                state = gridState,
+                // 双列间距统一收口:横向 contentPadding + 纵向 itemSpacing(原 chunked Row 的
+                // horizontal=PageHPadding/vertical=6 双份/Spacer(12) 等价迁移);卡片本身不再带
+                // 水平 padding
+                contentPadding = PaddingValues(horizontal = AppTheme.PageHPadding),
+                verticalItemSpacing = 12.dp,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 // 浮层(发布/大图预览)开着时关列表滚动:遮罩 clickable 不吃拖拽,
                 // 背景列表原生滚动仍收事件(MinePage/MoodPage 同款,2026-10-17 真机实证)
                 userScrollEnabled = !showAdd && preview == null,
             ) {
-                // 下拉刷新(官方 pullToRefreshItem 须为首个 item,ChatPage 先例):重拉首页。
-                // 最短驻留 + 失败 toast 已收口在 AppPullRefreshItem(components,三页单源,
-                // REFRESH_MIN_VISIBLE_MS=600L 同常数;成功不 toast,数据自己会更新,肉眼可辨)
-                AppPullRefreshItem(
-                    pullState = pullState,
-                    listState = listState,
-                    scope = scope,
-                    setRefreshing = { refreshing = it },
-                    pager = pager,
-                    onRefresh = { fetchFirst() },
-                )
                 when {
-                    loading -> item {
+                    loading -> item(key = "loading", span = StaggeredGridItemSpan.FullLine) {
                         // 三态件收编 components.AppLoading/AppLoadFailed(mood 域 Timeline
                         // 同款原件原样迁入,视觉逐字一致);外层 48dp 垫 Box 保留,叠加几何不变
                         Box(
@@ -325,13 +352,13 @@ internal fun MomentPage(pager: Pager) {
                             contentAlignment = Alignment.Center,
                         ) { AppLoading() }
                     }
-                    loadFailed -> item {
+                    loadFailed -> item(key = "failed", span = StaggeredGridItemSpan.FullLine) {
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
                             contentAlignment = Alignment.Center,
                         ) { AppLoadFailed { load() } }
                     }
-                    moments.isEmpty() -> item {
+                    moments.isEmpty() -> item(key = "empty", span = StaggeredGridItemSpan.FullLine) {
                         // 空态收编 components.AppEmptyHint(56dp brandStart 10% 圆 + Heart 26dp +
                         // 14sp 标题 + 11sp 副文案,与原件逐字一致,iconSize 26 显式传参)
                         AppEmptyHint(
@@ -343,36 +370,17 @@ internal fun MomentPage(pager: Pager) {
                         )
                     }
                     else -> {
-                        // 双列自排:chunked(2) Row(CheckinPage 日历同款);头插/删除按整行重排,量级可接受
-                        moments.chunked(2).forEach { rowItems ->
-                            item(
-                                key = "moment-${rowItems.first().id}",
-                                contentType = "momentRow", // 行同构,与空态/加载更多脚项区分复用池(M18 收口)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth()
-                                        .padding(horizontal = AppTheme.PageHPadding, vertical = 6.dp),
-                                ) {
-                                    MomentCard(
-                                        info = rowItems[0],
-                                        modifier = Modifier.weight(1f),
-                                        onClick = { preview = rowItems[0] },
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    if (rowItems.size > 1) {
-                                        MomentCard(
-                                            info = rowItems[1],
-                                            modifier = Modifier.weight(1f),
-                                            onClick = { preview = rowItems[1] },
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.weight(1f)) // 奇数尾行补位
-                                    }
-                                }
-                            }
+                        // 瀑布流卡片:高度随首图压缩后宽高比自适应(imageWidth/Height 0=旧数据
+                        // → MomentCard 内降级 140dp 定高);key+contentType 复用池(铁律 10⑥)
+                        items(
+                            moments,
+                            key = { it.id },
+                            contentType = { "momentCard" },
+                        ) { info ->
+                            MomentCard(info, onClick = { preview = info })
                         }
                         if (hasMore) {
-                            item(key = "load-more") {
+                            item(key = "load-more", span = StaggeredGridItemSpan.FullLine) {
                                 // 胶囊三层写法(铁律 14/15,M12 三轮定稿,2026-10-17 真机反馈同源:
                                 // 背景直挂 Text 落原生 TextView 块,文字 gravity 失控在胶囊内偏移
                                 // =「边距对齐似乎有问题」):外层 Box 容器居中 → 内层 Box 载
@@ -402,9 +410,21 @@ internal fun MomentPage(pager: Pager) {
                         }
                     }
                 }
-                item(key = "bottom-safe") { Spacer(modifier = Modifier.height(90.dp + navBarSafePaddingDp())) }
+                item(key = "bottom-safe", span = StaggeredGridItemSpan.FullLine) {
+                    Spacer(modifier = Modifier.height(90.dp + navBarSafePaddingDp()))
+                }
             }
+
         }
+
+        // M24 下拉刷新悬浮指示胶囊(挂根 Box TopCenter、Column 之外——Column 内会占布局空间
+        // 且无 BoxScope.align;独立 @Composable=重组边界,逐帧下拉只重组指示器不传页)
+        StaggeredPullIndicator(
+            pullPx = pullPx,
+            refreshing = refreshing,
+            thresholdPx = pullThresholdPx,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+        )
 
         // 右下 FAB 新增(浮层打开时被最后组合的浮层覆盖,不可误触;AnniversaryPage 同款)
         AppIconButton(
@@ -456,11 +476,12 @@ internal fun MomentPage(pager: Pager) {
 }
 
 /**
- * 单卡:图块统一 140dp 全宽 Crop(浅灰底常驻充当加载占位),多图右上「N张」黑胶囊角标
- * (三层胶囊写法铁律 14/15;全部图进大图预览横滑——三列迷你九宫格半宽卡内 cell 过小,
+ * 单卡:图块高度 M24 起随首图压缩后宽高比自适应(imageWidth/Height>0 → aspectRatio,瀑布流
+ * 错落;0=旧数据降级 140dp 全宽 Crop 现状,浅灰底常驻充当加载占位),多图右上「N张」黑胶囊
+ * 角标(三层胶囊写法铁律 14/15;全部图进大图预览横滑——三列迷你九宫格半宽卡内 cell 过小,
  * 2026-10-17 真机反馈二轮弃用)+ 配文(空串不显,maxLines=2)+ 我/TA 与时间 + 纯展示红心
  * (不可点,点赞入口在预览浮层)。「我」= 主题色,「TA」= 暖橙(CheckinPage PartnerRingDot
- * 同款语义色);background+clickable 同节点(铁律⑤)。行高仅随配文有无变化,双列更整齐
+ * 同款语义色);background+clickable 同节点(铁律⑤)
  */
 @Composable
 private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick: () -> Unit) {
@@ -474,7 +495,16 @@ private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick:
     ) {
         Box(
             modifier = Modifier.fillMaxWidth()
-                .height(140.dp)
+                // M24 瀑布流:首图压缩后宽高比自适应(staggered grid fillMaxWidth 下由列宽推导
+                // 高度,测高无上限);0=未知(旧数据/老版 App)降级 140dp 定高(M9 现状);
+                // .then 分支挂高度 modifier,背景/圆角常驻同节点(铁律 7 不增删节点)
+                .then(
+                    if (info.imageWidth > 0 && info.imageHeight > 0) {
+                        Modifier.aspectRatio(info.imageWidth.toFloat() / info.imageHeight)
+                    } else {
+                        Modifier.height(140.dp)
+                    }
+                )
                 .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp)),
         ) {
             Image(
@@ -541,12 +571,18 @@ private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick:
     }
 }
 
+/** 已传图片落态(M24):服务端 URL + 压缩后宽高(EXIF 矫正,取自 uploadImage 回包顶层
+ *  width/height 键;0=未知——老服务端回包无此键)——create 时取首图组宽高供瀑布流比例 */
+private data class UploadedPhoto(val url: String, val width: Int, val height: Int)
+
 /**
  * MomentAddOverlay — 发布瞬间浮层(M15 多图:最多 9 张;独立页内根级挂载,一次性表单:成功即收,
  * AnniversaryAddOverlay 同款浮岛式键盘避让)。M15 真机反馈裁决「没上传不调接口,点击发布才是上传」:
  * 选图 FileModule.pickImages 仅回本地 file:// 副本(零压缩零上传零网络,原生落盘规避 content URI
  * 授权衰减),getUser 热身与逐张上传全部挪到发布时点——submit = 热身 → 串行 uploadImage
- * (进度「上传中 i/N」,uploadedMap 缓存已传 URL,失败重试跳过已传张)→ MomentApi.create 头插上报。
+ * (进度「上传中 i/N」,uploadedMap 缓存已传落态,失败重试跳过已传张)→ MomentApi.create 头插上报。
+ * M24:uploadedMap 改存 UploadedPhoto(url+宽高)——回包顶层 width/height(M24,缺失=0)随 create
+ * 传首图组,服务端落库端上瀑布流按比例渲染。
  * 取消选图(code=1)静默不 toast;getModule=null 渐进降级 toast
  */
 @Composable
@@ -559,9 +595,10 @@ private fun MomentAddOverlay(
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val localUris = remember { mutableStateListOf<String>() } // 待发本地图(file:// 原生落盘副本,发布时才上传)
-    // 已传缓存(路径→服务端 URL,跨 submit 存活):发布失败重试跳过已传张不重复产服务端文件;
-    // 重选同图会落新文件新路径(不命中缓存重新上传,可接受)。删除缩略图不必清(不在 localUris 即不参与)
-    val uploadedMap = remember { mutableMapOf<String, String>() }
+    // 已传缓存(路径→UploadedPhoto,跨 submit 存活):发布失败重试跳过已传张不重复产服务端
+    // 文件;重选同图会落新文件新路径(不命中缓存重新上传,可接受)。删除缩略图不必清
+    // (不在 localUris 即不参与)。M24 值含压缩后宽高(瀑布流比例)
+    val uploadedMap = remember { mutableMapOf<String, UploadedPhoto>() }
     var draft by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }
     // 发布进度文案(空串 = 空闲):「上传中 i/N…」/「发布中…」,发布钮据此显态禁点
@@ -644,13 +681,13 @@ private fun MomentAddOverlay(
             for ((index, uri) in localUris.withIndex()) {
                 if (uploadedMap.containsKey(uri)) continue // 重选同图防重传(同 URI 复用已传 URL)
                 publishStep = "上传中 ${index + 1}/${localUris.size}…"
-                var fileUrl: String? = null
+                var uploaded: UploadedPhoto? = null
                 try {
                     val module = pager.getModule<FileModule>(FileModule.MODULE_NAME)
                     if (module == null) {
                         failMsg = "当前端暂不支持上传照片"
                     } else {
-                        fileUrl = suspendCoroutine { cont ->
+                        uploaded = suspendCoroutine { cont ->
                             module.uploadImage(
                                 ApiConfig.url(pager, "/infra/file/upload"),
                                 SessionStore.accessToken,
@@ -661,7 +698,14 @@ private fun MomentAddOverlay(
                                 val code = result?.optInt("code", -1) ?: -1
                                 val data = result?.optString("data").orEmpty()
                                 if (code == 0 && data.isNotEmpty()) {
-                                    cont.resume(data)
+                                    // M24:回包顶层 width/height(M24 键,缺失=0——老服务端兼容)
+                                    cont.resume(
+                                        UploadedPhoto(
+                                            url = data,
+                                            width = result?.optInt("width", 0) ?: 0,
+                                            height = result?.optInt("height", 0) ?: 0,
+                                        ),
+                                    )
                                 } else {
                                     result?.optString("msg")?.takeIf { it.isNotEmpty() }?.let { failMsg = it }
                                     cont.resume(null)
@@ -672,17 +716,25 @@ private fun MomentAddOverlay(
                 } catch (_: Exception) {
                     null
                 }
-                if (fileUrl == null) {
+                if (uploaded == null) {
                     if (failMsg.isEmpty()) failMsg = "上传失败,请重试"
                     publishing = false
                     publishStep = ""
                     toastCouple(pager, failMsg)
                     return@launch
                 }
-                uploadedMap[uri] = fileUrl
+                uploadedMap[uri] = uploaded
             }
             publishStep = "发布中…"
-            val result = MomentApi.create(pager, localUris.mapNotNull { uploadedMap[it] }, draft.trim())
+            // M24:create 附首图压缩后宽高(瀑布流比例;首图未传/未知传 0,服务端落 0 端上降级定高)
+            val firstPhoto = localUris.firstOrNull()?.let { uploadedMap[it] }
+            val result = MomentApi.create(
+                pager,
+                localUris.mapNotNull { uploadedMap[it]?.url },
+                draft.trim(),
+                firstPhoto?.width ?: 0,
+                firstPhoto?.height ?: 0,
+            )
             publishing = false
             publishStep = ""
             if (result is ApiResult.Ok) {

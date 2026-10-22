@@ -68,6 +68,19 @@ public class LoveMomentDO extends BaseDO {
      */
     private String imageUrls;
     /**
+     * 首图压缩后宽（px，M24）
+     *
+     * 端上 Glide 压缩（centerInside + EXIF 自动矫正）后 Bitmap 的实际宽，随发布请求透传落库；
+     * 0 = 未知（存量行 / 老版 App）→ 端上瀑布流卡片降级 140dp 定高；不校验范围
+     */
+    private Integer imageWidth;
+    /**
+     * 首图压缩后高（px，M24）
+     *
+     * 语义同 imageWidth（首图 = imageUrls[0] = image_url 冗余列所指那张）
+     */
+    private Integer imageHeight;
+    /**
      * 配文（可选，≤64 字，DEFAULT ''）
      */
     private String text;

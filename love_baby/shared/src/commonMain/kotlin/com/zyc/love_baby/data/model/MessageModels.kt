@@ -16,7 +16,8 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
  *  - ⚠ send-wishes 快照式(§5.2):wishKey/text/color/icon 四字段整体入 love_message,服务端不校验
  *    wish 归属(无 wish 实体,文案字典留端上 §7.4),两设备还原靠快照字段而非字典版本
  *  - id/senderId 一律 String(§5.1,同 CoupleModels 惯例:optString 经 JSON.toString 对数字值回字符串);
- *    kind Int(1 文本悄悄话/2 心愿消息/3 图片消息,比对常量 KIND_TEXT/KIND_WISH/KIND_IMAGE,
+ *    kind Int(1 文本悄悄话/2 心愿消息/3 图片消息/4 语音/5 视频/6 贴纸/7 自定义卡片,M23 补 4-7,
+ *    比对常量 KIND_TEXT/KIND_WISH/KIND_IMAGE/KIND_VOICE/KIND_VIDEO/KIND_STICKER/KIND_CARD,
  *    渲染分支留 Store 层);
  *    wishKey/color/icon 可空,皆以空串表示缺省(CoupleModels 同款惯例),color 为 hex、icon 为 icon name
  *    字符串——Color/AppIconType 不可 JSON 序列化(§7.6 铁律⑥),映射留 Store 层;
@@ -55,6 +56,41 @@ internal data class MessageSendImageReq(val imageUrl: String) {
         .put("imageUrl", imageUrl)
 }
 
+/** 发语音消息(message/send-voice,kind=4,M23):服务端组装 content JSON 快照 {"url","dur"}(dur=秒) */
+internal data class MessageSendVoiceReq(val voiceUrl: String, val duration: Int) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("voiceUrl", voiceUrl)
+        .put("duration", duration)
+}
+
+/** 发视频消息(message/send-video,kind=5,M23):content 快照 {"url","cover","dur"},cover 可空串 */
+internal data class MessageSendVideoReq(val videoUrl: String, val coverUrl: String, val duration: Int) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("videoUrl", videoUrl)
+        .put("coverUrl", coverUrl)
+        .put("duration", duration)
+}
+
+/** 发贴纸消息(message/send-sticker,kind=6,M23):content = 贴纸 key 明文(快照式同 wishKey) */
+internal data class MessageSendStickerReq(val stickerKey: String) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("stickerKey", stickerKey)
+}
+
+/** 发自定义卡片消息(message/send-card,kind=7,M23):content 快照 {"type","title","sub","icon"},sub/icon 可空串 */
+internal data class MessageSendCardReq(
+    val cardType: String,
+    val title: String,
+    val sub: String,
+    val icon: String,
+) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("cardType", cardType)
+        .put("title", title)
+        .put("sub", sub)
+        .put("icon", icon)
+}
+
 /** 标记已读(message/read,M11):lastMessageId = 已读到的最大消息 id(服务端 GREATEST 只进不退;String 传 §5.1) */
 internal data class MessageReadReq(val lastMessageId: String) {
     fun toJson(): JSONObject = JSONObject()
@@ -85,13 +121,33 @@ internal data class MessageInfo(
     val createTime: Long,
     val recalled: Boolean = false,
 ) {
+    /**
+     * 序列化为缓存 JSON 对象(M23 本地缓存依赖,与 from() 字段对称:全字段写全,
+     * 缺省值显式落盘,防跨版本缓存缺字段解析出脏缺省)
+     */
+    fun toJson(): JSONObject = JSONObject()
+        .put("id", id)
+        .put("senderId", senderId)
+        .put("kind", kind)
+        .put("content", content)
+        .put("wishKey", wishKey)
+        .put("color", color)
+        .put("icon", icon)
+        .put("createTime", createTime)
+        .put("recalled", recalled)
+
     companion object {
 
-        /** kind 值域(§4 love_message.kind:1 文本悄悄话 / 2 心愿消息 / 3 图片消息);
+        /** kind 值域(§4 love_message.kind:1 文本悄悄话 / 2 心愿消息 / 3 图片消息 /
+         *  4 语音 / 5 视频 / 6 贴纸 / 7 自定义卡片,M23 补 4-7);
          *  比对常量,渲染枚举映射留 Store 层 */
         const val KIND_TEXT = 1
         const val KIND_WISH = 2
         const val KIND_IMAGE = 3
+        const val KIND_VOICE = 4
+        const val KIND_VIDEO = 5
+        const val KIND_STICKER = 6
+        const val KIND_CARD = 7
 
         /** id 为空判无效条目返回 null(listFrom 逐条跳过,不整体失败) */
         fun from(data: JSONObject?): MessageInfo? {
@@ -110,6 +166,10 @@ internal data class MessageInfo(
                 recalled = data.optBoolean("recalled", false),
             )
         }
+
+        /** MessageInfo 列表 → JSONArray(缓存 envelope msgs 数组载体,M23;条目无效不拦,from() 读回时兜底跳过) */
+        fun listToJson(list: List<MessageInfo>): JSONArray =
+            JSONArray().apply { list.forEach { put(it.toJson()) } }
 
         /**
          * 从 CommonResult.data 数组解析(数组形态经 HttpClient 的 Ok.dataArray 携带,§5.2 message/list)。
