@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import com.tencent.kuikly.compose.BackHandler
 import com.tencent.kuikly.compose.coil3.rememberAsyncImagePainter
 import com.tencent.kuikly.compose.foundation.Image
 import com.tencent.kuikly.compose.foundation.background
@@ -1205,6 +1206,10 @@ private fun ChatImagePreviewBar(
  */
 @Composable
 internal fun ChatImagePreviewOverlay(url: String, onDismiss: () -> Unit) {
+    // 返回键关闭浮层(2026-10-22 浮层返回键接线):BackHandler 组合期注册/离场注销,浮层由
+    // MainPager 按状态条件组合,关闭即注销,宿主返回恢复双击退出语义(Kuikly2.29 返回链路:
+    // Activity → delegator.onBackPressed 同步问 consumed → Pager 分发栈顶 BackHandler)
+    BackHandler { onDismiss() }
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.9f))
@@ -1233,6 +1238,8 @@ internal fun ChatRecallConfirmOverlay(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
+    // 返回键关闭浮层(同 ChatImagePreviewOverlay):提交中不关,与灰幕点击同闸
+    BackHandler { if (!submitting) onDismiss() }
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.45f))

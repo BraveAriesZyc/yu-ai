@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.tencent.kuikly.compose.BackHandler
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
@@ -338,6 +339,8 @@ private const val APP_VERSION_NAME = "1.0.0"
  */
 @Composable
 internal fun MineAboutOverlay(onDismiss: () -> Unit) {
+    // 返回键关闭浮层(2026-10-22 浮层返回键接线,同 ChatImagePreviewOverlay)
+    BackHandler { onDismiss() }
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.45f))

@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.tencent.kuikly.compose.BackHandler
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
@@ -100,6 +101,9 @@ internal fun MoodOptionManageOverlay(
         // 卸载时树中已无持焦视图
         pager.setTimeout(0) { onDismiss() }
     }
+
+    // 返回键关闭浮层(2026-10-22 浮层返回键接线):走灰幕同款 dismiss(清焦+迟一拍卸载,铁律 16)
+    BackHandler { dismiss() }
 
     fun delete(id: String) {
         // 单飞写:增删同时在飞会让回滚快照互相踩,一次只放一个写请求

@@ -1,6 +1,7 @@
 package com.zyc.love_baby.components
 
 import androidx.compose.runtime.Composable
+import com.tencent.kuikly.compose.BackHandler
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Box
@@ -44,6 +45,9 @@ fun AppConfirmOverlay(
     busy: Boolean = false,
     busyText: String = "删除中…",
 ) {
+    // 返回键关闭浮层(2026-10-22 浮层返回键接线):busy(提交在飞)不关,与灰幕点击同闸;
+    // 组合期注册/离场注销,调用方按状态条件组合时天然只在浮层开着时拦截返回
+    BackHandler { if (!busy) onDismiss() }
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = 0.45f))

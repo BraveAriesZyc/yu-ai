@@ -53,20 +53,28 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
             }
         }
 
-    // 双击返回退出(2026-10-17 真机反馈:主界面误触返回手势直接退 App 太生硬):仅根页面
-    // (main)启用本 callback 接管返回——首次提示「再按一次退出」,2s 内再次返回才 finish;
-    // 二级页(每个 @Page 经 KRRouterAdapter 独立起一个 KuiklyRenderActivity 实例)callback
-    // 不启用,系统默认出栈行为不变
+    // 返回键统一收口(2026-10-17 双击退出 + 2026-10-22 浮层返回关闭):callback 常开三段路由——
+    // ① 先问 Kuikly 侧(delegator.onBackPressed:发 onBackPressed 事件进 common 层再读回 consumed;
+    //    框架对该事件强制同步发送 innerSyncSendEvent,返回前 common 侧必已写好标记,非陈旧值):
+    //    consumed = 页内有 BackHandler(全屏浮层)注册,返回键已用于关浮层,宿主直接放手;
+    // ② 未消费且 main 页:双击退出窗口,2s 内再次返回才 finish(根 Activity finish = 退出任务);
+    // ③ 未消费且二级页(每个 @Page 经 KRRouterAdapter 独立起一个 KuiklyRenderActivity 实例):
+    //    finish() = 与系统默认出栈行为一致
     private var lastBackPressAt = 0L
 
-    private val backToExitCallback = object : OnBackPressedCallback(false) {
+    private val backToExitCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            val now = System.currentTimeMillis()
-            if (now - lastBackPressAt < EXIT_INTERVAL_MS) {
-                finish() // 根 Activity finish = 退出任务(与原「返回即退」终态一致)
+            if (kuiklyRenderViewDelegator.onBackPressed()) return
+            if (pageName == PAGE_MAIN) {
+                val now = System.currentTimeMillis()
+                if (now - lastBackPressAt < EXIT_INTERVAL_MS) {
+                    finish() // 根 Activity finish = 退出任务(与原「返回即退」终态一致)
+                } else {
+                    lastBackPressAt = now
+                    Toast.makeText(this@KuiklyRenderActivity, "再按一次退出", Toast.LENGTH_SHORT).show()
+                }
             } else {
-                lastBackPressAt = now
-                Toast.makeText(this@KuiklyRenderActivity, "再按一次退出", Toast.LENGTH_SHORT).show()
+                finish() // 二级页出栈(Kuikly 侧未消费 = 页内无浮层接管)
             }
         }
     }
@@ -85,7 +93,6 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         loadingView = findViewById(R.id.hr_loading)
         errorView = findViewById(R.id.hr_error)
         onBackPressedDispatcher.addCallback(this, backToExitCallback)
-        backToExitCallback.isEnabled = pageName == PAGE_MAIN
         maybeRequestNotificationPermission(savedInstanceState)
         kuiklyRenderViewDelegator.onAttach(hrContainerView, "", pageName, createPageData())
     }
