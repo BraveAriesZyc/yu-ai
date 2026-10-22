@@ -1,0 +1,7 @@
+# ─── Kuikly AI skills(2026-10-22 接入 Tencent-TDS/KuiklyUI-AI)───
+# skill 知识库自动克隆的官方仓库(约 113MB,可随时删除重建),勿提交
+.agents/skills/*/references/KuiklyUI/
+.agents/skills/*/scripts/.last-update
+# .claude/skills 为 npx skills 生成的符号链接(Windows 检出不可靠),
+# 换机器后重新执行 `npx skills add Tencent-TDS/KuiklyUI-AI/skills` 重建
+.claude/skills/

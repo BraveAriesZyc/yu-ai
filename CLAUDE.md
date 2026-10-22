@@ -21,13 +21,13 @@
 ```
 
 - 三端共用一套后端；后端以 `controller/admin`（admin-api，供管理后台）与 `controller/app`（app-api，供 App）**双通道**区分调用方。
-- 后端改接口时，同步检查对应前端的 api 封装层（web 在 `apps/*/src/api/`，App 的网络层在规划中的 `love_baby/shared/network/`）。
+- 后端改接口时，同步检查对应前端的 api 封装层（web 在 `apps/*/src/api/`，App 的网络层在 `love_baby/shared/network/`，已建成：HttpClient + 各域 Api 对象）。
 
 ---
 
 ## 1. love_baby/ — Kuikly 跨端客户端（C 端）
 
-**定位**：一码多端（Android / iOS / 鸿蒙 / H5 / 小程序）的情侣互动 App，已有首页 / 待办 / 心情 / 悄悄话 / 我的五大页。
+**定位**：一码多端（Android / iOS / 鸿蒙 / H5 / 小程序）的情侣互动 App。已有首页 / 待办 / 心情 / 悄悄话 / 我的五大 Tab 页 + 登录注册 / 情侣绑定 / 资料 / 纪念日 / 打卡 / 相册 / 恋爱清单 / 情话与灵感 / 权限管理等共 **15 个业务域**（`features/` 下 96 个 Kotlin 文件，已对接后端 app-api）。
 
 **技术栈**：腾讯 Kuikly `2.29.0`（KMP + Compose DSL）、Kotlin `2.1.21`、AGP `8.5.2` + Gradle `8.14.5` + JDK 17；H5 产物 `nativevue2.js` 由子目录 `static_server/`（Node/Koa）托管。
 
@@ -45,9 +45,9 @@ components/（AppTheme / ThemeStore 主题系统、AppIcons、通用组件库）
 
 原生扩展：各端宿主壳（androidApp / iosApp / ohosApp）注册 Module，跨端接口声明放 `base/`。
 
-**后续开发套路（架构级）**：新页面进 `features/<域>/`，跨页共享状态进 `state/`，可复用 UI 进 `components/`（并同步补组件画廊 demo）。规划中的 `data/`（kotlinx.serialization 数据模型 + Repository）与 `network/`（网络封装）尚未建立——建好后在此对接后端 app-api。
+**后续开发套路（架构级）**：新页面进 `features/<域>/`，跨页共享状态进 `state/`，可复用 UI 进 `components/`（并同步补组件画廊 demo）。`data/`（kotlinx.serialization 数据模型，10 文件）与 `network/`（HttpClient 统一拆包/401 单飞刷新 + 各域 Api 对象）**已建成**——新接口照既有 Api 对象模式扩展即可，无需再自建网络层。
 
-➡️ **详细开发手册：[love_baby/CLAUDE.md](love_baby/CLAUDE.md)（已完备，含 Kuikly 2.29 渲染层大量踩坑铁律，写代码前必读）**
+➡️ **详细开发手册：[love_baby/CLAUDE.md](love_baby/CLAUDE.md)（已完备，含 Kuikly 2.29 渲染层大量踩坑铁律，写代码前必读；已接入官方 Kuikly AI skills——根 `.agents/skills/` 13 个，更新 `npx skills update Tencent-TDS/KuiklyUI-AI/skills`，用法见该手册「Kuikly AI 知识库」节）**
 
 ---
 
