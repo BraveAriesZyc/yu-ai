@@ -1,0 +1,9 @@
+<resources>
+	<!-- Android 12+ 系统 splash 背景独立于 windowBackground(默认走主题 colorBackground=白,
+		 2026-10-17 真机反馈「还是白屏」残留根因),显式对齐主题底色;启动图标居中同底色,
+		 与 Kuikly 首帧页面背景三级同色无缝 -->
+	<style name="Theme.LoveBaby" parent="Theme.AppCompat.NoActionBar">
+		<item name="android:windowBackground">@color/splash_bg</item>
+		<item name="android:windowSplashScreenBackground">@color/splash_bg</item>
+	</style>
+</resources>

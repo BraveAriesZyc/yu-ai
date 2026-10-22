@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+	<uses-permission android:name="android.permission.INTERNET"/>
+	<!-- 后台消息通知(M21):targetSdk 33(M22)起为运行时权限,新装默认关——由应用打开时主动
+	     请求(KuiklyRenderActivity 主页 onCreate)与权限管理页(「我的」页入口)双通道申请;
+	     未授权场景 KRNotificationModule 静默降级,红点兜底 -->
+	<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+	<application
+			android:name=".KRApplication"
+			android:allowBackup="false"
+			android:supportsRtl="true"
+			android:icon="@mipmap/ic_launcher"
+			android:roundIcon="@mipmap/ic_launcher_round"
+			android:label="予爱"
+			android:networkSecurityConfig="@xml/network_security_config"
+			android:theme="@style/Theme.LoveBaby">
+		<activity
+				android:name=".KuiklyRenderActivity"
+				android:exported="true">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN"/>
+				<category android:name="android.intent.category.LAUNCHER"/>
+			</intent-filter>
+		</activity>
+		<!-- 头像选图透明桥(KRFileModule 代收 onActivityResult):透明主题无感知,选完即 finish。
+		     ⚠ name 必须与类实际 package 一致(KRPickImageActivity 在根包 com.zyc.love_baby 非 module 子包) -->
+		<activity
+				android:name=".KRPickImageActivity"
+				android:exported="false"
+				android:theme="@style/Theme.KRPickImage"/>
+	</application>
+</manifest>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- 启动期背景色:取默认主题「蜜桃恋语」页面背景(与 shared ThemeStore.all[peach].bg 一致),
+		 冷启动系统 starting window / Activity window / 加载期容器三级同色,白屏变主题底色无缝衔接 -->
+	<color name="splash_bg">#FDF6F4</color>
+</resources>

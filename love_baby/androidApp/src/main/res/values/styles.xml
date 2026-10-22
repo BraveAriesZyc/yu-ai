@@ -1,0 +1,15 @@
+<resources>
+	<style name="AppTheme" parent="android:Theme.Material.NoActionBar"/>
+
+	<!-- 启动主题:windowBackground 用主题底色而非默认白,消冷启动白屏(2026-10-17 真机反馈);
+		 Android 12+ 系统 starting splash 的背景亦取自 windowBackground,图标 splash 同色 -->
+	<style name="Theme.LoveBaby" parent="Theme.AppCompat.NoActionBar">
+		<item name="android:windowBackground">@color/splash_bg</item>
+	</style>
+
+	<!-- 头像选图透明桥 Activity 主题:全透明窗口,主页面在选图系统 UI 下仍可见,无黑底闪帧 -->
+	<style name="Theme.KRPickImage" parent="Theme.AppCompat.NoActionBar">
+		<item name="android:windowIsTranslucent">true</item>
+		<item name="android:windowBackground">@android:color/transparent</item>
+	</style>
+</resources>
