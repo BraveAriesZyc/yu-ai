@@ -1,0 +1,22 @@
+{
+  "app": "ele",
+  "list": {
+    "ok": true,
+    "hasListTitle": true,
+    "pageOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/salary/month-record/page?pageNo=1&pageSize=20&status=10&year=2026",
+        "status": 200,
+        "kind": "page"
+      }
+    ]
+  },
+  "detail": {
+    "ok": true,
+    "detailOk": true,
+    "hasSummary": true,
+    "hasEmployeeGrid": true
+  },
+  "url": "http://127.0.0.1:5777/hrm/salary/history"
+}

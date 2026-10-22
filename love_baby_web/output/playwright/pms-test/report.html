@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>PMS Vue3 → Vben5 迁移测试报告</title>
+<style>
+  body { margin: 24px; font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f6f8; color: #222; }
+  h1 { font-size: 22px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 18px; }
+  .summary { display: inline-block; padding: 6px 14px; border-radius: 6px; font-weight: 600; }
+  .summary.ok { background: #e6f7e9; color: #1a7f37; }
+  section { background: #fff; border-radius: 8px; padding: 18px 22px; margin-bottom: 28px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  h2 { font-size: 17px; display: flex; align-items: center; gap: 10px; }
+  .badge { font-size: 12px; padding: 2px 10px; border-radius: 10px; }
+  .badge.ok { background: #e6f7e9; color: #1a7f37; }
+  .badge.bad { background: #fdecec; color: #c0392b; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 18px; }
+  th, td { border: 1px solid #e3e5e8; padding: 6px 10px; text-align: left; }
+  th { background: #f2f3f5; }
+  tr.pass td:nth-child(2) { color: #1a7f37; }
+  tr.fail td:nth-child(2) { color: #c0392b; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
+  figure { margin: 0; border: 1px solid #e3e5e8; border-radius: 6px; overflow: hidden; background: #fafafa; }
+  figure img { width: 100%; display: block; }
+  figcaption { font-size: 12px; color: #555; padding: 6px 10px; background: #f2f3f5; }
+</style>
+</head>
+<body>
+<h1>PMS Vue3 → Vben5 迁移测试报告</h1>
+<div class="meta">
+  生成时间：2026/9/3 13:44:47　|
+  测试范围：PMS（pm 项目管理 + kb 知识库）三端冒烟测试（登录、页面渲染、列表、详情、抽屉、弹窗、看板、目录树、图表）
+</div>
+<div class="summary ok">总计：57 项通过，0 项失败</div>
+
+  <section>
+    <h2>web-antdv-next (http://localhost:5999) <span class="badge ok">19 通过 / 0 失败</span></h2>
+    <table>
+      <thead><tr><th>测试项</th><th>结果</th><th>路径</th><th>备注</th></tr></thead>
+      <tbody><tr class="pass">
+        <td>00-登录</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>01-工作台</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/workbench</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>02-项目列表</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/list</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>03-项目详情-打开</td>
+        <td>✅ 通过</td>
+        <td>http://localhost:5999/pms/pm/project/detail/3?tabs=planning</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>04-项目详情-概况</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>05-项目详情-甘特图</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>06-工作项详情抽屉</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>07-项目模板</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/template</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>08-项目归档</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/archive</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>09-项目回收站</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/recycle</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>10-知识库列表</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/library</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>11-知识库文档中心</td>
+        <td>✅ 通过</td>
+        <td>http://localhost:5999/pms/kb/library/5</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>12-知识库模板</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/library-template</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>13-文档标签</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/label</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>14-我的收藏</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/collection</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>15-最近浏览</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/recent</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>16-文档搜索</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/search</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>17-知识库回收站</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/recycle</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>zz-页面JS错误</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr></tbody>
+    </table>
+    <h3>页面截图</h3>
+    <div class="shots"><figure>
+        <img src="antdv-next/01-工作台.png" alt="01-工作台" loading="lazy" />
+        <figcaption>01-工作台</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/02-项目列表.png" alt="02-项目列表" loading="lazy" />
+        <figcaption>02-项目列表</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/03-项目详情-任务.png" alt="03-项目详情-任务" loading="lazy" />
+        <figcaption>03-项目详情-任务</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/04-项目详情-概况.png" alt="04-项目详情-概况" loading="lazy" />
+        <figcaption>04-项目详情-概况</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/05-项目详情-甘特图.png" alt="05-项目详情-甘特图" loading="lazy" />
+        <figcaption>05-项目详情-甘特图</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/06-工作项详情抽屉.png" alt="06-工作项详情抽屉" loading="lazy" />
+        <figcaption>06-工作项详情抽屉</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/07-项目模板.png" alt="07-项目模板" loading="lazy" />
+        <figcaption>07-项目模板</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/08-项目归档.png" alt="08-项目归档" loading="lazy" />
+        <figcaption>08-项目归档</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/09-项目回收站.png" alt="09-项目回收站" loading="lazy" />
+        <figcaption>09-项目回收站</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/10-知识库列表.png" alt="10-知识库列表" loading="lazy" />
+        <figcaption>10-知识库列表</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/11-知识库文档中心.png" alt="11-知识库文档中心" loading="lazy" />
+        <figcaption>11-知识库文档中心</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/12-知识库模板.png" alt="12-知识库模板" loading="lazy" />
+        <figcaption>12-知识库模板</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/13-文档标签.png" alt="13-文档标签" loading="lazy" />
+        <figcaption>13-文档标签</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/14-我的收藏.png" alt="14-我的收藏" loading="lazy" />
+        <figcaption>14-我的收藏</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/15-最近浏览.png" alt="15-最近浏览" loading="lazy" />
+        <figcaption>15-最近浏览</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/16-文档搜索.png" alt="16-文档搜索" loading="lazy" />
+        <figcaption>16-文档搜索</figcaption>
+      </figure>
+<figure>
+        <img src="antdv-next/17-知识库回收站.png" alt="17-知识库回收站" loading="lazy" />
+        <figcaption>17-知识库回收站</figcaption>
+      </figure></div>
+  </section>
+  <section>
+    <h2>web-antd (http://localhost:5666) <span class="badge ok">19 通过 / 0 失败</span></h2>
+    <table>
+      <thead><tr><th>测试项</th><th>结果</th><th>路径</th><th>备注</th></tr></thead>
+      <tbody><tr class="pass">
+        <td>00-登录</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>01-工作台</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/workbench</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>02-项目列表</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/list</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>03-项目详情-打开</td>
+        <td>✅ 通过</td>
+        <td>http://localhost:5666/pms/pm/project/detail/3?tabs=planning</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>04-项目详情-概况</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>05-项目详情-甘特图</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>06-工作项详情抽屉</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>07-项目模板</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/template</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>08-项目归档</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/archive</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>09-项目回收站</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/recycle</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>10-知识库列表</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/library</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>11-知识库文档中心</td>
+        <td>✅ 通过</td>
+        <td>http://localhost:5666/pms/kb/library/5</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>12-知识库模板</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/library-template</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>13-文档标签</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/label</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>14-我的收藏</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/collection</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>15-最近浏览</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/recent</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>16-文档搜索</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/search</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>17-知识库回收站</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/recycle</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>zz-页面JS错误</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr></tbody>
+    </table>
+    <h3>页面截图</h3>
+    <div class="shots"><figure>
+        <img src="antd/01-工作台.png" alt="01-工作台" loading="lazy" />
+        <figcaption>01-工作台</figcaption>
+      </figure>
+<figure>
+        <img src="antd/02-项目列表.png" alt="02-项目列表" loading="lazy" />
+        <figcaption>02-项目列表</figcaption>
+      </figure>
+<figure>
+        <img src="antd/03-项目详情-任务.png" alt="03-项目详情-任务" loading="lazy" />
+        <figcaption>03-项目详情-任务</figcaption>
+      </figure>
+<figure>
+        <img src="antd/04-项目详情-概况.png" alt="04-项目详情-概况" loading="lazy" />
+        <figcaption>04-项目详情-概况</figcaption>
+      </figure>
+<figure>
+        <img src="antd/05-项目详情-甘特图.png" alt="05-项目详情-甘特图" loading="lazy" />
+        <figcaption>05-项目详情-甘特图</figcaption>
+      </figure>
+<figure>
+        <img src="antd/06-工作项详情抽屉.png" alt="06-工作项详情抽屉" loading="lazy" />
+        <figcaption>06-工作项详情抽屉</figcaption>
+      </figure>
+<figure>
+        <img src="antd/07-项目模板.png" alt="07-项目模板" loading="lazy" />
+        <figcaption>07-项目模板</figcaption>
+      </figure>
+<figure>
+        <img src="antd/08-项目归档.png" alt="08-项目归档" loading="lazy" />
+        <figcaption>08-项目归档</figcaption>
+      </figure>
+<figure>
+        <img src="antd/09-项目回收站.png" alt="09-项目回收站" loading="lazy" />
+        <figcaption>09-项目回收站</figcaption>
+      </figure>
+<figure>
+        <img src="antd/10-知识库列表.png" alt="10-知识库列表" loading="lazy" />
+        <figcaption>10-知识库列表</figcaption>
+      </figure>
+<figure>
+        <img src="antd/11-知识库文档中心.png" alt="11-知识库文档中心" loading="lazy" />
+        <figcaption>11-知识库文档中心</figcaption>
+      </figure>
+<figure>
+        <img src="antd/12-知识库模板.png" alt="12-知识库模板" loading="lazy" />
+        <figcaption>12-知识库模板</figcaption>
+      </figure>
+<figure>
+        <img src="antd/13-文档标签.png" alt="13-文档标签" loading="lazy" />
+        <figcaption>13-文档标签</figcaption>
+      </figure>
+<figure>
+        <img src="antd/14-我的收藏.png" alt="14-我的收藏" loading="lazy" />
+        <figcaption>14-我的收藏</figcaption>
+      </figure>
+<figure>
+        <img src="antd/15-最近浏览.png" alt="15-最近浏览" loading="lazy" />
+        <figcaption>15-最近浏览</figcaption>
+      </figure>
+<figure>
+        <img src="antd/16-文档搜索.png" alt="16-文档搜索" loading="lazy" />
+        <figcaption>16-文档搜索</figcaption>
+      </figure>
+<figure>
+        <img src="antd/17-知识库回收站.png" alt="17-知识库回收站" loading="lazy" />
+        <figcaption>17-知识库回收站</figcaption>
+      </figure></div>
+  </section>
+  <section>
+    <h2>web-ele (http://localhost:5777) <span class="badge ok">19 通过 / 0 失败</span></h2>
+    <table>
+      <thead><tr><th>测试项</th><th>结果</th><th>路径</th><th>备注</th></tr></thead>
+      <tbody><tr class="pass">
+        <td>00-登录</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>01-工作台</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/workbench</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>02-项目列表</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/list</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>03-项目详情-打开</td>
+        <td>✅ 通过</td>
+        <td>http://localhost:5777/pms/pm/project/detail/3?tabs=planning</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>04-项目详情-概况</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>05-项目详情-甘特图</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>06-工作项详情抽屉</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>07-项目模板</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/template</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>08-项目归档</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/archive</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>09-项目回收站</td>
+        <td>✅ 通过</td>
+        <td>/pms/pm/project/recycle</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>10-知识库列表</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/library</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>11-知识库文档中心</td>
+        <td>✅ 通过</td>
+        <td>http://localhost:5777/pms/kb/library/5</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>12-知识库模板</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/library-template</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>13-文档标签</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/label</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>14-我的收藏</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/collection</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>15-最近浏览</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/recent</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>16-文档搜索</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/search</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>17-知识库回收站</td>
+        <td>✅ 通过</td>
+        <td>/pms/kb/recycle</td>
+        <td></td>
+      </tr>
+<tr class="pass">
+        <td>zz-页面JS错误</td>
+        <td>✅ 通过</td>
+        <td></td>
+        <td></td>
+      </tr></tbody>
+    </table>
+    <h3>页面截图</h3>
+    <div class="shots"><figure>
+        <img src="ele/01-工作台.png" alt="01-工作台" loading="lazy" />
+        <figcaption>01-工作台</figcaption>
+      </figure>
+<figure>
+        <img src="ele/02-项目列表.png" alt="02-项目列表" loading="lazy" />
+        <figcaption>02-项目列表</figcaption>
+      </figure>
+<figure>
+        <img src="ele/03-项目详情-任务.png" alt="03-项目详情-任务" loading="lazy" />
+        <figcaption>03-项目详情-任务</figcaption>
+      </figure>
+<figure>
+        <img src="ele/04-项目详情-概况.png" alt="04-项目详情-概况" loading="lazy" />
+        <figcaption>04-项目详情-概况</figcaption>
+      </figure>
+<figure>
+        <img src="ele/05-项目详情-甘特图.png" alt="05-项目详情-甘特图" loading="lazy" />
+        <figcaption>05-项目详情-甘特图</figcaption>
+      </figure>
+<figure>
+        <img src="ele/06-工作项详情抽屉.png" alt="06-工作项详情抽屉" loading="lazy" />
+        <figcaption>06-工作项详情抽屉</figcaption>
+      </figure>
+<figure>
+        <img src="ele/07-项目模板.png" alt="07-项目模板" loading="lazy" />
+        <figcaption>07-项目模板</figcaption>
+      </figure>
+<figure>
+        <img src="ele/08-项目归档.png" alt="08-项目归档" loading="lazy" />
+        <figcaption>08-项目归档</figcaption>
+      </figure>
+<figure>
+        <img src="ele/09-项目回收站.png" alt="09-项目回收站" loading="lazy" />
+        <figcaption>09-项目回收站</figcaption>
+      </figure>
+<figure>
+        <img src="ele/10-知识库列表.png" alt="10-知识库列表" loading="lazy" />
+        <figcaption>10-知识库列表</figcaption>
+      </figure>
+<figure>
+        <img src="ele/11-知识库文档中心.png" alt="11-知识库文档中心" loading="lazy" />
+        <figcaption>11-知识库文档中心</figcaption>
+      </figure>
+<figure>
+        <img src="ele/12-知识库模板.png" alt="12-知识库模板" loading="lazy" />
+        <figcaption>12-知识库模板</figcaption>
+      </figure>
+<figure>
+        <img src="ele/13-文档标签.png" alt="13-文档标签" loading="lazy" />
+        <figcaption>13-文档标签</figcaption>
+      </figure>
+<figure>
+        <img src="ele/14-我的收藏.png" alt="14-我的收藏" loading="lazy" />
+        <figcaption>14-我的收藏</figcaption>
+      </figure>
+<figure>
+        <img src="ele/15-最近浏览.png" alt="15-最近浏览" loading="lazy" />
+        <figcaption>15-最近浏览</figcaption>
+      </figure>
+<figure>
+        <img src="ele/16-文档搜索.png" alt="16-文档搜索" loading="lazy" />
+        <figcaption>16-文档搜索</figcaption>
+      </figure>
+<figure>
+        <img src="ele/17-知识库回收站.png" alt="17-知识库回收站" loading="lazy" />
+        <figcaption>17-知识库回收站</figcaption>
+      </figure></div>
+  </section>
+</body>
+</html>

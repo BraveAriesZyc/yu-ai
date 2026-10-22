@@ -1,0 +1,54 @@
+[
+  {
+    "app": "antdv-next",
+    "status": "pass",
+    "demoOrderId": 217,
+    "imageSrcs": [
+      {
+        "alt": "芋道管理系统",
+        "src": "https://unpkg.com/@vbenjs/static-source@0.1.7/source/logo-v1.webp"
+      },
+      {
+        "alt": "芋道源码",
+        "src": "http://test.yudao.iocoder.cn/20260517/blob_1778998103688.png"
+      }
+    ],
+    "payOrderId": 575,
+    "qrCount": 2,
+    "submitCalls": [
+      {
+        "method": "POST",
+        "postData": "{\"id\":\"575\",\"channelCode\":\"wx_native\",\"returnUrl\":\"http://127.0.0.1:5999/pay/cashier?id=575\"}"
+      }
+    ],
+    "text": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n收银台\n请选择租户\n搜索\n⌘ K\n分析页\n收银台\n华为手机\n支付单号\n575\n\t\n商品标题\n华为手机\n\t\n商品内容\n\n\n支付金额\n￥0.01\n\t\n创建时间\n2026-06-26\n\t\n过期时间\n2026-06-26\n选择支付宝支付\n支付宝 PC 网站支付\n支付宝 Wap 网站支付\n支付宝 App 网站支付\n支付宝扫码支付\n支付宝条码支付\n选择微信支付\n微信公众号支付\n微信小程序支付\n微信 App 支付\n微信扫码支付\n微信条码支付\n选择其它支付\n钱包支付\n模拟支付\n请使用微信“扫一扫”扫码支付\n\n取 消"
+  },
+  {
+    "app": "ele",
+    "status": "pass",
+    "demoOrderId": 218,
+    "imageSrcs": [
+      {
+        "alt": "芋道管理系统",
+        "src": "https://unpkg.com/@vbenjs/static-source@0.1.7/source/logo-v1.webp"
+      },
+      {
+        "alt": "芋道源码",
+        "src": "http://test.yudao.iocoder.cn/20260517/blob_1778998103688.png"
+      },
+      {
+        "alt": "支付二维码",
+        "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAALa0lEQVR4AeydUXIbSQxD9fb+d9ZWnCgVYrNNU+yeac3AVbYMkw"
+      }
+    ],
+    "payOrderId": 576,
+    "qrCount": 1,
+    "submitCalls": [
+      {
+        "method": "POST",
+        "postData": "{\"id\":\"576\",\"channelCode\":\"wx_native\",\"returnUrl\":\"http://127.0.0.1:5777/pay/cashier?id=576\"}"
+      }
+    ],
+    "text": "芋道管理系统\n概览\n作者动态\nBoot 开发文档\nCloud 开发文档\n系统管理\n基础设施\n支付管理\n报表管理\n工作流程\n会员中心\n商城系统\n公众号管理\nCRM 系统\nERP 系统\nWMS 系统\nMES 系统\nAI 大模型\nIoT 物联网\nIM 即时通讯\n收银台\n请选择租户\n搜索\n⌘ K\n分析页\n收银台\n华为手机\n支付单号576\t商品标题华为手机\t商品内容\n支付金额￥0.01\t创建时间2026-06-26\t过期时间2026-06-26\n支付宝 PC 网站支付\n支付宝 Wap 网站支付\n支付宝 App 网站支付\n支付宝扫码支付\n支付宝条码支付\n微信公众号支付\n微信小程序支付\n微信 App 支付\n微信扫码支付\n微信条码支付\n钱包支付\n模拟支付\n请使用微信“扫一扫”扫码支付\n\n取消"
+  }
+]

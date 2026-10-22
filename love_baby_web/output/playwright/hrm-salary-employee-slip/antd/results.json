@@ -1,0 +1,6 @@
+{
+  "app": "antd",
+  "employeeInfo": null,
+  "slipSendRecord": null,
+  "error": "TimeoutError: page.goto: Timeout 60000ms exceeded.\nCall log:\n  - navigating to \"http://127.0.0.1:5666/auth/login\", waiting until \"domcontentloaded\"\n"
+}

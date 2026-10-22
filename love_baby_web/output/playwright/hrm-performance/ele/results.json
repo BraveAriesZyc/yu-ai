@@ -1,0 +1,50 @@
+{
+  "app": "ele",
+  "menus": {
+    "plan": {
+      "hasTitle": true,
+      "apiOk": true,
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/performance/plan/page?pageNo=1&pageSize=20&status=2",
+          "status": 200
+        }
+      ],
+      "ok": true
+    },
+    "assessment": {
+      "hasTitle": true,
+      "apiOk": true,
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/performance/assessment/archive-employee-page?pageNo=1&pageSize=20",
+          "status": 200
+        }
+      ],
+      "ok": true
+    },
+    "assessmentTemplate": {
+      "hasTitle": true,
+      "apiOk": true,
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/performance/assessment-template/page?pageNo=1&pageSize=20",
+          "status": 200
+        }
+      ],
+      "ok": true
+    },
+    "resultTemplate": {
+      "hasTitle": true,
+      "apiOk": true,
+      "apiHits": [
+        {
+          "url": "http://127.0.0.1:5777/admin-api/hrm/performance/result-template/page?pageNo=1&pageSize=20",
+          "status": 200
+        }
+      ],
+      "ok": true
+    }
+  },
+  "error": null
+}

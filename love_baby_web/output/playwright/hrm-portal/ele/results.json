@@ -1,0 +1,108 @@
+[
+  {
+    "menu": "home",
+    "pass": true,
+    "route": "/hrm/portal/home",
+    "apiOk": true,
+    "hintHits": ["Hi", "日历", "工作台"],
+    "redirectedToGuide": false,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/employee/get-bind-status",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/employee/get",
+        "status": 200
+      }
+    ]
+  },
+  {
+    "menu": "employee",
+    "pass": true,
+    "route": "/hrm/portal/employee",
+    "apiOk": true,
+    "hintHits": ["我的档案", "基本信息", "岗位信息"],
+    "redirectedToGuide": false,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/employee/get-bind-status",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/employee/get",
+        "status": 200
+      }
+    ]
+  },
+  {
+    "menu": "insurance",
+    "pass": true,
+    "route": "/hrm/portal/insurance",
+    "apiOk": true,
+    "hintHits": ["社保", "所属月份"],
+    "redirectedToGuide": false,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/insurance/record/list",
+        "status": 200
+      }
+    ]
+  },
+  {
+    "menu": "salarySlip",
+    "pass": true,
+    "route": "/hrm/portal/salary/slip",
+    "apiOk": true,
+    "hintHits": ["工资条", "按最近发放"],
+    "redirectedToGuide": false,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/salary/slip/list?orderType=1&order=1",
+        "status": 200
+      }
+    ]
+  },
+  {
+    "menu": "attendance",
+    "pass": true,
+    "route": "/hrm/portal/attendance/report",
+    "apiOk": true,
+    "hintHits": ["考勤报表", "应出勤天数", "请假"],
+    "redirectedToGuide": false,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/attendance/statistics/month-detail?year=2026&month=8",
+        "status": 200
+      }
+    ]
+  },
+  {
+    "menu": "performanceAssessment",
+    "pass": true,
+    "route": "/hrm/portal/performance/assessment",
+    "apiOk": true,
+    "hintHits": ["评分"],
+    "redirectedToGuide": false,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/performance/assessment/task-count",
+        "status": 200
+      }
+    ]
+  },
+  {
+    "menu": "performanceHistory",
+    "pass": true,
+    "route": "/hrm/portal/performance/history",
+    "apiOk": true,
+    "hintHits": ["考核名称", "绩效得分", "绩效等级"],
+    "redirectedToGuide": false,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/portal/performance/assessment/page?pageNo=1&pageSize=10&archived=true",
+        "status": 200
+      }
+    ]
+  }
+]

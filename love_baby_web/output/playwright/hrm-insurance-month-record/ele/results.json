@@ -1,0 +1,27 @@
+{
+  "app": "ele",
+  "list": {
+    "ok": true,
+    "hasListTitle": true,
+    "listOk": true,
+    "lastOk": true,
+    "apiHits": [
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/insurance/month-record/last",
+        "status": 200,
+        "kind": "last"
+      },
+      {
+        "url": "http://127.0.0.1:5777/admin-api/hrm/insurance/month-record/list?year=2026",
+        "status": 200,
+        "kind": "list"
+      }
+    ]
+  },
+  "detail": {
+    "ok": true,
+    "skipped": true,
+    "reason": "no month record row"
+  },
+  "url": "http://127.0.0.1:5777/hrm/insurance/month-record"
+}

@@ -1,0 +1,660 @@
+[
+  {
+    "app": "antdv-next",
+    "status": "blocked",
+    "actionButtonCount": 11,
+    "beforeHasPage": true,
+    "clicked": true,
+    "confirmed": false,
+    "loadingVisible": 0,
+    "popconfirmOpened": true,
+    "requests": [
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5999/admin-api/infra/file-config/page?pageNo=1&pageSize=20",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 11,
+            "list": [
+              {
+                "id": 35,
+                "name": "1",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "http://www.baidu.com",
+                  "domain": "http://www.xxx.com",
+                  "bucket": "1",
+                  "accessKey": "2",
+                  "accessSecret": "3",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": false,
+                  "region": "1"
+                },
+                "remark": "1",
+                "createTime": 1759440732000
+              },
+              {
+                "id": 34,
+                "name": "七牛云存储【私有】（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "s3.cn-south-1.qiniucs.com",
+                  "domain": "http://t151glocd.hn-bkt.clouddn.com",
+                  "bucket": "ruoyi-vue-pro-private",
+                  "accessKey": "3TvrJ70gl2Gt6IBe7_IZT1F6i_k0iMuRtyEv4EyS",
+                  "accessSecret": "wd0tbVBYlp0S-ihA8Qg2hPLncoP83wyrIq24OZuY",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": false,
+                  "region": null
+                },
+                "remark": "请换成你自己的密钥！！！",
+                "createTime": 1755490920000
+              },
+              {
+                "id": 30,
+                "name": "SFTP 存储（示例）",
+                "storage": 12,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.sftp.SftpFileClientConfig",
+                  "basePath": "/upload",
+                  "domain": "http://127.0.0.1:48081",
+                  "host": "127.0.0.1",
+                  "port": 2222,
+                  "username": "foo",
+                  "password": "pass"
+                },
+                "remark": "",
+                "createTime": 1746228850000
+              },
+              {
+                "id": 29,
+                "name": "本地存储（示例）",
+                "storage": 10,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.local.LocalFileClientConfig",
+                  "basePath": "/Users/yunai/tmp/file",
+                  "domain": "http://127.0.0.1:48081"
+                },
+                "remark": "mac/linux 使用 /，windows 使用 \\",
+                "createTime": 1746210345000
+              },
+              {
+                "id": 28,
+                "name": "MinIO 存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "http://127.0.0.1:9000",
+                  "domain": "http://127.0.0.1:9000/yudao",
+                  "bucket": "yudao",
+                  "accessKey": "admin",
+                  "accessSecret": "password",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731202990000
+              },
+              {
+                "id": 27,
+                "name": "华为云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "obs.cn-east-3.myhuaweicloud.com",
+                  "domain": "",
+                  "bucket": "yudao",
+                  "accessKey": "PVDONDEIOTW88LF8DC4U",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731201521000
+              },
+              {
+                "id": 26,
+                "name": "火山云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "tos-s3-cn-beijing.volces.com",
+                  "domain": null,
+                  "bucket": "yunai",
+                  "accessKey": "AKLTZjc3Zjc4MzZmMjU3NDk0ZTgxYmIyMmFkNTIwMDI1ZGE",
+                  "accessSecret": "X==",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731200202000
+              },
+              {
+                "id": 25,
+                "name": "阿里云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "oss-cn-beijing.aliyuncs.com",
+                  "domain": "http://ali-oss.iocoder.cn",
+                  "bucket": "yunai-aoteman",
+                  "accessKey": "LTAI5tEQLgnDyjh3WpNcdMKA",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731199628000
+              },
+              {
+                "id": 24,
+                "name": "腾讯云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "https://cos.ap-shanghai.myqcloud.com",
+                  "domain": "http://tengxun-oss.iocoder.cn",
+                  "bucket": "aoteman-1255880240",
+                  "accessKey": "AKIDAF6WSh1uiIjwqtrOsGSN3WryqTM6cTMt",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "请换成你的密钥！！！",
+                "createTime": 1731197002000
+              },
+              {
+                "id": 22,
+                "name": "七牛存储器（示例）",
+                "storage": 20,
+                "master": true,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "s3.cn-south-1.qiniucs.com",
+                  "domain": "http://test.yudao.iocoder.cn",
+                  "bucket": "ruoyi-vue-pro",
+                  "accessKey": "3TvrJ70gl2Gt6IBe7_IZT1F6i_k0iMuRtyEv4EyS",
+                  "accessSecret": "wd0tbVBYlp0S-ihA8Qg2hPLncoP83wyrIq24OZuY",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "请换成你自己的密钥！！！",
+                "createTime": 1705212672000
+              },
+              {
+                "id": 4,
+                "name": "数据库（示例）",
+                "storage": 1,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.db.DBFileClientConfig",
+                  "domain": "http://127.0.0.1:48081"
+                },
+                "remark": "我是数据库",
+                "createTime": 1647413784000
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "app": "ele",
+    "status": "pass",
+    "actionButtonCount": 11,
+    "beforeHasPage": true,
+    "clicked": true,
+    "confirmed": true,
+    "loadingVisible": 0,
+    "popconfirmOpened": true,
+    "requests": [
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/infra/file-config/page?pageNo=1&pageSize=20",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 11,
+            "list": [
+              {
+                "id": 35,
+                "name": "1",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "http://www.baidu.com",
+                  "domain": "http://www.xxx.com",
+                  "bucket": "1",
+                  "accessKey": "2",
+                  "accessSecret": "3",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": false,
+                  "region": "1"
+                },
+                "remark": "1",
+                "createTime": 1759440732000
+              },
+              {
+                "id": 34,
+                "name": "七牛云存储【私有】（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "s3.cn-south-1.qiniucs.com",
+                  "domain": "http://t151glocd.hn-bkt.clouddn.com",
+                  "bucket": "ruoyi-vue-pro-private",
+                  "accessKey": "3TvrJ70gl2Gt6IBe7_IZT1F6i_k0iMuRtyEv4EyS",
+                  "accessSecret": "wd0tbVBYlp0S-ihA8Qg2hPLncoP83wyrIq24OZuY",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": false,
+                  "region": null
+                },
+                "remark": "请换成你自己的密钥！！！",
+                "createTime": 1755490920000
+              },
+              {
+                "id": 30,
+                "name": "SFTP 存储（示例）",
+                "storage": 12,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.sftp.SftpFileClientConfig",
+                  "basePath": "/upload",
+                  "domain": "http://127.0.0.1:48081",
+                  "host": "127.0.0.1",
+                  "port": 2222,
+                  "username": "foo",
+                  "password": "pass"
+                },
+                "remark": "",
+                "createTime": 1746228850000
+              },
+              {
+                "id": 29,
+                "name": "本地存储（示例）",
+                "storage": 10,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.local.LocalFileClientConfig",
+                  "basePath": "/Users/yunai/tmp/file",
+                  "domain": "http://127.0.0.1:48081"
+                },
+                "remark": "mac/linux 使用 /，windows 使用 \\",
+                "createTime": 1746210345000
+              },
+              {
+                "id": 28,
+                "name": "MinIO 存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "http://127.0.0.1:9000",
+                  "domain": "http://127.0.0.1:9000/yudao",
+                  "bucket": "yudao",
+                  "accessKey": "admin",
+                  "accessSecret": "password",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731202990000
+              },
+              {
+                "id": 27,
+                "name": "华为云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "obs.cn-east-3.myhuaweicloud.com",
+                  "domain": "",
+                  "bucket": "yudao",
+                  "accessKey": "PVDONDEIOTW88LF8DC4U",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731201521000
+              },
+              {
+                "id": 26,
+                "name": "火山云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "tos-s3-cn-beijing.volces.com",
+                  "domain": null,
+                  "bucket": "yunai",
+                  "accessKey": "AKLTZjc3Zjc4MzZmMjU3NDk0ZTgxYmIyMmFkNTIwMDI1ZGE",
+                  "accessSecret": "X==",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731200202000
+              },
+              {
+                "id": 25,
+                "name": "阿里云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "oss-cn-beijing.aliyuncs.com",
+                  "domain": "http://ali-oss.iocoder.cn",
+                  "bucket": "yunai-aoteman",
+                  "accessKey": "LTAI5tEQLgnDyjh3WpNcdMKA",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731199628000
+              },
+              {
+                "id": 24,
+                "name": "腾讯云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "https://cos.ap-shanghai.myqcloud.com",
+                  "domain": "http://tengxun-oss.iocoder.cn",
+                  "bucket": "aoteman-1255880240",
+                  "accessKey": "AKIDAF6WSh1uiIjwqtrOsGSN3WryqTM6cTMt",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "请换成你的密钥！！！",
+                "createTime": 1731197002000
+              },
+              {
+                "id": 22,
+                "name": "七牛存储器（示例）",
+                "storage": 20,
+                "master": true,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "s3.cn-south-1.qiniucs.com",
+                  "domain": "http://test.yudao.iocoder.cn",
+                  "bucket": "ruoyi-vue-pro",
+                  "accessKey": "3TvrJ70gl2Gt6IBe7_IZT1F6i_k0iMuRtyEv4EyS",
+                  "accessSecret": "wd0tbVBYlp0S-ihA8Qg2hPLncoP83wyrIq24OZuY",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "请换成你自己的密钥！！！",
+                "createTime": 1705212672000
+              },
+              {
+                "id": 4,
+                "name": "数据库（示例）",
+                "storage": 1,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.db.DBFileClientConfig",
+                  "domain": "http://127.0.0.1:48081"
+                },
+                "remark": "我是数据库",
+                "createTime": 1647413784000
+              }
+            ]
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/infra/file-config/update-master?id=35",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": true
+        }
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "url": "http://127.0.0.1:5777/admin-api/infra/file-config/page?pageNo=1&pageSize=20",
+        "body": {
+          "code": 0,
+          "msg": "",
+          "data": {
+            "total": 11,
+            "list": [
+              {
+                "id": 35,
+                "name": "1",
+                "storage": 20,
+                "master": true,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "http://www.baidu.com",
+                  "domain": "http://www.xxx.com",
+                  "bucket": "1",
+                  "accessKey": "2",
+                  "accessSecret": "3",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": false,
+                  "region": "1"
+                },
+                "remark": "1",
+                "createTime": 1759440732000
+              },
+              {
+                "id": 34,
+                "name": "七牛云存储【私有】（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "s3.cn-south-1.qiniucs.com",
+                  "domain": "http://t151glocd.hn-bkt.clouddn.com",
+                  "bucket": "ruoyi-vue-pro-private",
+                  "accessKey": "3TvrJ70gl2Gt6IBe7_IZT1F6i_k0iMuRtyEv4EyS",
+                  "accessSecret": "wd0tbVBYlp0S-ihA8Qg2hPLncoP83wyrIq24OZuY",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": false,
+                  "region": null
+                },
+                "remark": "请换成你自己的密钥！！！",
+                "createTime": 1755490920000
+              },
+              {
+                "id": 30,
+                "name": "SFTP 存储（示例）",
+                "storage": 12,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.sftp.SftpFileClientConfig",
+                  "basePath": "/upload",
+                  "domain": "http://127.0.0.1:48081",
+                  "host": "127.0.0.1",
+                  "port": 2222,
+                  "username": "foo",
+                  "password": "pass"
+                },
+                "remark": "",
+                "createTime": 1746228850000
+              },
+              {
+                "id": 29,
+                "name": "本地存储（示例）",
+                "storage": 10,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.local.LocalFileClientConfig",
+                  "basePath": "/Users/yunai/tmp/file",
+                  "domain": "http://127.0.0.1:48081"
+                },
+                "remark": "mac/linux 使用 /，windows 使用 \\",
+                "createTime": 1746210345000
+              },
+              {
+                "id": 28,
+                "name": "MinIO 存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "http://127.0.0.1:9000",
+                  "domain": "http://127.0.0.1:9000/yudao",
+                  "bucket": "yudao",
+                  "accessKey": "admin",
+                  "accessSecret": "password",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731202990000
+              },
+              {
+                "id": 27,
+                "name": "华为云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "obs.cn-east-3.myhuaweicloud.com",
+                  "domain": "",
+                  "bucket": "yudao",
+                  "accessKey": "PVDONDEIOTW88LF8DC4U",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731201521000
+              },
+              {
+                "id": 26,
+                "name": "火山云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "tos-s3-cn-beijing.volces.com",
+                  "domain": null,
+                  "bucket": "yunai",
+                  "accessKey": "AKLTZjc3Zjc4MzZmMjU3NDk0ZTgxYmIyMmFkNTIwMDI1ZGE",
+                  "accessSecret": "X==",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731200202000
+              },
+              {
+                "id": 25,
+                "name": "阿里云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "oss-cn-beijing.aliyuncs.com",
+                  "domain": "http://ali-oss.iocoder.cn",
+                  "bucket": "yunai-aoteman",
+                  "accessKey": "LTAI5tEQLgnDyjh3WpNcdMKA",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "",
+                "createTime": 1731199628000
+              },
+              {
+                "id": 24,
+                "name": "腾讯云存储（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "https://cos.ap-shanghai.myqcloud.com",
+                  "domain": "http://tengxun-oss.iocoder.cn",
+                  "bucket": "aoteman-1255880240",
+                  "accessKey": "AKIDAF6WSh1uiIjwqtrOsGSN3WryqTM6cTMt",
+                  "accessSecret": "X",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "请换成你的密钥！！！",
+                "createTime": 1731197002000
+              },
+              {
+                "id": 22,
+                "name": "七牛存储器（示例）",
+                "storage": 20,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.s3.S3FileClientConfig",
+                  "endpoint": "s3.cn-south-1.qiniucs.com",
+                  "domain": "http://test.yudao.iocoder.cn",
+                  "bucket": "ruoyi-vue-pro",
+                  "accessKey": "3TvrJ70gl2Gt6IBe7_IZT1F6i_k0iMuRtyEv4EyS",
+                  "accessSecret": "wd0tbVBYlp0S-ihA8Qg2hPLncoP83wyrIq24OZuY",
+                  "enablePathStyleAccess": false,
+                  "enablePublicAccess": true,
+                  "region": null
+                },
+                "remark": "请换成你自己的密钥！！！",
+                "createTime": 1705212672000
+              },
+              {
+                "id": 4,
+                "name": "数据库（示例）",
+                "storage": 1,
+                "master": false,
+                "config": {
+                  "@class": "cn.iocoder.yudao.module.infra.framework.file.core.client.db.DBFileClientConfig",
+                  "domain": "http://127.0.0.1:48081"
+                },
+                "remark": "我是数据库",
+                "createTime": 1647413784000
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+]

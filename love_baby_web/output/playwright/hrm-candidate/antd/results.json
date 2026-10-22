@@ -1,0 +1,40 @@
+{
+  "app": "antd",
+  "list": {
+    "path": "/hrm/recruit/candidate",
+    "textHits": {
+      "候选人": true,
+      "新增": true,
+      "应聘职位": true
+    },
+    "allExpectedFound": true,
+    "matchedApis": [
+      {
+        "apiPath": "/hrm/recruit/candidate/page",
+        "hit": true,
+        "status": 200
+      },
+      {
+        "apiPath": "/hrm/recruit/candidate/status-count",
+        "hit": true,
+        "status": 200
+      }
+    ],
+    "allApisOk": true,
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/hrm-candidate/antd/list.png"
+  },
+  "detail": {
+    "opened": true,
+    "detailTabsOk": true,
+    "matchedApis": [
+      {
+        "apiPath": "/hrm/recruit/candidate/get",
+        "hit": true,
+        "status": 200
+      }
+    ],
+    "allApisOk": true,
+    "screenshot": "/Users/yunai/Java/yudao-all-in-vben/yudao-ui-admin-vben/output/playwright/hrm-candidate/antd/detail.png",
+    "actualUrl": "http://127.0.0.1:5666/hrm/recruit/candidate/detail/149"
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "generatedAt": "2026-09-17T16:10:45.421Z",
+  "results": [
+    {
+      "tag": "antd",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antd",
+      "name": "01-会议室预定信息弹窗",
+      "ok": true,
+      "screenshot": "antd-01-meetingroom-schedule.png",
+      "note": "半小时格数量=48（预期 48）"
+    },
+    {
+      "tag": "antd",
+      "name": "02-考勤月报旷工天数列",
+      "ok": true,
+      "screenshot": "antd-02-attendance-month-report.png",
+      "note": "末列列头=旷工天数；数据行=11，非空值=11（样例 0,0,0,0,0）"
+    },
+    {
+      "tag": "antd",
+      "name": "03-日程日历视图切换",
+      "ok": true,
+      "screenshot": "antd-03-schedule-calendar-month.png, antd-03-schedule-calendar-week.png, antd-03-schedule-calendar-day.png",
+      "note": "视图切换=true，上一=1，今天=1，下一=1，周视图列数=7，带内联着色日程条=2"
+    },
+    {
+      "tag": "antd",
+      "name": "04-写信附件与字数统计",
+      "ok": true,
+      "screenshot": "antd-04-mail-compose.png",
+      "note": "添加附件按钮=true，大小提示=true，字数统计=0 字"
+    },
+    {
+      "tag": "antd",
+      "name": "05-请假表单计算天数",
+      "ok": true,
+      "screenshot": "antd-05-leave-days.png",
+      "note": "天数输入框值=2（预期 2）"
+    },
+    {
+      "tag": "antd",
+      "name": "07-车辆所属部门下拉",
+      "ok": true,
+      "screenshot": "antd-07-vehicle-dept-tree.png",
+      "note": "部门树节点数=12"
+    },
+    {
+      "tag": "antd",
+      "name": "06-通讯录我共享的列",
+      "ok": false,
+      "screenshot": "antd-06-contact-shared.png",
+      "note": "缺少列: 接收人,共享时间,处理状态；实际列: 姓名|分类|手机号码|邮箱|公司名称|创建人|操作"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "antdv-next",
+      "name": "01-会议室预定信息弹窗",
+      "ok": true,
+      "screenshot": "antdv-next-01-meetingroom-schedule.png",
+      "note": "半小时格数量=48（预期 48）"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "02-考勤月报旷工天数列",
+      "ok": true,
+      "screenshot": "antdv-next-02-attendance-month-report.png",
+      "note": "末列列头=旷工天数；数据行=11，非空值=11（样例 0,0,0,0,0）"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "03-日程日历视图切换",
+      "ok": true,
+      "screenshot": "antdv-next-03-schedule-calendar-month.png, antdv-next-03-schedule-calendar-week.png, antdv-next-03-schedule-calendar-day.png",
+      "note": "视图切换=true，上一=1，今天=1，下一=1，周视图列数=7，带内联着色日程条=2"
+    },
+    {
+      "tag": "antdv-next",
+      "name": "06-通讯录我共享的列",
+      "ok": false,
+      "screenshot": "antdv-next-06-contact-shared.png",
+      "note": "缺少列: 接收人,共享时间,处理状态；实际列: 姓名|分类|手机号码|邮箱|公司名称|创建人|操作"
+    },
+    {
+      "tag": "ele",
+      "name": "00-登录",
+      "ok": true
+    },
+    {
+      "tag": "ele",
+      "name": "01-会议室预定信息弹窗",
+      "ok": true,
+      "screenshot": "ele-01-meetingroom-schedule.png",
+      "note": "半小时格数量=48（预期 48）"
+    },
+    {
+      "tag": "ele",
+      "name": "02-考勤月报旷工天数列",
+      "ok": true,
+      "screenshot": "ele-02-attendance-month-report.png",
+      "note": "末列列头=旷工天数；数据行=11，非空值=11（样例 0,0,0,0,0）"
+    },
+    {
+      "tag": "ele",
+      "name": "03-日程日历视图切换",
+      "ok": true,
+      "screenshot": "ele-03-schedule-calendar-month.png, ele-03-schedule-calendar-week.png, ele-03-schedule-calendar-day.png",
+      "note": "视图切换=true，上一=1，今天=1，下一=1，周视图列数=7，带内联着色日程条=2"
+    },
+    {
+      "tag": "ele",
+      "name": "06-通讯录我共享的列",
+      "ok": false,
+      "screenshot": "ele-06-contact-shared.png",
+      "note": "缺少列: 接收人,共享时间,处理状态；实际列: 姓名|分类|手机号码|邮箱|公司名称|创建人|操作"
+    }
+  ]
+}
