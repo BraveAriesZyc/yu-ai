@@ -67,6 +67,8 @@ fun AppMenuRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            // 铁律⑤:透明底与 clickable 同节点——否则行内空白区(标题右侧到箭头前)是触摸死区
+            .background(Color.Transparent)
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,

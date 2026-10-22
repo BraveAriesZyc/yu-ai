@@ -366,9 +366,10 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
             Spacer(modifier = Modifier.height(14.dp))
             AppInputField(
                 value = title,
-                onValueChange = { title = it.filterNot { ch -> ch == '\n' }.take(TITLE_MAX_LENGTH) },
+                onValueChange = { title = it.filterNot { ch -> ch == '\n' } },
                 placeholder = "纪念日名称(如:领证纪念日)",
                 maxLines = Int.MAX_VALUE, // 原 AnnivInputRow 走 TextField 缺省可折行,长标题换行展示保真
+                maxLength = TITLE_MAX_LENGTH, // 渲染层拒超限(官方禁 onValueChange take 截断,光标 bug)
                 keyboardHeightChange = onKeyboardHeightChange,
             )
             Spacer(modifier = Modifier.height(10.dp))

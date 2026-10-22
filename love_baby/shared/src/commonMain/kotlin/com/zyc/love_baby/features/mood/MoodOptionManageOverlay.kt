@@ -199,7 +199,8 @@ internal fun MoodOptionManageOverlay(
                         .height((MoodStore.moodOptions.size * 46 + 6).coerceAtMost(190).dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    items(MoodStore.moodOptions.size) { index ->
+                    // key 按 id(官方 L2):删中间项时其余行按身份复用,不再位置错位/状态串行
+                    items(MoodStore.moodOptions.size, key = { MoodStore.moodOptions[it].id }) { index ->
                         val option = MoodStore.moodOptions[index]
                         Row(
                             modifier = Modifier.fillMaxWidth()
@@ -237,8 +238,9 @@ internal fun MoodOptionManageOverlay(
             Spacer(modifier = Modifier.height(8.dp))
             BindInputField(
                 value = label,
-                onValueChange = { label = it.take(MOOD_LABEL_MAX_LENGTH) },
+                onValueChange = { label = it },
                 placeholder = "心情名(最多 $MOOD_LABEL_MAX_LENGTH 字)",
+                maxLength = MOOD_LABEL_MAX_LENGTH, // 渲染层拒超限(官方禁 onValueChange take 截断,光标 bug)
             )
             Spacer(modifier = Modifier.height(10.dp))
             // emoji 预设(横向单层滚动,跨轴于卡片纵向,铁律⑦;选中换底色不改结构,铁律③)

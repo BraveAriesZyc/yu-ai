@@ -223,6 +223,13 @@ internal fun MainPageImpl(pager: BasePager) {
     val openUnbindConfirm = remember { { showUnbindConfirm = true } }
     val openLogoutConfirm = remember { { showLogoutConfirm = true } }
     val openMoodManage = remember { { showMoodManage = true } }
+    // 双通道回写/开关回调同款 remember(理由同上):值+回写两通道的「回写端」也必须缓存——
+    // 否则翻转帧/浮层开关帧新建 lambda 实例,收回调的 TodoPage/ChatPage/MinePage 参数恒不等,
+    // 常驻页整树重 diff(2026-10-22 知识库审计补齐的 4 处漏网)
+    val setTodoDeleteTarget = remember { { id: String -> todoDeleteTargetId = id } }
+    val setChatImagePreviewUrl = remember { { url: String -> chatImagePreviewUrl = url } }
+    val setChatRecallTarget = remember { { id: String -> chatRecallTargetId = id } }
+    val openMineAbout = remember { { showMineAbout = true } }
 
     // 资料拉取(§7.7):userId 变化时重拉(冷启动进入/换号防御);此处一次 GET 换 MainPager
     // 单一数据源,五页展示(首页/我的页昵称头像)/解绑浮层伴侣名展示不再跨组件同步
@@ -327,7 +334,7 @@ internal fun MainPageImpl(pager: BasePager) {
                 1 -> TodoPage(
                     pager,
                     deleteTargetId = todoDeleteTargetId,
-                    onSetDeleteTarget = { todoDeleteTargetId = it },
+                    onSetDeleteTarget = setTodoDeleteTarget,
                     listScrollEnabled = !overlayActive,
                     pageVisible = selectedTab == 1, // M19:5s 静默轮询门控(常驻 Tab 离页须停)
                 )
@@ -339,16 +346,16 @@ internal fun MainPageImpl(pager: BasePager) {
                     myAvatar = profile?.avatar.orEmpty(),
                     pageVisible = selectedTab == 3,
                     imagePreviewUrl = chatImagePreviewUrl,
-                    onImagePreviewChange = { chatImagePreviewUrl = it },
+                    onImagePreviewChange = setChatImagePreviewUrl,
                     recallTargetId = chatRecallTargetId,
-                    onRecallTargetChange = { chatRecallTargetId = it },
+                    onRecallTargetChange = setChatRecallTarget,
                 )
                 else -> MinePage(
                     pager = pager,
                     profile = profile,
                     onUnbindClick = openUnbindConfirm,
                     onLogoutClick = openLogoutConfirm,
-                    onAboutClick = { showMineAbout = true },
+                    onAboutClick = openMineAbout,
                     listScrollEnabled = !overlayActive,
                 )
             }
@@ -366,7 +373,9 @@ internal fun MainPageImpl(pager: BasePager) {
             AppBottomBar(
                 selectedIndex = selectedTab,
                 pillPosition = pillPosition,
-                badges = mapOf(3 to ChatStore.unreadCount),
+                // remember 键控缓存:unreadCount 不变的重组帧复用同一 Map 实例,底栏参数按引用相等
+                // 直接跳过(每次新建 mapOf 会让底栏内容区恒判「参数变了」而重组,2026-10-22 审计)
+                badges = remember(ChatStore.unreadCount) { mapOf(3 to ChatStore.unreadCount) },
                 onSelect = goTo,
             )
         }

@@ -442,7 +442,10 @@ internal fun WishListPage(pager: Pager) {
                     if (showDoneToggle) {
                         item(key = "done-toggle", contentType = "wish-done-toggle") {
                             Box(
+                                // 铁律⑤:clickable 与 background 同节点(透明底也挂)——裸 clickable
+                                // 无背景子视图,原生端触摸热点可能不成形/空白死区(TodoPage 同款先例)
                                 modifier = Modifier.fillMaxWidth()
+                                    .background(Color.Transparent)
                                     .clickable { doneExpanded = !doneExpanded },
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -693,7 +696,9 @@ private fun WishRow(
         // 删除仅创建者可见(D-19e:伴侣不能删对方的心愿,防误删;服务端 1_003_009_001 兜底)
         if (wish.userId == myId) {
             Box(
+                // 铁律⑤:透明底与 clickable 同节点(TodoRow 删除钮同款),防背景子视图吞点击
                 modifier = Modifier.size(30.dp)
+                    .background(Color.Transparent, RoundedCornerShape(15.dp))
                     .clickable(onClick = onDelete),
                 contentAlignment = Alignment.Center,
             ) {

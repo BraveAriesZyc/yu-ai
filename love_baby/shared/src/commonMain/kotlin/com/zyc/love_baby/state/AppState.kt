@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.graphics.toArgb
+import com.tencent.kuikly.core.coroutines.CoroutineScope
+import com.tencent.kuikly.core.coroutines.Job
 import com.tencent.kuikly.core.coroutines.launch
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
@@ -1012,10 +1014,13 @@ internal object ChatStore {
         // 进锁前快照游标(与回包同窗口基线):锁外通知判定「本回包新增」的依据,防并发覆盖拉
         // 先推进游标后失真;首拉(空游标)不通知——拉的是历史不是新消息(见 notifyPartnerMessage)
         val prevLastId = lastId
+        // 回包解析一次锁外复用(5s 心跳 + WS 信号高频路径,此前 notifyPartnerMessage 对同一
+        // dataArray 重复 listFrom 两遍);非 Ok 时恒空表,锁外通知分支天然短路
+        var infos: List<MessageInfo> = emptyList()
         val result = pullMutex.withLock {
             val listResult = MessageApi.list(pager, if (overwrite) "" else lastId)
             if (listResult is ApiResult.Ok) {
-                val infos = MessageInfo.listFrom(listResult.dataArray)
+                infos = MessageInfo.listFrom(listResult.dataArray)
                 if (overwrite) {
                     // 首屏覆盖(F6):按 id 对账合并而非整表替换——覆盖拉在飞时本端 send/sendWishes 可能
                     // 已 POST 落库并先入列(其服务端 id 必大于本页快照最大 id),整表替换会把它们驱逐,
@@ -1044,7 +1049,7 @@ internal object ChatStore {
         if (result is ApiResult.Ok) {
             // M21 通知先于未读同步(skeptic minor:syncReadState 有一次网络往返,markRead/ unread
             // 期间切后台会让「用户已看到的消息」迟发通知;调序消掉该窗口,纯内存判定零成本)
-            notifyPartnerMessage(pager, result, prevLastId)
+            notifyPartnerMessage(pager, infos, prevLastId)
             syncReadState(pager)
         }
         return result
@@ -1059,16 +1064,15 @@ internal object ChatStore {
      * 本端消息过滤(send 不推游标,回包含自己迟到条目);墓碑不发(增量拉扫不到老消息变更,
      * 覆盖窗口若含已撤回条目同样无通知意义)。多条合并一条(取最新摘要,原生 NOTIF_ID 固定
      * 覆盖,情侣单会话语义)。未桥接端 getModule=null 静默降级(未读红点兜底,渐进降级同
-     * WebSocketModule)
+     * WebSocketModule)。infos 由 pull 锁内解析一次直传(不再重解 dataArray,高频路径单次解析)
      */
-    private fun notifyPartnerMessage(pager: Pager, result: ApiResult.Ok, prevLastId: String) {
+    private fun notifyPartnerMessage(pager: Pager, infos: List<MessageInfo>, prevLastId: String) {
         val latest = if (prevLastId.isEmpty()) {
-            MessageInfo.listFrom(result.dataArray).lastOrNull()
+            infos.lastOrNull()
                 ?.takeIf { !it.recalled && it.senderId != SessionStore.userId }
         } else {
             val prevLong = prevLastId.toLongOrNull() ?: Long.MIN_VALUE
-            MessageInfo.listFrom(result.dataArray)
-                .asSequence()
+            infos.asSequence()
                 .filter { !it.recalled && it.senderId != SessionStore.userId }
                 .filter { (it.id.toLongOrNull() ?: Long.MIN_VALUE) > prevLong }
                 .maxByOrNull { it.id.toLongOrNull() ?: Long.MIN_VALUE }
@@ -1396,6 +1400,17 @@ internal object ChatPushStore {
     /** 事件回调闭包持有的 pager 引用(connect 时刷新;MainPager 常驻页,生命周期=App 会话) */
     private var currentPager: Pager? = null
 
+    /** WS 回调域 launch 的 Job 自持跟踪(T2 官方:Pager.lifecycleScope 不随页面销毁自动取消——
+     *  context 不含 Job 框架不代管,登出/解绑 disconnect 时手动 cancel,防残留任务继续跑) */
+    private val wsJobs = mutableListOf<Job>()
+
+    /** 回调域 launch 收口:登记进 wsJobs,登记前顺手清已结束项(回调高频,防列表随会话无限涨) */
+    private fun launchTracked(block: suspend CoroutineScope.() -> Unit) {
+        val pager = currentPager ?: return
+        wsJobs.removeAll { !it.isActive }
+        wsJobs.add(pager.lifecycleScope.launch(block = block))
+    }
+
     /**
      * 连接(幂等,亦作断线自愈 ensure 入口):未桥接端 getModule=null 静默降级纯轮询;
      * CONNECTING/CONNECTED 早退——触发源密集(连接 effect 三 key + 5s 轮询循环体),判重全靠 state
@@ -1412,6 +1427,10 @@ internal object ChatPushStore {
 
     /** 主动断开(登出/解绑:连接 effect else 分支驱动;未桥接端无连接可言,静默) */
     fun disconnect(pager: Pager) {
+        // T2 收口:先杀回调域残留任务再断连(loadIncrement/applyRecall/applyPartnerTyping
+        // 不在断开后继续跑);置于 module 早退之前,任何路径进来都清干净
+        wsJobs.forEach { it.cancel() }
+        wsJobs.clear()
         val module = pager.getModule<WebSocketModule>(WebSocketModule.MODULE_NAME) ?: return
         module.disconnect()
         state = STATE_DISCONNECTED
@@ -1437,7 +1456,7 @@ internal object ChatPushStore {
                     ""
                 }
                 if (type == TYPE_LOVE_NEW) {
-                    pager.lifecycleScope.launch {
+                    launchTracked {
                         ChatStore.loadIncrement(pager)
                     }
                 } else if (type == TYPE_LOVE_RECALL) {
@@ -1448,14 +1467,14 @@ internal object ChatPushStore {
                         ""
                     }
                     if (messageId.isNotEmpty()) {
-                        pager.lifecycleScope.launch {
+                        launchTracked {
                             ChatStore.applyRecall(messageId)
                         }
                     }
                 } else if (type == TYPE_LOVE_TYPING) {
                     // M13 正在输入纯信号:content 单键占位不消费;置位 + seq++ 由 ChatPage 过期
                     // 协程 4s 收口(D-18 无停止信号);非停留聊天页时置位无害(副标题仅聊天页可见)
-                    pager.lifecycleScope.launch {
+                    launchTracked {
                         ChatStore.applyPartnerTyping()
                     }
                 }

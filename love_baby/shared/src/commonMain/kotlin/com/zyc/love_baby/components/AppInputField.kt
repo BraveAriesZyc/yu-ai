@@ -51,6 +51,7 @@ internal fun AppInputField(
     trailing: (@Composable () -> Unit)? = null,
     keyboardHeightChange: (KeyboardParams) -> Unit = {},
     maxLines: Int = 1,
+    maxLength: Int = Int.MAX_VALUE, // 透传 BasicWidget.TextField(渲染层拒超限输入,勿在 onValueChange take)
 ) {
     // 单行真实排版下限(1.7×字号 ≥ 含 fontPadding 的 1.45em 行排版 + 余量),压住原生
     // EditText 拖拽钳制上限(排版高 − 视口高)恒 ≤ 0 → 框内文字拖不动 = 平移修复,见头注释
@@ -71,6 +72,7 @@ internal fun AppInputField(
             placeholderColor = AppTheme.TextTertiary,
             autoFocus = false,
             maxLines = maxLines,
+            maxLength = maxLength,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 15.sp),
             keyboardHeightChange = keyboardHeightChange,

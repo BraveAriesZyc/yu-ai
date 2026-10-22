@@ -35,7 +35,6 @@ import com.tencent.kuikly.compose.foundation.lazy.items
 import com.tencent.kuikly.compose.foundation.lazy.itemsIndexed
 import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
-import com.tencent.kuikly.compose.foundation.text.maxLength
 import com.tencent.kuikly.compose.material3.CircularProgressIndicator
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.material3.pullToRefreshItem
@@ -153,7 +152,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 private val quickStickers = listOf("贴贴", "mua~", "想你了", "举高高", "晚安鸭")
 
-/** 文本长度上限(与服务端 AppMessageSendReqVO @Length(max=500) 对齐;maxLength 原生层拒绝 + take 兜底) */
+/** 文本长度上限(与服务端 AppMessageSendReqVO @Length(max=500) 对齐;TextField maxLength 渲染层拒绝) */
 private const val INPUT_MAX_LENGTH = 500
 
 /** 聊天图片上传压缩上限(maxEdge,与 M9 相册同口径 1080):气泡/预览条按方图展示,服务端 content 列 ≤512 存 URL */
@@ -838,7 +837,7 @@ fun ChatPage(
                     TextField(
                         value = inputText,
                         onValueChange = {
-                            inputText = it.take(INPUT_MAX_LENGTH)
+                            inputText = it
                             // M13 输入上报(无停止信号,3s 节流在 Store):有输入才报(清空不算输入中),
                             // fire-and-forget 失败静默
                             if (it.isNotEmpty()) ChatStore.noteTyping(pager)
@@ -848,11 +847,11 @@ fun ChatPage(
                         placeholderColor = AppTheme.TextTertiary,
                         textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 13.sp),
                         maxLines = 3, // 长文本限 3 行竖向生长,不在 22dp 胶囊里无限撑高(F15)
+                        maxLength = INPUT_MAX_LENGTH, // 渲染层拒超限输入(F15;勿在 onValueChange take 截断,光标 bug)
                         keyboardHeightChange = onKeyboardHeightChange, // 写高度 + 捕获贴底快照(见上)
                         cursorBrush = remember(theme.brandStart) { SolidColor(theme.brandStart) }, // 光标随主题(§5)
                         modifier = Modifier.fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 13.dp) // 单行≈44dp 与发送钮等高、触达舒适;3 行时自然长高
-                            .maxLength(INPUT_MAX_LENGTH), // 原生层拒绝超限输入(F15)
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))

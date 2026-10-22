@@ -802,12 +802,14 @@ private fun MomentAddOverlay(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 // 配文输入行(AppInputField 单源:固定高挂行容器、TextField 居中,原生 gravity
-                // 恒 TOP|START 铁律);≤64 字服务端 @Length 兜底,端上 take 同步拦。
+                // 恒 TOP|START 铁律);≤64 字服务端 @Length 兜底,端上 maxLength 渲染层拦
+                // (2026-10-22 take→maxLength:官方禁 onValueChange 截断,光标跳变/回吞字符)。
                 // maxLines 显式传 Int.MAX_VALUE 维持原件缺省(未限行,48dp 定高容器裁剪行为不变)
                 AppInputField(
                     value = draft,
-                    onValueChange = { draft = it.filterNot { ch -> ch == '\n' }.take(MOMENT_TEXT_MAX) },
+                    onValueChange = { draft = it.filterNot { ch -> ch == '\n' } },
                     placeholder = "说点什么…(可不填)",
+                    maxLength = MOMENT_TEXT_MAX,
                     maxLines = Int.MAX_VALUE,
                     keyboardHeightChange = onKeyboardHeightChange,
                 )

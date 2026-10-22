@@ -402,35 +402,53 @@ private fun TodoDayHeader(label: String) {
 @Composable
 private fun FilterBar(filter: Int, onFilter: (Int) -> Unit, modifier: Modifier = Modifier) {
     val theme = ThemeStore.current
-    val tabs = listOf("全部", "进行中", "已完成")
     Row(
         modifier = modifier.fillMaxWidth()
             .background(AppTheme.CardBg, RoundedCornerShape(14.dp))
             .padding(4.dp),
     ) {
-        tabs.forEachIndexed { index, label ->
-            val selected = index == filter
-            // 短 tween 压帧数;preferNative 原生路径接管背景色后与主题切换冲突,实测异常,暂不启用
-            val bg by animateColorAsState(
-                targetValue = if (selected) theme.bg else AppTheme.CardBg,
-                animationSpec = tween<Color>(durationMillis = 150, easing = FastOutSlowInEasing),
-                label = "filterBg",
+        listOf("全部", "进行中", "已完成").forEachIndexed { index, label ->
+            FilterTabChip(
+                label = label,
+                selected = index == filter,
+                selectedBg = theme.bg,
+                onSelect = { onFilter(index) },
+                modifier = Modifier.weight(1f),
             )
-            Box(
-                modifier = Modifier.weight(1f)
-                    .background(bg, RoundedCornerShape(11.dp))
-                    .clickable { onFilter(index) }
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    label,
-                    color = if (selected) AppTheme.TextPrimary else AppTheme.TextSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                )
-            }
         }
+    }
+}
+
+/** 单颗筛选 chip(动画叶子化,铁律 10② 同源):150ms 底色动画状态只在 chip 内读取——
+ *  切换筛选时动画帧只重跑受影响的 chip,FilterBar 容器与相邻 chip 不再被拖着整条重组;
+ *  preferNative 原生路径接管背景色后与主题切换冲突,实测异常,暂不启用(既有结论保留) */
+@Composable
+private fun FilterTabChip(
+    label: String,
+    selected: Boolean,
+    selectedBg: Color,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // 短 tween 压帧数
+    val bg by animateColorAsState(
+        targetValue = if (selected) selectedBg else AppTheme.CardBg,
+        animationSpec = tween<Color>(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "filterBg",
+    )
+    Box(
+        modifier = modifier
+            .background(bg, RoundedCornerShape(11.dp))
+            .clickable(onClick = onSelect)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            color = if (selected) AppTheme.TextPrimary else AppTheme.TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        )
     }
 }
 

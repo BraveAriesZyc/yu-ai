@@ -218,8 +218,9 @@ private fun BindByCodePane(pager: Pager) {
 
     BindInputField(
         value = code,
-        onValueChange = { code = it.take(INVITE_CODE_LENGTH) },
+        onValueChange = { code = it },
         placeholder = "输入 TA 的 $INVITE_CODE_LENGTH 位邀请码",
+        maxLength = INVITE_CODE_LENGTH, // 渲染层拒超限(官方禁 onValueChange take 截断,光标 bug)
     )
     Spacer(modifier = Modifier.height(16.dp))
     BindPrimaryButton(text = "绑 定", submitting = submitting) { submit() }

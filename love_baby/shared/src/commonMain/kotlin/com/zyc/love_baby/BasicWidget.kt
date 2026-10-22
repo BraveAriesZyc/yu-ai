@@ -37,6 +37,7 @@ import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.foundation.text.BasicTextField
 import com.tencent.kuikly.compose.foundation.text.KeyboardActions
 import com.tencent.kuikly.compose.foundation.text.KeyboardOptions
+import com.tencent.kuikly.compose.foundation.text.maxLength
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
@@ -366,6 +367,9 @@ internal fun TextField(
     placeholderColor: Color? = null,
     cursorBrush: Brush = SolidColor(Color.Black),
     maxLines: Int = Int.MAX_VALUE,
+    // 最大输入长度(渲染层直接拒绝超限输入):官方禁止在 onValueChange 里 take() 截断——文本回退
+    // 会造成光标跳变/回吞字符(core-components.md #5);Int.MAX_VALUE = 不限
+    maxLength: Int = Int.MAX_VALUE,
     onTextLayout: (TextLayoutResult) -> Unit = {},
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -398,6 +402,7 @@ internal fun TextField(
                 it.placeHolder(placeholder, placeholderColor)
             } else it
         }
+        .let { if (maxLength != Int.MAX_VALUE) it.maxLength(maxLength) else it }
     BasicTextField(
         modifier = updatedModifier,
         value = value,

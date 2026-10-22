@@ -97,6 +97,7 @@ internal fun BindInputField(
     keyboardType: KeyboardType = KeyboardType.Text,
     keyboardHeightChange: (KeyboardParams) -> Unit = {}, // 透传键盘高度回调(默认空,存量调用方零改动)
     maxLines: Int = Int.MAX_VALUE, // 源 TextField 缺省可折行,薄壳保真透传(存量调用方行为逐字节不变)
+    maxLength: Int = Int.MAX_VALUE, // 透传 AppInputField(渲染层拒超限输入)
 ) {
     AppInputField(
         value = value,
@@ -106,6 +107,7 @@ internal fun BindInputField(
         keyboardType = keyboardType,
         keyboardHeightChange = keyboardHeightChange,
         maxLines = maxLines,
+        maxLength = maxLength,
     )
 }
 
