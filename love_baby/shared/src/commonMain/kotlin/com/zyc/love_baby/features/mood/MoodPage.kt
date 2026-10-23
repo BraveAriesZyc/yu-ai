@@ -61,12 +61,11 @@ import com.zyc.love_baby.state.CoupleStore
 import com.zyc.love_baby.state.MoodStore
 import com.zyc.love_baby.state.MoodOption
 import com.zyc.love_baby.state.Wish
-import com.zyc.love_baby.state.allWishes
+import com.zyc.love_baby.state.WishStore
 import com.zyc.love_baby.state.currentDate
 import com.zyc.love_baby.state.dateKeyOf
 import com.zyc.love_baby.state.daysInMonthYear
 import com.zyc.love_baby.state.firstWeekdayOfMondayFirst
-import com.zyc.love_baby.state.moodCategories
 import com.zyc.love_baby.state.moodRecordColor
 import com.zyc.love_baby.state.monthParts
 import com.zyc.love_baby.state.monthShift
@@ -171,10 +170,13 @@ fun MoodPage(
             // 必须死高度;span 表头是单容器官方形态(GridItemSpan/maxLineSpan 2.29 全
             // 实现非死 API,LazyGridMeasure 真消费 spanLayoutProvider,反编译核实)。
             // 残存嵌套仅分类 LazyRow——横向 in 竖向,跨轴,MainPager 横滑先例同型
-            val visible = if (MoodStore.categoryIndex == 0) {
-                allWishes
+            // M25 心愿模板服务端化:数据源 WishStore.wishes(模板空走 allWishes 兜底),
+            // wishCategory 空串 = 全部、非空按分类过滤(原 categoryIndex 索引 0 标签
+            // 渲染 moodCategories[0] 的 quirk 一并修正)
+            val visible = if (MoodStore.wishCategory.isEmpty()) {
+                WishStore.wishes
             } else {
-                allWishes.filter { it.category == moodCategories[MoodStore.categoryIndex] }
+                WishStore.wishes.filter { it.category == MoodStore.wishCategory }
             }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -219,11 +221,14 @@ fun MoodPage(
                 }
                 // 情绪分类(跨双列表头):16dp 页边由 contentPadding 提供,内部 spacer 全撤
                 item(span = { GridItemSpan(maxLineSpan) }) {
+                    // M25:「全部」+ 服务端模板分类动态聚合(原 moodCategories 固定 6 项退役)
+                    val chips = listOf("全部") + WishStore.categories
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        items(moodCategories.size) { index ->
-                            val selected = index == MoodStore.categoryIndex
+                        items(chips.size) { index ->
+                            val cat = chips[index]
+                            val selected = MoodStore.wishCategory == cat
                             Box(
                                 // 胶囊背景两分支统一 brush 重载(铁律⑦):原 .then(if...) 混用
                                 // color/brush 重载,图层首建冻结后取消选中会「幽灵选中」
@@ -233,11 +238,11 @@ fun MoodPage(
                                         brush = if (selected) theme.brandBrush else chipIdleBrush,
                                         shape = RoundedCornerShape(16.dp),
                                     )
-                                    .clickable { MoodStore.categoryIndex = index }
+                                    .clickable { MoodStore.wishCategory = cat }
                                     .padding(horizontal = 14.dp, vertical = 7.dp),
                             ) {
                                 Text(
-                                    moodCategories[index],
+                                    cat,
                                     color = if (selected) Color.White else AppTheme.TextSecondary,
                                     fontSize = 12.sp,
                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,

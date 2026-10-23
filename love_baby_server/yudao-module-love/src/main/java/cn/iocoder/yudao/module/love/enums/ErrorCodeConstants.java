@@ -140,4 +140,22 @@ public interface ErrorCodeConstants {
 
     ErrorCode CONFIG_KEY_DUPLICATE = new ErrorCode(1_003_012_001, "配置键已存在");
 
+    // ========== 聊天表情包 模块 1-003-013-xxx（M25 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。表情包是全局共享的运营内容
+     * （无 couple 归属、无按 id 的 app 写端点），app 侧 list 单端点只读零错误路径
+     * （池空端上走内置兜底字典，不打错）；本码仅供 admin 按物理 id 更新/删除时判空
+     * （LoveAdminInspirationServiceImpl 同款口径）
+     */
+    ErrorCode EMOJI_NOT_EXISTS = new ErrorCode(1_003_013_000, "表情不存在");
+
+    // ========== 心愿墙挑选模板 模块 1-003-014-xxx（M25 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。心愿模板是全局共享的运营内容
+     * （无 couple 归属、无按 id 的 app 写端点），app 侧 list 单端点只读零错误路径
+     * （池空端上走内置兜底字典，不打错）；kind=2 心愿消息为快照式上送（渲染不查模板表），
+     * 删模板不影响历史消息；本码仅供 admin 按物理 id 更新/删除时判空
+     */
+    ErrorCode WISH_TEMPLATE_NOT_EXISTS = new ErrorCode(1_003_014_000, "心愿模板不存在");
+
 }

@@ -933,3 +933,204 @@ SET @m24_ddl := IF(@m24_col = 0,
 PREPARE m24_stmt FROM @m24_ddl;
 EXECUTE m24_stmt;
 DEALLOCATE PREPARE m24_stmt;
+
+-- ============================================================================
+-- M25 段：字典数据服务端化（表情包 + 心愿模板两表 + love_config 三键，2026-10-23）
+-- 端上四处写死字典改后台可配、接口下发（「零死数据」裁决）：
+--   ① love_emoji：聊天表情包字典（原端上 ChatStickers 24 枚）+ 分类；App 表情面板分类 tab
+--      动态聚合；点选仍插输入框（TEXT 链，emoji 字面量随消息全文落库，服务端不校验表情）；
+--   ② love_wish_template：心愿墙挑选模板（原端上 allWishes 24 条：分类/文案/渐变双色/图标）；
+--      id 即 App 送出 wishKey——kind=2 心愿消息为快照式四字段上送（服务端不校验、气泡渲染
+--      不查字典），删/停模板不影响历史消息，双向兼容；
+--   ③ love_config 三 key：quick_stickers（聊天快捷贴纸条文案）/ mood_emoji_presets（心情新增
+--      浮层 emoji 预设）/ mood_color_presets（心情新增浮层色板）——JSON 字符串数组，端上解析
+--      失败或缺 key 走内置兜底（兜底值与种子同值）。
+-- 心情主链（couple 私有字典 love_mood_option）M3.5 已服务端化，本段不涉及。
+-- 端上三级兜底：新端点空表/全停用/拉取失败回落端上内置字典，UI 永不空白；
+-- 老版 App 不请求新端点，服务端先上不影响老版。上线顺序 SQL 先于新代码（Mapper 依赖两表）。
+-- 本段追加于 M24 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- ============================================================================
+
+-- ----------------------------
+-- Table structure for love_emoji（聊天表情包字典表，M25）
+-- 说明：B 端配置 App 只读（同 love_inspiration 路线，继承 BaseDO 逻辑删除）；
+-- 无 uk（emoji 内容无唯一性约束，同分类重复靠运营自律，重放种子靠 NOT EXISTS 判重）；
+-- idx_category 覆盖 App 聚合 tab 与 admin 分类筛选（category + sort + id 稳定序）。
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `love_emoji`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '表情编号',
+  `category` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '分类（App 端动态聚合 tab；建议：爱意/情绪/手势/庆祝，可自由新增；空串归「常用」桶）',
+  `emoji` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'emoji 字符（App 点选直插输入框，随消息全文落库快照）',
+  `sort` int NOT NULL DEFAULT 0 COMMENT '显示顺序（同分类内 sort asc, id asc，越小越靠前）',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0启用 1停用；停用行不出现在 App）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_category`(`category` ASC, `sort` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '聊天表情包字典表（情侣业务，B 端配置，App 只读，M25）';
+
+-- ----------------------------
+-- Table structure for love_wish_template（心愿墙挑选模板表，M25）
+-- 说明：B 端配置 App 只读（love_inspiration 同路线）；id 即 App 送出 wishKey（快照式，
+-- 历史消息渲染不依赖本表，删/停模板零影响）；无 uk（title 重复靠运营自律）。
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `love_wish_template`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '模板编号（=App 送出 wishKey；快照式：历史消息渲染不依赖本表）',
+  `category` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '分类（App 端动态聚合 chips；建议：想亲亲/想抱抱/想吃点/想念/撒个娇/和好，可自由新增）',
+  `title` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '标题（气泡主文案 + 卡片首行，随消息快照上送）',
+  `subtitle` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '副标题（卡片第二行，仅挑选列表展示，不随消息上送）',
+  `color_start` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '#FF8FA3' COMMENT '卡片渐变起始色 hex #RRGGBB（sendWishes 上送的主色）',
+  `color_end` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '#FF5A8C' COMMENT '卡片渐变结束色 hex #RRGGBB',
+  `icon` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Heart' COMMENT '图标（端上 AppIconType 枚举 name；未知名端上兜底 Heart）',
+  `sort` int NOT NULL DEFAULT 0 COMMENT '显示顺序（sort asc, id asc）',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0启用 1停用；停用行不出现在 App）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_category`(`category` ASC, `sort` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '心愿墙挑选模板表（情侣业务，B 端配置，App 只读，M25）';
+
+-- ----------------------------
+-- 种子（M25，两表各 24 行，幂等：NOT EXISTS 判重——emoji 按 category+emoji、wish 按 title；
+-- 内容 = 原端上 ChatStickers / allWishes 字典一比一迁入，替换前后 App 观感一致；
+-- INSERT...SELECT...UNION ALL 模板同 M17 种子段；creator='1'、NOW()、不写显式 id）
+-- ----------------------------
+INSERT INTO `love_emoji` (`category`, `emoji`, `sort`, `status`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT * FROM (
+  -- 爱意 8（原 ORDER 前段 + rose/star/moon，组内沿用原展示相对顺序，下同）
+  SELECT '爱意' AS `category`, '🤗' AS `emoji`, 1 AS `sort`, 0 AS `status`, '1' AS `creator`, NOW() AS `create_time`, '1' AS `updater`, NOW() AS `update_time`, b'0' AS `deleted`
+  UNION ALL SELECT '爱意', '😘', 2, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '爱意', '🥰', 3, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '爱意', '❤️', 4, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '爱意', '😊', 5, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '爱意', '🌹', 6, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '爱意', '⭐', 7, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '爱意', '🌙', 8, 0, '1', NOW(), '1', NOW(), b'0'
+  -- 情绪 6
+  UNION ALL SELECT '情绪', '😂', 9, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '情绪', '😭', 10, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '情绪', '😠', 11, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '情绪', '😲', 12, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '情绪', '🤔', 13, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '情绪', '😴', 14, 0, '1', NOW(), '1', NOW(), b'0'
+  -- 手势 6
+  UNION ALL SELECT '手势', '👍', 15, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '手势', '👌', 16, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '手势', '👏', 17, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '手势', '👋', 18, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '手势', '🙏', 19, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '手势', '💪', 20, 0, '1', NOW(), '1', NOW(), b'0'
+  -- 庆祝 4
+  UNION ALL SELECT '庆祝', '🎉', 21, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '庆祝', '🎂', 22, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '庆祝', '🐶', 23, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '庆祝', '👻', 24, 0, '1', NOW(), '1', NOW(), b'0'
+) AS seed
+WHERE NOT EXISTS (
+  SELECT 1 FROM `love_emoji` d WHERE d.`deleted` = b'0' AND d.`category` = seed.`category` AND d.`emoji` = seed.`emoji`
+);
+
+INSERT INTO `love_wish_template` (`category`, `title`, `subtitle`, `color_start`, `color_end`, `icon`, `sort`, `status`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT * FROM (
+  -- 想亲亲 4（原 catColors「想亲亲」双色 FF9AC4/FF5A8C）
+  SELECT '想亲亲' AS `category`, '求亲亲' AS `title`, 'mua 一口就跑' AS `subtitle`, '#FF9AC4' AS `color_start`, '#FF5A8C' AS `color_end`, 'Heart' AS `icon`, 1 AS `sort`, 0 AS `status`, '1' AS `creator`, NOW() AS `create_time`, '1' AS `updater`, NOW() AS `update_time`, b'0' AS `deleted`
+  UNION ALL SELECT '想亲亲', '贴贴脸', '脸贴脸蹭蹭', '#FF9AC4', '#FF5A8C', 'Star', 2, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想亲亲', '早安吻', '叫醒服务', '#FF9AC4', '#FF5A8C', 'Bell', 3, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想亲亲', '晚安吻', '睡前专属', '#FF9AC4', '#FF5A8C', 'Moon', 4, 0, '1', NOW(), '1', NOW(), b'0'
+  -- 想抱抱 4（FFB27A/FF8A5C）
+  UNION ALL SELECT '想抱抱', '充电式抱抱', '充到 100%', '#FFB27A', '#FF8A5C', 'Heart', 5, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想抱抱', '熊抱', '抱到悬浮', '#FFB27A', '#FF8A5C', 'Star', 6, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想抱抱', '背后抱', '突然袭击', '#FFB27A', '#FF8A5C', 'Bell', 7, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想抱抱', '举高高', '转圈圈', '#FFB27A', '#FF8A5C', 'Sun', 8, 0, '1', NOW(), '1', NOW(), b'0'
+  -- 想吃点 4（FFD98E/FFB25C）
+  UNION ALL SELECT '想吃点', '蛋糕一块', '草莓味的', '#FFD98E', '#FFB25C', 'Heart', 9, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想吃点', '奶茶三分甜', '去冰加珍珠', '#FFD98E', '#FFB25C', 'Star', 10, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想吃点', '火锅一顿', '鸳鸯锅安排', '#FFD98E', '#FFB25C', 'Sun', 11, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想吃点', '冰淇淋', '甜到心里', '#FFD98E', '#FFB25C', 'Moon', 12, 0, '1', NOW(), '1', NOW(), b'0'
+  -- 想念 4（8FB8FF/6C8BFF）
+  UNION ALL SELECT '想念', '想你了', '超想那种', '#8FB8FF', '#6C8BFF', 'Heart', 13, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想念', '视频一下', '看看彼此', '#8FB8FF', '#6C8BFF', 'Bell', 14, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想念', '来见我', '立刻马上', '#8FB8FF', '#6C8BFF', 'Star', 15, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '想念', '写封情书', '手写才有诚意', '#8FB8FF', '#6C8BFF', 'Moon', 16, 0, '1', NOW(), '1', NOW(), b'0'
+  -- 撒个娇 4（C09AFF/9B6BFF）
+  UNION ALL SELECT '撒个娇', '夸夸我', '彩虹屁来十句', '#C09AFF', '#9B6BFF', 'Star', 17, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '撒个娇', '捏捏脸', '轻轻的那种', '#C09AFF', '#9B6BFF', 'Heart', 18, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '撒个娇', '陪我看剧', '要抱着看', '#C09AFF', '#9B6BFF', 'Moon', 19, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '撒个娇', '哄睡服务', '讲个故事', '#C09AFF', '#9B6BFF', 'Bell', 20, 0, '1', NOW(), '1', NOW(), b'0'
+  -- 和好 4（9BEBB5/4EB087）
+  UNION ALL SELECT '和好', '抱抱和好', '不许生气了', '#9BEBB5', '#4EB087', 'Heart', 21, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '和好', '请你吃饭', '你选地方', '#9BEBB5', '#4EB087', 'Sun', 22, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '和好', '看场电影', '我买爆米花', '#9BEBB5', '#4EB087', 'Star', 23, 0, '1', NOW(), '1', NOW(), b'0'
+  UNION ALL SELECT '和好', '散步谈心', '手牵手那种', '#9BEBB5', '#4EB087', 'Moon', 24, 0, '1', NOW(), '1', NOW(), b'0'
+) AS seed
+WHERE NOT EXISTS (
+  SELECT 1 FROM `love_wish_template` d WHERE d.`deleted` = b'0' AND d.`title` = seed.`title`
+);
+
+-- ----------------------------
+-- love_config 种子（M25，3 行：快捷贴纸条 + 心情两预设，幂等按 config_key，M23 种子模板）；
+-- value 均为 JSON 字符串数组（≤100 字符，varchar(500) 充裕）；端上解析失败/缺 key 走内置兜底
+-- ----------------------------
+INSERT INTO `love_config` (`name`, `config_key`, `config_value`, `remark`, `status`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT * FROM (
+  SELECT '聊天快捷贴纸条' AS `name`, 'quick_stickers' AS `config_key`, '["贴贴","mua~","想你了","举高高","晚安鸭"]' AS `config_value`,
+         '聊天输入区顶部快捷贴纸条文案（M25，原端上写死迁入）；JSON 字符串数组；缺行/停用/解析失败端上走内置兜底 5 条' AS `remark`,
+         0 AS `status`, '1' AS `creator`, NOW() AS `create_time`, '1' AS `updater`, NOW() AS `update_time`, b'0' AS `deleted`
+) AS seed
+WHERE NOT EXISTS (
+  SELECT 1 FROM `love_config` d WHERE d.`deleted` = b'0' AND d.`config_key` = seed.`config_key`
+);
+
+INSERT INTO `love_config` (`name`, `config_key`, `config_value`, `remark`, `status`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT * FROM (
+  SELECT '心情emoji预设' AS `name`, 'mood_emoji_presets' AS `config_key`, '["😄","😊","🥰","😌","😎","🥺","😭","😤","😠","😴","🤒","🥳"]' AS `config_value`,
+         '心情新增浮层 emoji 预设（M25，原端上写死迁入）；JSON 字符串数组；⚠ 全部 Unicode 11 及以前字形（老系统字体可渲染），勿随手加新版；解析失败端上走内置兜底 12 枚' AS `remark`,
+         0 AS `status`, '1' AS `creator`, NOW() AS `create_time`, '1' AS `updater`, NOW() AS `update_time`, b'0' AS `deleted`
+) AS seed
+WHERE NOT EXISTS (
+  SELECT 1 FROM `love_config` d WHERE d.`deleted` = b'0' AND d.`config_key` = seed.`config_key`
+);
+
+INSERT INTO `love_config` (`name`, `config_key`, `config_value`, `remark`, `status`, `creator`, `create_time`, `updater`, `update_time`, `deleted`)
+SELECT * FROM (
+  SELECT '心情色板预设' AS `name`, 'mood_color_presets' AS `config_key`, '["#FFB93C","#FF8FA3","#FF5A5A","#FF8A5C","#4EB087","#6C8BFF","#9B6BFF","#8FA3BF"]' AS `config_value`,
+         '心情新增浮层色板（M25，原端上写死迁入）；JSON 字符串数组（#RRGGBB hex）；解析失败端上走内置兜底 8 色' AS `remark`,
+         0 AS `status`, '1' AS `creator`, NOW() AS `create_time`, '1' AS `updater`, NOW() AS `update_time`, b'0' AS `deleted`
+) AS seed
+WHERE NOT EXISTS (
+  SELECT 1 FROM `love_config` d WHERE d.`deleted` = b'0' AND d.`config_key` = seed.`config_key`
+);
+
+-- ----------------------------
+-- 菜单/按钮权限 SQL（M25，「情侣业务」目录下第十二/十三个管理页）
+-- 挂接：目录 id 按 type+name 回查（同 M3.5/M17 段理由，不依赖前段 LAST_INSERT_ID）；
+-- 幂等：按钮（按 permission）→ 管理菜单（按 component_name）先行 DELETE，先子后父（M-3 同款）。
+-- ----------------------------
+DELETE FROM `system_menu` WHERE `permission` IN ('love:emoji:query', 'love:emoji:create', 'love:emoji:update', 'love:emoji:delete');
+DELETE FROM `system_menu` WHERE `component_name` = 'LoveEmoji';
+DELETE FROM `system_menu` WHERE `permission` IN ('love:wish-template:query', 'love:wish-template:create', 'love:wish-template:update', 'love:wish-template:delete');
+DELETE FROM `system_menu` WHERE `component_name` = 'LoveWishTemplate';
+
+SELECT @loveDirectoryId := `id` FROM `system_menu` WHERE `type` = 1 AND `name` = '情侣业务' AND `deleted` = b'0' LIMIT 1;
+
+-- 管理菜单十二：表情包管理（component_name 唯一 = LoveEmoji，M17 实况同款无 Menu 后缀）
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('表情包管理', '', 2, 12, @loveDirectoryId, 'emoji', 'ep:sugar', 'love/emoji/index', 'LoveEmoji', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+SELECT @parentId := LAST_INSERT_ID();
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('表情查询', 'love:emoji:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('表情新增', 'love:emoji:create', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('表情编辑', 'love:emoji:update', 3, 3, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('表情删除', 'love:emoji:delete', 3, 4, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+
+-- 管理菜单十三：心愿模板管理（component_name 唯一 = LoveWishTemplate；多词权限先例 mood-option-default）
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('心愿模板管理', '', 2, 13, @loveDirectoryId, 'wishTemplate', 'ep:present', 'love/wishTemplate/index', 'LoveWishTemplate', 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+SELECT @parentId := LAST_INSERT_ID();
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('模板查询', 'love:wish-template:query', 3, 1, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('模板新增', 'love:wish-template:create', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('模板编辑', 'love:wish-template:update', 3, 3, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('模板删除', 'love:wish-template:delete', 3, 4, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');

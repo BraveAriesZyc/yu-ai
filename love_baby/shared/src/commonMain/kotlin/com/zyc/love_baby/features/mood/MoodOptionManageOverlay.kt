@@ -40,6 +40,7 @@ import com.zyc.love_baby.features.couple.BindPrimaryButton
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.network.ApiResult
+import com.zyc.love_baby.state.LoveConfigStore
 import com.zyc.love_baby.state.MoodStore
 import com.zyc.love_baby.state.colorFromHex
 import kotlinx.coroutines.launch
@@ -49,18 +50,6 @@ private const val MOOD_LABEL_MAX_LENGTH = 16
 
 /** 选项数上限(与服务端 MoodOptionServiceImpl 上限一致,超限服务端 1_003_002_002;端上预检少一趟请求) */
 private const val MOOD_OPTION_MAX = 20
-
-/**
- * emoji 预设集(约 12 个,全部 Unicode 11 及以前——老系统字体可渲染,勿随手加新版字形;
- * H5/鸿蒙字体覆盖 M4 多端测试再核)。只影响上送的 emoji 字符串,服务端 varchar(16) 原样存
- */
-private val emojiPresets = listOf("😄", "😊", "🥰", "😌", "😎", "🥺", "😭", "😤", "😠", "😴", "🤒", "🥳")
-
-/**
- * 色板预设集(8 色,取仓内既有色值:5 档 legacy 配色 + 主题粉 fallback + 和好绿 + 拥抱橙)。
- * 选定后上送 hex 字符串,服务端 varchar(16) 原样存
- */
-private val colorPresets = listOf("#FFB93C", "#FF8FA3", "#FF5A5A", "#FF8A5C", "#4EB087", "#6C8BFF", "#9B6BFF", "#8FA3BF")
 
 /**
  * MoodOptionManageOverlay — 心情字典管理浮层(M3.5 D-14):couple 私有心情选项的增删面板。
@@ -84,6 +73,11 @@ internal fun MoodOptionManageOverlay(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    // M25 预设服务端化(LoveConfigStore 两 KV,后台「业务配置」页维护):兜底值与原内置
+    // 12+8 完全一致,无配置/坏 JSON 时行为不变。重组间只取一次——取值器逐次解析 JSON,
+    // 勿下放到下方 items lambda 反复解析
+    val emojiPresets = LoveConfigStore.moodEmojiPresets
+    val colorPresets = LoveConfigStore.moodColorPresets
     var label by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf(emojiPresets.first()) }
     var colorHex by remember { mutableStateOf(colorPresets.first()) }

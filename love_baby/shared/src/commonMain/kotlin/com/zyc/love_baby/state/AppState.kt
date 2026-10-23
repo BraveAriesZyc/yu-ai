@@ -642,8 +642,7 @@ internal data class Wish(
     val icon: AppIconType,
 )
 
-val moodCategories = listOf("想亲亲", "想抱抱", "想吃点", "想念", "撒个娇", "和好")
-
+/** 分类配色(M25 起仅供 allWishes 兜底列表用色;正常数据源 = 后台模板 color_start/color_end) */
 private val catColors = mapOf(
     "想亲亲" to listOf(Color(0xFFFF9AC4), Color(0xFFFF5A8C)),
     "想抱抱" to listOf(Color(0xFFFFB27A), Color(0xFFFF8A5C)),
@@ -654,8 +653,9 @@ private val catColors = mapOf(
 )
 
 /**
- * 24 条心愿文案字典留端上(§7.4:服务端无 wish 实体,只同步 kind=2 快照消息与 love_mood_record);
- * 送出时按快照四字段(id/title/主色 hex/icon name)上送,两设备还原靠快照而非字典版本
+ * 24 条心愿文案内置字典(M25 起角色 = 心愿模板池空/拉取失败时的端上兜底,WishStore.wishes 消费;
+ * 正常数据源 = 后台 love_wish_template 下发)。送出时按快照四字段(id/title/主色 hex/icon name)
+ * 上送,两设备还原靠快照而非字典版本——admin 删/停模板不影响历史消息
  */
 internal val allWishes: List<Wish> = listOf(
     Wish("w1", "想亲亲", "求亲亲", "mua 一口就跑", catColors["想亲亲"]!!, AppIconType.Heart),
@@ -685,10 +685,15 @@ internal val allWishes: List<Wish> = listOf(
 )
 
 internal object MoodStore {
-    var categoryIndex by mutableIntStateOf(0)
+    /**
+     * 心愿墙选中分类(M25 字典服务端化):空串 = 全部,非空 = WishStore.categories 之一。
+     * 住 Store 而非页内 remember:要与选中态同级跨组件共享;M25 前为 categoryIndex:Int,
+     * 索引 0「全部」却按 moodCategories[0] 渲染标签的 quirk 一并修正(字符串直存,无映射歧义)
+     */
+    var wishCategory by mutableStateOf("")
 
     /**
-     * 当前选中心情选项 id(空串 = 未选;M3.5)。住 Store 而非页内 remember:选中态要与 categoryIndex
+     * 当前选中心情选项 id(空串 = 未选;M3.5)。住 Store 而非页内 remember:选中态要与 wishCategory
      * 同级跨组件共享——管理浮层(挂 MainPager 根 Box)删除选中项后需清此值,页内 remember 够不着
      */
     var selectedOptionId by mutableStateOf("")
@@ -711,8 +716,17 @@ internal object MoodStore {
     var moodOptions by mutableStateOf(emptyList<MoodOption>())
         private set
 
+    /** 已选心愿(数据源 = WishStore.wishes,M25 服务端化;selectedIds 是模板 id 即 wishKey) */
     val selectedWishes: List<Wish>
-        get() = allWishes.filter { it.id in selectedIds }
+        get() = WishStore.wishes.filter { it.id in selectedIds }
+
+    /**
+     * 按服务端模板集剪枝选中集(WishStore.refresh 成功后接线):停用/删除的模板从已选中剔除,
+     * 防「已选 N 个」悬空计数;交集为空集时自然清空(全停用 → 兜底列表 + 无选中)
+     */
+    fun retainSelected(validIds: Set<String>) {
+        selectedIds = selectedIds intersect validIds
+    }
 
     fun toggle(id: String) {
         selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
@@ -867,7 +881,7 @@ internal object MoodStore {
 
     /** 登出/换号/解绑清内存(MainPager 接线调用);字典随清——couple 私有,换绑定重新播种 */
     fun reset() {
-        categoryIndex = 0
+        wishCategory = ""
         selectedOptionId = ""
         selectedIds = emptySet()
         moodRecords = emptyList()

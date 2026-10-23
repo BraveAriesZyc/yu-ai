@@ -183,6 +183,32 @@
 
 **M24 追加（2026-10-22，相册瀑布流）**：love_moment 加 `image_width` / `image_height` int NOT NULL DEFAULT 0——**首图压缩后宽/高（px，EXIF 矫正）**，取自 Android 原生 Glide 压缩回调 Bitmap 实际值（uploadImage 回包顶层 width/height 键附带，data=URL 契约不变、老调用方零感知）；0=未知（旧数据/老版 App/上传失败缺省）→ 端上瀑布流卡片降级 140dp 定高，双向兼容。create 请求可空缺省 0，list/回包经 BeanUtils 同名自动拷贝零手工组装；admin VO 不消费零改动。
 
+### love_emoji（聊天表情包字典，**M25 新增 2026-10-23**）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | |
+| category | varchar(20) 默认 '' | 分类（App 端动态聚合 tab，空串归「常用」桶；**自由填不做字典表**，聚合机制天然支持新分类） |
+| emoji | varchar(16) | emoji 字符本体（App 点选即插入聊天输入框，TEXT 链发送） |
+| sort | int 默认 0 | App 端 sort asc, id asc 稳定序 |
+| status | tinyint 默认 0 | 0=启用 / 1=停用（停用行不下发 App） |
+
+全局共享运营内容（无 couple/user 归属，照 love_inspiration 母本全链）；BaseDO 五件审计列 + idx_category(category,sort,id)。app 单端点 GET /love/emoji/list 启用行全量零分页，**零错误路径**（池空/停用全删/拉取失败端上走 ChatStickers 内置兜底单分类「常用」，面板永不空白）。种子 24 枚 = 原 ChatStickers.ORDER 逐枚转录（语义四组 爱意8/情绪6/手势6/庆祝4）；⚠ **ChatStickers append-only 一字不动**——历史 kind=6 贴纸 content=key 明文仍靠端上字典渲染，本表只服务新表情面板，与 ChatStickers 并存不替代。
+
+### love_wish_template（心愿墙挑选模板，**M25 新增 2026-10-23**）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | **即 App 送出 wishKey**（历史 "w1".."w24" 与新数字 id 无碰撞；快照式上送，渲染不查本表） |
+| category | varchar(20) 默认 '' | 分类（App 端动态聚合 chips，空串归「其他」桶） |
+| title | varchar(32) | 气泡主文案（@NotBlank） |
+| subtitle | varchar(64) 可空 | 卡片第二行（可空不渲染） |
+| color_start / color_end | varchar(16) | 卡片渐变起/止色 hex #RRGGBB（@Pattern `^#[0-9A-Fa-f]{6}$`，默认 #FF8FA3 / #FF5A8C） |
+| icon | varchar(32) 默认 'Heart' | 端上 AppIconType 枚举 name（未知名端上兜底 Heart） |
+| sort / status | 同 love_emoji | 同上 |
+
+**快照式兼容（设计根基）**：kind=2 心愿消息上送四字段快照（wishKey/text/color/icon），服务端不校验、渲染不查字典 → admin 删/停模板**零影响历史消息**。种子 24 条 = 原 allWishes 一比一转录（判重按 title）；app 单端点 GET /love/wish-template/list（池空端上走 allWishes 内置兜底）；App 成功拉取后按新模板集剪枝选中集（MoodStore.retainSelected，防「已选 N」悬空）。
+
 ## 5. API 设计
 
 ### 5.1 通用约定（已核实，非待确认）
@@ -686,6 +712,16 @@ MinePage 目前为本地假数据；M2 起：用户资料区（昵称/头像）�
 - [ ] (M24) 相册瀑布流走查：旧动态（宽高 0）140dp 定高 / 新发横图竖图各一验 aspectRatio 自适应错落 / 下拉刷新（列表顶/中/底三态可拉，加载中拦重，越阈松手触发+最短驻留）/ 加载更多 / 发布头插 / 5s 轮询对账不闪 / 删除 / 大图预览回归
 - [ ] (M24) 服务端冒烟：moment create 传宽高正常值 / 传 0 / 不传三态落库；list 回包含 imageWidth/imageHeight；老客户端（不传宽高）发布照常
 - [ ] (M24) 服务端零改动项确认：原生录音桥（recordAudioStart/Stop 单一收口通道）未动；上传链分派（uploadImage/uploadMedia/videoCover）未动；修订后原生仅**新增**桥方法（pickMedia 十轮混选[十三轮起休眠]、queryMediaLibrary/copyMedia 十三轮相册弹层；pickImages/pickVideo 保留作单类型选择器），服务端零改动不变
+
+### (M25) 字典数据服务端化（2026-10-23 实施）
+
+用户裁决「按理说就不应该存在死数据」：端上四处写死字典改后台可配、接口下发——新表 love_emoji（聊天表情包含分类，端上分类 tab + 滚动网格）+ love_wish_template（心愿墙挑选模板，端上 chips 动态聚合）；三个 love_config 新 key（quick_stickers=聊天快捷贴纸条 / mood_emoji_presets+mood_color_presets=心情新增浮层预设，JSON 字符串数组，后台「业务配置」页维护）。心情主链 M3.5 已动态（couple 私有字典全链）本轮不动。
+
+- [ ] (M25) 快照式兼容回归：admin 删/停 wish 模板 → 历史 kind=2 消息气泡渲染不变（四字段快照上送，服务端/渲染均不查表）；ChatStickers 一字不动（kind=6 历史贴纸渲染仍靠端上 append-only 字典，新角色=表情面板兜底单分类「常用」）
+- [ ] (M25) 端上兜底走查：断网冷启动 → 表情 24 枚单分类 / 心愿 24 条内置 / 快捷条 5 条 / 预设 12+8，与 M24 现状一致；后台全停用表情/模板 → 回兜底且「已选 N」剪枝不悬空（WishStore.refresh → MoodStore.retainSelected）
+- [ ] (M25) 动态生效：后台加新分类+条目 → App 回前台分类 tab/chips 即现（含 love_config 三 key 热更：快捷条/心情预设）
+- [ ] (M25) 交互回归：emoji 点选插输入框（超长拒插）/发送 TEXT/退格代理对整删；心愿送出气泡渐变+图标正确（新 wishKey=模板数字 id）；历史 w1 时代消息与 kind=6 贴纸渲染不变；quirk 修正回归（分类标签不再恒显「想亲亲」）
+- [ ] (M25) web 后台两页（表情包/心愿模板）CRUD 走通：emoji 列大字号直显、色块预览列、icon Select 与 AppIconType 全集对齐、hex 正则校验；SQL 幂等（两表 24 行 / config +3 行 / 菜单两组各 4 按钮，重放无重复）
 
 ### 上线前（M4，D-4 强制项）
 

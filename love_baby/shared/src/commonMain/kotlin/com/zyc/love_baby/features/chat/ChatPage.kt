@@ -39,6 +39,9 @@ import com.tencent.kuikly.compose.foundation.lazy.LazyRow
 import com.tencent.kuikly.compose.foundation.lazy.items
 import com.tencent.kuikly.compose.foundation.lazy.itemsIndexed
 import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
+import com.tencent.kuikly.compose.foundation.lazy.grid.GridCells
+import com.tencent.kuikly.compose.foundation.lazy.grid.LazyVerticalGrid
+import com.tencent.kuikly.compose.foundation.lazy.grid.items
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.CircularProgressIndicator
 import com.tencent.kuikly.compose.material3.Text
@@ -94,6 +97,8 @@ import com.zyc.love_baby.state.ChatStickers
 import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.EmojiStore
+import com.zyc.love_baby.state.LoveConfigStore
 import com.zyc.love_baby.state.MSG_SEND_FAILED
 import com.zyc.love_baby.state.MSG_SEND_SENDING
 import com.zyc.love_baby.state.MSG_SEND_SENT
@@ -180,9 +185,10 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    发送钮,右下退格键删改);mediaPanel 三态(0 快捷贴纸条[输入行上方]/1 表情网格/2 动作面板
  *    仅剩心愿墙卡——1/2 移到输入行下方微信式贴底整幅 CardBg 面板,修订裁决「表情包弹出来后
  *    在输入框下面」);图片钮直选混选(修订裁决「不要弹框,点击图片 icon 直接选择」,见图片消息条)
+ *  - M25 字典服务端化:快捷贴纸条 5 条文案走 LoveConfigStore.quick_stickers 下发(内置兜底同值);
+ *    表情面板 24 枚死网格退役,改 EmojiStore 分类 tab + 滚动网格(池空走 ChatStickers 兜底单分类)
  *  - ⚠ partnerReply 本地假回复已随 M3 整体移除,TA 的消息靠 message/list 增量拉取(§7.4)
  */
-private val quickStickers = listOf("贴贴", "mua~", "想你了", "举高高", "晚安鸭")
 
 /** 文本长度上限(与服务端 AppMessageSendReqVO @Length(max=500) 对齐;TextField maxLength 渲染层拒绝) */
 private const val INPUT_MAX_LENGTH = 500
@@ -1419,13 +1425,14 @@ fun ChatPage(
             // ── 快捷贴纸文本条(F17:白底胶囊在近白页底上对比度过低改 Divider 实底;sending 期间
             // 拦点击)。M24 修订:仅 mediaPanel==0 时显示——表情/动作面板移到输入行下方(微信式
             // 布局,用户裁决「表情包弹出来后在输入框下面」),不再共用此槽位。点击乐观发送:
-            // 即点即现(乐观入列)→ POST 回包换真身/失败红叹号(同文本钮)
+            // 即点即现(乐观入列)→ POST 回包换真身/失败红叹号(同文本钮)。M25:文案走
+            // LoveConfigStore.quick_stickers 下发(后台业务配置页可改,回前台即见;坏 JSON 兜底同值)
             if (mediaPanel == 0) {
                 LazyRow(
                     modifier = Modifier.padding(horizontal = AppTheme.PageHPadding, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(quickStickers) { sticker ->
+                    items(LoveConfigStore.quickStickers) { sticker ->
                         Box(
                             modifier = Modifier.background(AppTheme.Divider, RoundedCornerShape(15.dp))
                                 .clickable {
@@ -1623,34 +1630,66 @@ fun ChatPage(
             // bottom padding(面板开着时输入行只留 4dp 小间距,见输入行注释)。互斥下面板打开时
             // 键盘必收起,inputBarBottomPaddingDp(0)=86dp 浮岛底栏常数
             if (mediaPanel == 1) {
-                // M24 表情面板(微信式,替代 M23 快捷贴纸 LazyRow):ChatStickers.ORDER 24 枚
-                // 恰 3×8 静态网格(无滚动容器)。M24 五轮修订(用户裁决「选择的表情包在输入框里,
-                // 不应该有个专门显示的」):点选即 append 进输入框(微信语义;发送走输入行发送钮,
-                // 与快捷贴纸条同为 TEXT 链),删「选中底/底部预览行/品牌发送胶囊」专显——右侧
-                // 退格键供面板内删改(面板开着键盘收起,无系统删除途径;emoji 代理对整体删)
+                // M25 表情面板字典服务端化(替代 M24 内置 3×8 静态网格):EmojiStore 分类 tab +
+                // 当前分类 LazyVerticalGrid。点选链不变(M24 五轮裁决「选择的表情包在输入框里」:
+                // 点选即 append 进输入框,发送走输入行发送钮,与快捷贴纸条同为 TEXT 链,超长拒插);
+                // 退格行原样(面板开着键盘收起,无系统删除途径;emoji 代理对整体删)。
+                // 兜底:池空/停用全删/拉取失败 → EmojiStore 回 ChatStickers.ORDER 包装单分类
+                // 「常用」(kind=6 渲染字典原样复用,面板永不空白,与 M23 老版语义一致)
                 Column(
                     modifier = Modifier.fillMaxWidth()
                         .background(AppTheme.CardBg) // 贴底整幅实底(微信式面板)
                         .padding(horizontal = AppTheme.PageHPadding, vertical = 8.dp)
                         .padding(bottom = inputBarBottomPaddingDp(keyboardHeight)), // dock 清让,CardBg 随之铺满
                 ) {
-                    ChatStickers.ORDER.chunked(8).forEach { rowKeys ->
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            rowKeys.forEach { key ->
+                    // 分类 tab 行(仅多分类渲染:单分类「常用」无切换价值;横向 in 竖向 = 跨轴,铁律⑦)
+                    if (EmojiStore.categories.size > 1) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            items(EmojiStore.categories) { cat ->
+                                val selected = cat == EmojiStore.effectiveCategory
                                 Box(
-                                    modifier = Modifier.weight(1f)
-                                        .padding(3.dp)
-                                        .clickable {
-                                            // 插入输入框(超长拒插,与 TextField maxLength 同源守卫)
-                                            if (inputText.length + ChatStickers.emojiOf(key).length <= INPUT_MAX_LENGTH) {
-                                                inputText += ChatStickers.emojiOf(key)
-                                            }
-                                        }
-                                        .height(40.dp),
-                                    contentAlignment = Alignment.Center,
+                                    // 选中态换色不增删节点(铁律③);clickable 与背景同节点(铁律⑤)
+                                    modifier = Modifier
+                                        .background(
+                                            if (selected) theme.brandStart else AppTheme.Divider,
+                                            RoundedCornerShape(14.dp),
+                                        )
+                                        .clickable { EmojiStore.selectedCategory = cat }
+                                        .padding(horizontal = 12.dp, vertical = 5.dp),
                                 ) {
-                                    Text(ChatStickers.emojiOf(key), fontSize = 24.sp)
+                                    Text(
+                                        cat,
+                                        color = if (selected) Color.White else AppTheme.TextSecondary,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                    )
                                 }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                    // 网格区:8 列,死高度 138dp(3 行 × 46dp;超 24 枚面板内滚,父 Column 不滚
+                    // 无同向嵌套滚动)——Kuikly lazy 网格须死高度,MediaPickerSheet 已实证可行
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(8),
+                        modifier = Modifier.fillMaxWidth().height(138.dp),
+                    ) {
+                        items(EmojiStore.currentEmojis) { info ->
+                            Box(
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(3.dp)
+                                    .clickable {
+                                        // 插入输入框(超长拒插,与 TextField maxLength 同源守卫)
+                                        if (inputText.length + info.emoji.length <= INPUT_MAX_LENGTH) {
+                                            inputText += info.emoji
+                                        }
+                                    }
+                                    .height(40.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(info.emoji, fontSize = 24.sp)
                             }
                         }
                     }

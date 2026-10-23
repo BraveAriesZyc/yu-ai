@@ -43,10 +43,12 @@ import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.EmojiStore
 import com.zyc.love_baby.state.LoveConfigStore
 import com.zyc.love_baby.state.MoodStore
 import com.zyc.love_baby.state.StatsStore
 import com.zyc.love_baby.state.TodoStore
+import com.zyc.love_baby.state.WishStore
 import com.zyc.love_baby.features.home.HomePage
 import com.zyc.love_baby.features.mine.MinePage
 import com.zyc.love_baby.features.mood.MoodOptionManageOverlay
@@ -245,6 +247,9 @@ internal fun MainPageImpl(pager: BasePager) {
             StatsStore.refresh(pager)
             // 业务配置(M23):登录后首拉(客服微信号等 KV),失败静默走内置兜底(只读降级)
             LoveConfigStore.refresh(pager)
+            // 字典服务端化(M25):表情面板/心愿模板全量,失败静默走端上内置兜底(只读降级)
+            EmojiStore.refresh(pager)
+            WishStore.refresh(pager)
         }
     }
 
@@ -511,6 +516,9 @@ internal fun MainPageImpl(pager: BasePager) {
                 StatsStore.refresh(pager)
                 // 业务配置同步新(M23):后台改客服微信号等,App 回前台即见(失败静默走兜底)
                 LoveConfigStore.refresh(pager)
+                // 字典同步新(M25):后台改表情包/心愿模板,App 回前台即见(失败静默走兜底)
+                EmojiStore.refresh(pager)
+                WishStore.refresh(pager)
                 // 纪念日整表补拉(M5):首页第 4 列消费 AnniversaryStore,回前台即可见对端增删;
                 // 未绑定时服务端回 1_003_004_003,loadList 失败静默保留旧值(解绑清场已清空,无残留)
                 if (CoupleStore.bindState == CoupleBindState.BOUND) {
