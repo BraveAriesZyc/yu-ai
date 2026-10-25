@@ -67,3 +67,28 @@ internal fun daypartLabel(epochMs: Long): String {
         else -> "深夜" // 23-4
     }
 }
+
+/** 相对时间文案(M26 电量/位置「X 前」式,GMT+8):刚刚/N分钟前/N小时前/今天|昨天+HH:mm/
+ *  M月d日/跨年补年份;epochMs<=0 返回空串(调用侧显「从未上报」,不造假时间) */
+internal fun relativeTimeLabel(epochMs: Long): String {
+    if (epochMs <= 0) return ""
+    val now = nowEpochMs()
+    val diff = now - epochMs
+    if (diff >= 0) {
+        if (diff < 60_000L) return "刚刚"
+        if (diff < MS_HOUR) return "${diff / 60_000L}分钟前"
+        if (diff < MS_DAY) return "${diff / MS_HOUR}小时前"
+    }
+    // 超 1 天(或时钟回拨的负差):落到日期语义
+    val (y, m, d) = civilFromDays(chatDayIndex(epochMs))
+    val hhmm = chatHHmm(epochMs)
+    val todayIndex = (now + 8 * MS_HOUR) / MS_DAY
+    return when (chatDayIndex(epochMs)) {
+        todayIndex -> "今天 $hhmm"
+        todayIndex - 1 -> "昨天 $hhmm"
+        else -> {
+            val (nowY, _, _) = civilFromDays(todayIndex)
+            if (y == nowY) "${m}月${d}日 $hhmm" else "${y}年${m}月${d}日"
+        }
+    }
+}

@@ -21,6 +21,7 @@ import com.zyc.love_baby.data.model.AnniversaryInfo
 import com.zyc.love_baby.data.model.CheckinInfo
 import com.zyc.love_baby.data.model.CheckinSummaryInfo
 import com.zyc.love_baby.data.model.MessageInfo
+import com.zyc.love_baby.data.model.LocationPointInfo
 import com.zyc.love_baby.data.model.MoodOptionInfo
 import com.zyc.love_baby.data.model.MoodRecordInfo
 import com.zyc.love_baby.data.model.TodoInfo
@@ -1782,6 +1783,16 @@ internal object ChatPushStore {
      *  content 单键占位不消费;无「停止输入」信号,端上 4s 过期唯一收口(D-18) */
     private const val TYPE_LOVE_TYPING = "love-typing"
 
+    /** 位置有新点信号类型(M27,ShareServiceImpl.LOCATION_TYPE_LOVE_NEW 同串):content 即
+     *  点数据本体(AppLocationPointVO JSON,reportTime epoch 毫秒),直解落 store 即时换
+     *  marker;与聊天帧不同无需二次拉取,latest 30s 兜底轮询纠偏 */
+    private const val TYPE_LOVE_LOCATION_NEW = "love-location-new"
+
+    /** 提醒对方更新位置信号类型(M28,ShareServiceImpl.LOCATION_TYPE_LOVE_PULL 同串):
+     *  content="{}" 占位不消费,收到即触发一次上报——位置共享开 + App 前台(doReport 双闸)
+     *  才实际出点;pull 只发信号不触发 pull(服务端 report 只推 love-location-new),无回路 */
+    private const val TYPE_LOVE_LOCATION_PULL = "love-location-pull"
+
     /** 连接态:普通 var 非快照状态——不驱动 UI,只做幂等判重(主线程读写见头注释) */
     private const val STATE_DISCONNECTED = 0
     private const val STATE_CONNECTING = 1
@@ -1867,6 +1878,25 @@ internal object ChatPushStore {
                     // 协程 4s 收口(D-18 无停止信号);非停留聊天页时置位无害(副标题仅聊天页可见)
                     launchTracked {
                         ChatStore.applyPartnerTyping()
+                    }
+                } else if (type == TYPE_LOVE_LOCATION_NEW) {
+                    // M27 位置实时帧:content 即点数据本体(双层解析同 recall),纯快照写无 IO
+                    // 不走 launchTracked;无效点静默(latest 30s 兜底轮询自愈),TA 关共享后
+                    // 恒无此帧(服务端只在落库成功分支推),marker 消失由轮询 shareEnabled 驱动
+                    val point = try {
+                        LocationPointInfo.from(JSONObject(JSONObject(text).optString("content")))
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (point != null) {
+                        LocationStore.applyPartnerPoint(point)
+                    }
+                } else if (type == TYPE_LOVE_LOCATION_PULL) {
+                    // M28 「提醒 TA」信号(M28 行动轨迹半层按钮):对方催我更新位置,收到即
+                    // 上报一次——doReport 内部 单飞 Mutex + 位置共享开关 + 前台闸 多重收口,
+                    // 连点风暴被单飞+服务端 3s 限频兜底;WS 未连/未桥接端收不到,latest 兜底
+                    launchTracked {
+                        LocationStore.doReport(pager)
                     }
                 }
             }

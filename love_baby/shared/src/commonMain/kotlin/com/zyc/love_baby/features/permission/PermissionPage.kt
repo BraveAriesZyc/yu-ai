@@ -6,11 +6,13 @@ import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
+import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
+import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
@@ -22,12 +24,16 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
+import com.tencent.kuikly.core.log.KLog
 import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
+import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.reactive.handler.observable
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.base.NotificationModule
 import com.zyc.love_baby.base.NotifyPermState
+import com.zyc.love_baby.base.LocationModule
 import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppMenuDivider
@@ -40,9 +46,17 @@ import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.features.couple.toastCouple
+import kotlinx.coroutines.delay
 
 /** permissionPage 路由名(openPermissionPage 与 @Page 注册名共用,勿散落字面量) */
 internal const val PERMISSION_PAGE_NAME = "permissionPage"
+
+/** logcat 面包屑 tag(KLog 经 KRLogModule 落 logcat;M29 回调静默丢失根因排查留痕) */
+private const val TAG = "PermissionPage"
+
+/** 宿主直注快照 pageData 键(M29;androidApp KuiklyRenderActivity/PermissionSnapshot
+ *  KEY_PERM_SNAPSHOT 同串双源,勿单改一边) */
+private const val PERM_SNAPSHOT_KEY = "permSnapshot"
 
 /**
  * 路由打开权限管理页(base.openLovePage 收口,try/catch 吞未桥接端在 helper 内统一处理)
@@ -57,19 +71,34 @@ internal fun openPermissionPage(pager: Pager) {
  *      独立二级页(CheckinPager 同款壳)
  * 依赖:base.NotificationModule 五方法(checkPermission 六值快照/requestPermission/openSettings/
  *      openChannelSettings/notify,Android 壳 KRNotificationModule 实现;iOS/ohos/H5 未注册
- *      getModule null→「不支持」态渐进降级);components(AppSubPageHeader/AppMenuGroup/AppMenuRow/
+ *      getModule null→「不支持」态渐进降级);base.FileModule 五方法(M29:checkMicPermission/
+ *      requestMicPermission/checkMediaPermission/requestMediaPermission/openAppDetails,
+ *      Android 壳 KRFileModule 实现,requestCode 2005/2006 静态槽;iOS/ohos/H5 未注册
+ *      getModule null→「不支持」);components(AppSubPageHeader/AppMenuGroup/AppMenuRow/
  *      AppTag/AppPrimaryButton);couple 包 toastCouple;Modifier.clickable(状态胶囊透传行热区)
  * 事件:返回钮 closePage;消息通知行/「去开启」requestThenGuide;「悄悄话」渠道行与「悬浮横幅
  *      提醒」行 openChannelSettings(渠道重要性/横幅开关所在页);「前往系统设置」直跳 App 级
- *      通知设置;从系统设置返回经 pageDidAppear 重查状态即时刷新
+ *      通知设置;定位行恒有响应——未开启 requestLocThenGuide(运行时申请,被拒带去应用详情
+ *      页),已开启 openLocationSettings(应用详情页「权限 → 位置权限」= 权限获取页);从系统
+ *      设置返回经 pageDidAppear 重查状态即时刷新
  * 功能:
- *  - 三行结构(2026-10-19 悬浮通知真机反馈轮定稿):
+ *  - 六行结构(2026-10-19 悬浮通知真机反馈轮定稿;M29 权限全面状态化):
  *    ① 消息通知:App 级总开关断言行(已开启/已关闭),已关闭可点=「去开启」全路径;
  *    ② 「悄悄话」渠道:渠道级断言行——正常/已关闭(IMPORTANCE_NONE)/横幅受限(被调低于
  *       HIGH)/跟随系统(API<26 无渠道概念,横幅由通知 PRIORITY 决定),点击跳渠道设置;
  *    ③ 悬浮横幅提醒:**引导行不置断言**——横幅(heads-up)= 渠道≥HIGH 只是必要条件,国产
  *       ROM 另有系统级「悬浮通知/横幅」开关且无标准查询 API(源码级核实),该项恒示
  *       「需手动确认」,点击跳渠道设置人工核对(引擎对「高」的落名:渠道页/系统通知页)
+ *    ④ 相册与图片(M29 状态化,修正旧「无需授权」失实):完整授权=已开启/Android14
+ *       「仅选中照片」=部分授权/已关闭可申请(M24 十三轮起应用内相册弹层为聊天主路径,
+ *       读媒体库运行时权限),已开启/部分授权点击进应用详情页
+ *    ⑤ 麦克风(M29 新增,发语音消息 RECORD_AUDIO):已开启点击进应用详情页/已关闭行点击
+ *       运行时申请(FileModule requestMicPermission,被拒带去应用详情页)
+ *    ⑥ 定位权限(M26):行点击恒有响应,见下方定位权限行条目
+ *  - 全行状态化+查询失败兜底(M29):六行状态胶囊恒有形态,进页 4s 仍有任一组未回包 →
+ *    queryStuck 置真,全部行落「状态未知」、详情卡改「查询失败」——模块回调静默丢失
+ *    (卡「查询中」真机实证)绝不挂死;KLog 面包屑(发送/回包两侧,tag=PermissionPage)
+ *    留排查痕,一次真机运行即可二分定位死亡点
  *  - 卡死根因修复(同轮):旧版原生回包经 call() 内同步 invoke 不送达=页面卡「查询中」,
  *    原生侧已统一 mainHandler 异步投递+采集异常兜底必达;common 侧六值化(checkPermission
  *    回 NotifyPermState,data class 相等跳重组)
@@ -78,8 +107,12 @@ internal fun openPermissionPage(pager: Pager) {
  *    发运行时申请,granted=true 仍二段查证(总开关+渠道双开才真已开启),denied 一律带去
  *    系统设置(33+ 拒绝两次后系统不再弹框但仍回调 DENIED,asked 无法区分真假弹框,跳设置
  *    是万能引导)
- *  - 状态详情卡:六态(查询中/不支持/已关闭/渠道关/横幅受限/已开启)+ 勿扰/省电条件提示
- *    (两者都会压制横幅,只在做题时显示)+ 权限说明卡(如实告知权限边界)
+ *  - 状态详情卡:七态(查询中/不支持/查询失败/已关闭/渠道关/横幅受限/已开启)+ 勿扰/省电
+ *    条件提示(两者都会压制横幅,只在做题时显示)+ 权限说明卡(如实告知权限边界)
+ *  - 定位权限行(M26):行点击恒有响应——未开启=获取权限(运行时申请,被拒带去应用详情页);
+ *    已开启=行尾追加精度位展示已获取的权限(FINE=精确定位/否则 COARSE=大致位置)+跳应用
+ *    详情页「权限 → 位置权限」(权限获取页,可查看/改授权)。位置页 M29 起无共享开关,
+ *    进页自有权限链
  */
 @Page("permissionPage", supportInLocal = true)
 internal class PermissionPager : BasePager() {
@@ -94,12 +127,84 @@ internal class PermissionPager : BasePager() {
     /** 「去开启」在飞(防重复弹框) */
     internal var requesting by observable(false)
 
+    /** 定位权限五件(M26,结构同上通知组):locChecked=首查完成;locSupported=桥可用;
+     *  locGranted=FINE/COARSE 任一授权(与 KRLocationModule 口径一致);locFine/locCoarse=
+     *  各自授权位(M29:已开启时行尾展示已获取的权限,精确定位/大致位置) */
+    internal var locChecked by observable(false)
+    internal var locSupported by observable(true)
+    internal var locGranted by observable(false)
+    internal var locFine by observable(false)
+    internal var locCoarse by observable(false)
+
+    /** 定位申请在飞(防重复弹框,与通知 requesting 分立互不干扰) */
+    internal var locRequesting by observable(false)
+
+    /** 麦克风权限四件(M29,结构同通知组):micChecked=首查完成;micSupported=桥可用;
+     *  micGranted=RECORD_AUDIO 已授权 */
+    internal var micChecked by observable(false)
+    internal var micSupported by observable(true)
+    internal var micGranted by observable(false)
+
+    /** 麦克风申请在飞(防重复弹框) */
+    internal var micRequesting by observable(false)
+
+    /** 相册读权限五件(M29,结构同定位组):mediaChecked=首查完成;mediaSupported=桥可用;
+     *  mediaGranted=完整读权限(33+ IMAGES+VIDEO 双授权 / 33- 传统存储);mediaPartial=
+     *  Android14「仅选中照片」部分授权(granted=false 时才有意义) */
+    internal var mediaChecked by observable(false)
+    internal var mediaSupported by observable(true)
+    internal var mediaGranted by observable(false)
+    internal var mediaPartial by observable(false)
+
+    /** 相册读申请在飞(防重复弹框) */
+    internal var mediaRequesting by observable(false)
+
+    /** 查询失败兜底(M29):进页 4s 后仍有任一组未回包 → 置真,全部行落「状态未知」、详情卡
+     *  改「查询失败」——绝不挂「查询中」(模块回调静默丢失真机实证,宁可诚实示「未知」,
+     *  不给假的已开启/已关闭;后续回包先到则本位无效果) */
+    internal var queryStuck by observable(false)
+
     override fun willInit() {
         super.willInit()
         // 首帧前定主题:宿主经 pageData 注入(KuiklyRenderActivity.createPageData)
         ThemeStore.initFromPageData(this)
+        // 首帧前播种权限状态(M29):模块回调在本页静默丢失真机实证(两轮 mainHandler 投递
+        // 修复未根治),首帧真实状态由宿主直注绕开模块桥——createPageData 对 permissionPage
+        // 注快照,四组查询与模块 check 回包同一原生 companion 单源;模块 refresh 仍在(回调
+        // 若通,到包同值幂等刷),无快照端(iOS/ohos/H5)保持逐组查询+超时兜底链
+        seedFromPageData()
         setContent {
             PermissionPage(this)
+        }
+    }
+
+    /** 解析宿主直注快照并播种四组状态(各 checked 即置真,首帧不闪「查询中」也不吃超时
+     *  兜底;解析失败/无快照静默留空,走常规查询链) */
+    private fun seedFromPageData() {
+        try {
+            val raw = pageData.params.optString(PERM_SNAPSHOT_KEY)
+            if (raw.isEmpty()) return
+            val snapshot = JSONObject(raw)
+            permState = NotifyPermState(
+                appGranted = snapshot.optBoolean("appGranted", false),
+                channelExists = snapshot.optBoolean("channelExists", false),
+                channelBlocked = snapshot.optBoolean("channelBlocked", false),
+                channelHigh = snapshot.optBoolean("channelHigh", false),
+                dndOn = snapshot.optBoolean("dndOn", false),
+                powerSaveOn = snapshot.optBoolean("powerSaveOn", false),
+            )
+            checked = true
+            supported = true
+            locGranted = snapshot.optBoolean("granted", false)
+            locFine = snapshot.optBoolean("fine", false)
+            locCoarse = snapshot.optBoolean("coarse", false)
+            locChecked = true
+            micGranted = snapshot.optBoolean("micGranted", false)
+            micChecked = true
+            mediaGranted = snapshot.optBoolean("mediaGranted", false)
+            mediaPartial = snapshot.optBoolean("mediaPartial", false)
+            mediaChecked = true
+        } catch (_: Exception) {
         }
     }
 
@@ -113,9 +218,14 @@ internal class PermissionPager : BasePager() {
     override fun pageDidAppear() {
         super.pageDidAppear()
         refresh()
+        refreshLocation()
+        refreshMic()
+        refreshMedia()
     }
 
-    /** 重查通知权限状态(进页首查 + pageDidAppear + 授权回调后刷) */
+    /** 重查通知权限状态(进页首查 + pageDidAppear + 授权回调后刷)。KLog 面包屑(发送/回包
+     *  两侧,logcat tag=PermissionPage):M29 卡「查询中」根因排查留痕——发送有、回包无=
+     *  死在原生或回程桥,一次真机运行即可二分定位 */
     internal fun refresh() {
         val module = getModule<NotificationModule>(NotificationModule.MODULE_NAME)
         if (module == null) {
@@ -124,7 +234,9 @@ internal class PermissionPager : BasePager() {
             return
         }
         supported = true
+        KLog.d(TAG, "notify check send")
         module.checkPermission { state ->
+            KLog.d(TAG, "notify check arrived: appGranted=${state.appGranted} channelBlocked=${state.channelBlocked}")
             permState = state
             checked = true
         }
@@ -179,17 +291,169 @@ internal class PermissionPager : BasePager() {
         getModule<NotificationModule>(NotificationModule.MODULE_NAME)?.openSettings()
     }
 
+    /** 重查定位权限(M26:进页首查 + pageDidAppear + 授权回调后刷;结构照 refresh,KLog 同款) */
+    internal fun refreshLocation() {
+        val module = getModule<LocationModule>(LocationModule.MODULE_NAME)
+        if (module == null) {
+            locSupported = false
+            locChecked = true
+            return
+        }
+        locSupported = true
+        KLog.d(TAG, "loc check send")
+        module.checkLocationPermission { granted, fine, coarse ->
+            KLog.d(TAG, "loc check arrived: granted=$granted fine=$fine coarse=$coarse")
+            locGranted = granted
+            locFine = fine
+            locCoarse = coarse
+            locChecked = true
+        }
+    }
+
+    /** 重查麦克风权限(M29:进页首查 + pageDidAppear + 授权回调后刷;结构照 refreshLocation,
+     *  FileModule 桥实现) */
+    internal fun refreshMic() {
+        val module = getModule<FileModule>(FileModule.MODULE_NAME)
+        if (module == null) {
+            micSupported = false
+            micChecked = true
+            return
+        }
+        micSupported = true
+        KLog.d(TAG, "mic check send")
+        module.checkMicPermission { granted ->
+            KLog.d(TAG, "mic check arrived: granted=$granted")
+            micGranted = granted
+            micChecked = true
+        }
+    }
+
+    /** 重查相册读权限(M29:进页首查 + pageDidAppear + 授权回调后刷;结构照 refreshMic) */
+    internal fun refreshMedia() {
+        val module = getModule<FileModule>(FileModule.MODULE_NAME)
+        if (module == null) {
+            mediaSupported = false
+            mediaChecked = true
+            return
+        }
+        mediaSupported = true
+        KLog.d(TAG, "media check send")
+        module.checkMediaPermission { granted, partial ->
+            KLog.d(TAG, "media check arrived: granted=$granted partial=$partial")
+            mediaGranted = granted
+            mediaPartial = partial
+            mediaChecked = true
+        }
+    }
+
+    /** 「去开启」定位(通知行 3-skeptic 定稿同款简化):denied 一律跳系统设置(拒绝两次后
+     *  系统静默拒绝仍回调 DENIED,asked 无法区分真假弹框,跳设置是万能引导);granted 重查刷状态 */
+    internal fun requestLocThenGuide() {
+        if (locRequesting) return
+        val module = getModule<LocationModule>(LocationModule.MODULE_NAME) ?: run {
+            toastCouple(this, "当前平台暂不支持")
+            return
+        }
+        locRequesting = true
+        module.requestLocationPermission { granted, _ ->
+            locRequesting = false
+            refreshLocation()
+            if (granted) {
+                toastCouple(this, "定位权限已开启")
+            } else {
+                module.openSettings()
+            }
+        }
+    }
+
+    /** 「去开启」麦克风(M29,通知/定位同款简化):denied 一律跳应用详情页(拒绝两次后系统
+     *  静默拒绝仍回调 DENIED,asked 区分不了真假弹框,跳设置是万能引导);granted 重查刷状态 */
+    internal fun requestMicThenGuide() {
+        if (micRequesting) return
+        val module = getModule<FileModule>(FileModule.MODULE_NAME) ?: run {
+            toastCouple(this, "当前平台暂不支持")
+            return
+        }
+        micRequesting = true
+        module.requestMicPermission { granted, _ ->
+            micRequesting = false
+            refreshMic()
+            if (granted) {
+                toastCouple(this, "麦克风权限已开启")
+            } else {
+                module.openAppDetails()
+            }
+        }
+    }
+
+    /** 「去开启」相册读权限(M29,同款简化):denied 一律跳应用详情页;granted/partial 重查
+     *  刷状态(partial=Android14「仅选中照片」,行尾展示部分授权态) */
+    internal fun requestMediaThenGuide() {
+        if (mediaRequesting) return
+        val module = getModule<FileModule>(FileModule.MODULE_NAME) ?: run {
+            toastCouple(this, "当前平台暂不支持")
+            return
+        }
+        mediaRequesting = true
+        module.requestMediaPermission { granted, _, _ ->
+            mediaRequesting = false
+            refreshMedia()
+            if (granted) {
+                toastCouple(this, "相册权限已开启")
+            } else {
+                module.openAppDetails()
+            }
+        }
+    }
+
     /** 跳「悄悄话」渠道级设置(渠道行/悬浮横幅引导行的落点;未桥接端 getModule null 静默降级) */
     internal fun openChannelSettings() {
         getModule<NotificationModule>(NotificationModule.MODULE_NAME)?.openChannelSettings()
+    }
+
+    /** 跳应用详情页(定位权限的权限获取页:「权限 → 位置权限」所在;已开启态行点击落这里,
+     *  可查看/改授权;未桥接端 getModule null 静默降级) */
+    internal fun openLocationSettings() {
+        getModule<LocationModule>(LocationModule.MODULE_NAME)?.openSettings()
+    }
+
+    /** 跳应用详情页(麦克风/相册读权限的权限获取页:「权限 → 麦克风/照片和视频」所在;
+     *  已开启/部分授权态行点击落这里,可查看/改授权;未桥接端 getModule null 静默降级) */
+    internal fun openAppDetails() {
+        getModule<FileModule>(FileModule.MODULE_NAME)?.openAppDetails()
     }
 }
 
 @Composable
 internal fun PermissionPage(pager: PermissionPager) {
     val theme = ThemeStore.current
-    // 进页首查(独立 @Page 组合在即活动在;从设置返回由 pageDidAppear 兜)
-    LaunchedEffect(Unit) { pager.refresh() }
+    // 进页首查(独立 @Page 组合在即活动在;从设置返回由 pageDidAppear 兜);通知/定位/麦克风/
+    // 相册读四组并行
+    LaunchedEffect(Unit) {
+        pager.refresh()
+        pager.refreshLocation()
+        pager.refreshMic()
+        pager.refreshMedia()
+    }
+    // 查询失败兜底(M29):模块回调静默丢失真机实证(通知/定位首查双双不回=页面永挂「查询中」),
+    // 4s 后仍有任一组未回包 → 全部行落「状态未知」诚实降级,绝不挂死;回包先到则置真无效果
+    LaunchedEffect(Unit) {
+        delay(4000)
+        if (!pager.checked || !pager.locChecked || !pager.micChecked || !pager.mediaChecked) {
+            KLog.d(TAG, "query stuck fallback fired: notify=${pager.checked} loc=${pager.locChecked} " +
+                "mic=${pager.micChecked} media=${pager.mediaChecked}")
+            pager.queryStuck = true
+        }
+    }
+    // 申请在飞保险(M29):回调丢失场景 requesting 永真会焊死「去开启」按钮与行点击,10s 复位
+    // 自愈(结果真到达仍走各自回包收口刷新,双到达无害);只解交互锁,不做状态断言
+    LaunchedEffect(Unit) {
+        delay(10000)
+        pager.requesting = false
+        pager.locRequesting = false
+        pager.micRequesting = false
+        pager.mediaRequesting = false
+    }
 
     // 派生态:总开关开 + 渠道未被单独关 = 消息通知可用(checked 前不置真,防「已开启」闪错)
     val st = pager.permState
@@ -220,6 +484,17 @@ internal fun PermissionPage(pager: PermissionPager) {
                             onClick = { if (pager.checked && !enabled) pager.requestThenGuide() },
                         ) {
                             when {
+                                // 查询失败兜底:4s 未回包落「状态未知」,绝不挂空白(命中测试铁律:
+                                // 胶囊包 clickable 转发行动作,未知态同样可点=同「去开启」)
+                                !pager.checked && pager.queryStuck -> Box(
+                                    modifier = Modifier.clickable { pager.requestThenGuide() },
+                                ) {
+                                    AppTag(
+                                        "状态未知",
+                                        bgColor = Color(0xFFF0F1F5),
+                                        textColor = Color(0xFF9AA0AE),
+                                    )
+                                }
                                 !pager.checked -> {}
                                 !pager.supported -> AppTag(
                                     "不支持",
@@ -255,6 +530,12 @@ internal fun PermissionPage(pager: PermissionPager) {
                             onClick = { pager.openChannelSettings() },
                         ) {
                             when {
+                                // 查询失败兜底(与通知行同一回包源,同落「状态未知」;点击仍是渠道设置)
+                                !pager.checked && pager.queryStuck -> AppTag(
+                                    "状态未知",
+                                    bgColor = Color(0xFFF0F1F5),
+                                    textColor = Color(0xFF9AA0AE),
+                                )
                                 !pager.checked -> {}
                                 !pager.supported -> AppTag(
                                     "不支持",
@@ -302,6 +583,12 @@ internal fun PermissionPage(pager: PermissionPager) {
                             onClick = { pager.openChannelSettings() },
                         ) {
                             when {
+                                // 查询失败兜底(与通知行同一回包源;点击仍是渠道设置人工核对)
+                                !pager.checked && pager.queryStuck -> AppTag(
+                                    "状态未知",
+                                    bgColor = Color(0xFFF0F1F5),
+                                    textColor = Color(0xFF9AA0AE),
+                                )
                                 !pager.checked -> {}
                                 !pager.supported -> AppTag(
                                     "不支持",
@@ -321,18 +608,173 @@ internal fun PermissionPage(pager: PermissionPager) {
                             }
                         }
                         AppMenuDivider()
+                        // ④ 相册与图片(M29 状态化,修正旧「无需授权」失实——M24 十三轮起聊天主
+                        //  路径为应用内相册弹层,读媒体库运行时权限):完整授权=已开启 / Android14
+                        //  「仅选中照片」=部分授权 / 未授权=已关闭可申请
                         AppMenuRow(
                             icon = AppIconType.Image,
                             iconTint = Color(0xFF6C7BFF),
                             iconBg = Color(0xFFEDEFFF),
                             title = "相册与图片",
-                            onClick = {},
+                            onClick = {
+                                if (pager.mediaChecked && pager.mediaSupported) {
+                                    if (pager.mediaGranted || pager.mediaPartial) {
+                                        pager.openAppDetails()
+                                    } else {
+                                        pager.requestMediaThenGuide()
+                                    }
+                                }
+                            },
                         ) {
-                            AppTag(
-                                "无需授权",
-                                bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
-                                textColor = Color(0xFF34C77B),
-                            )
+                            when {
+                                !pager.mediaChecked && pager.queryStuck -> unknownTag()
+                                !pager.mediaChecked -> {}
+                                !pager.mediaSupported -> AppTag(
+                                    "不支持",
+                                    bgColor = Color(0xFFF0F1F5),
+                                    textColor = Color(0xFF9AA0AE),
+                                )
+                                // 已开启/部分授权:点击进应用详情页(权限获取页,可查看/改授权;
+                                // 部分授权的「选择更多照片」升级入口也在那里)。胶囊带背景原生视图
+                                // 吃 tap(命中测试铁律),包 clickable 转发行动作
+                                pager.mediaGranted -> Box(
+                                    modifier = Modifier.clickable { pager.openAppDetails() },
+                                ) {
+                                    AppTag(
+                                        "已开启",
+                                        bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
+                                        textColor = Color(0xFF34C77B),
+                                    )
+                                }
+                                pager.mediaPartial -> Box(
+                                    modifier = Modifier.clickable { pager.openAppDetails() },
+                                ) {
+                                    AppTag(
+                                        "部分授权",
+                                        bgColor = Color(0xFFF5A623).copy(alpha = 0.12f),
+                                        textColor = Color(0xFFF5A623),
+                                    )
+                                }
+                                else -> Box(
+                                    modifier = Modifier.clickable { pager.requestMediaThenGuide() },
+                                ) {
+                                    AppTag(
+                                        "已关闭",
+                                        bgColor = AppTheme.Danger.copy(alpha = 0.12f),
+                                        textColor = AppTheme.Danger,
+                                    )
+                                }
+                            }
+                        }
+                        AppMenuDivider()
+                        // ⑤ 麦克风(M29 新增,发语音消息用 RECORD_AUDIO):已开启=点击进应用详情页;
+                        // 已关闭=行点击运行时申请,被拒带去应用详情页
+                        AppMenuRow(
+                            icon = AppIconType.Mic,
+                            iconTint = Color(0xFFE0559B),
+                            iconBg = Color(0xFFFBE8F1),
+                            title = "麦克风",
+                            onClick = {
+                                if (pager.micChecked && pager.micSupported) {
+                                    if (pager.micGranted) {
+                                        pager.openAppDetails()
+                                    } else {
+                                        pager.requestMicThenGuide()
+                                    }
+                                }
+                            },
+                        ) {
+                            when {
+                                !pager.micChecked && pager.queryStuck -> unknownTag()
+                                !pager.micChecked -> {}
+                                !pager.micSupported -> AppTag(
+                                    "不支持",
+                                    bgColor = Color(0xFFF0F1F5),
+                                    textColor = Color(0xFF9AA0AE),
+                                )
+                                pager.micGranted -> Box(
+                                    modifier = Modifier.clickable { pager.openAppDetails() },
+                                ) {
+                                    AppTag(
+                                        "已开启",
+                                        bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
+                                        textColor = Color(0xFF34C77B),
+                                    )
+                                }
+                                else -> Box(
+                                    modifier = Modifier.clickable { pager.requestMicThenGuide() },
+                                ) {
+                                    AppTag(
+                                        "已关闭",
+                                        bgColor = AppTheme.Danger.copy(alpha = 0.12f),
+                                        textColor = AppTheme.Danger,
+                                    )
+                                }
+                            }
+                        }
+                        AppMenuDivider()
+                        // ⑥ 定位权限(M26):位置页前置(FINE/COARSE 任一授权即放行)。行点击恒有响应——
+                        // 未开启=获取权限(运行时申请;被拒[含 33+ 两次后系统静默拒绝,弹框不再出]
+                        // 一律带去应用详情页);已开启=行尾追加精度位展示已获取的权限+跳应用详情页
+                        // 「权限 → 位置权限」(权限获取页,可查看/改授权;系统无直达权限子页的
+                        // 公开 API,应用详情页即落点)
+                        AppMenuRow(
+                            icon = AppIconType.Location,
+                            iconTint = Color(0xFF3AA6DC),
+                            iconBg = Color(0xFFE7F5FC),
+                            title = "定位权限",
+                            onClick = {
+                                if (pager.locChecked && pager.locSupported) {
+                                    if (pager.locGranted) {
+                                        pager.openLocationSettings()
+                                    } else {
+                                        pager.requestLocThenGuide()
+                                    }
+                                }
+                            },
+                        ) {
+                            when {
+                                !pager.locChecked && pager.queryStuck -> unknownTag()
+                                !pager.locChecked -> {}
+                                !pager.locSupported -> AppTag(
+                                    "不支持",
+                                    bgColor = Color(0xFFF0F1F5),
+                                    textColor = Color(0xFF9AA0AE),
+                                )
+                                // 已开启:行尾追加已获取的权限(FINE=精确定位,否则 COARSE=大致位置);
+                                // 两枚胶囊带背景原生视图吃 tap(命中测试铁律),各包 clickable 转发
+                                pager.locGranted -> Row {
+                                    Box(
+                                        modifier = Modifier.clickable { pager.openLocationSettings() },
+                                    ) {
+                                        AppTag(
+                                            "已开启",
+                                            bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
+                                            textColor = Color(0xFF34C77B),
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Box(
+                                        modifier = Modifier.clickable { pager.openLocationSettings() },
+                                    ) {
+                                        AppTag(
+                                            if (pager.locFine) "精确定位" else "大致位置",
+                                            bgColor = Color(0xFFF0F1F5),
+                                            textColor = Color(0xFF9AA0AE),
+                                        )
+                                    }
+                                }
+                                // 已关闭胶囊:带背景原生视图吃 tap(命中测试铁律),包 clickable 转发
+                                else -> Box(
+                                    modifier = Modifier.clickable { pager.requestLocThenGuide() },
+                                ) {
+                                    AppTag(
+                                        "已关闭",
+                                        bgColor = AppTheme.Danger.copy(alpha = 0.12f),
+                                        textColor = AppTheme.Danger,
+                                    )
+                                }
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(14.dp))
@@ -422,7 +864,7 @@ internal fun PermissionPage(pager: PermissionPager) {
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "相册选图使用系统相册选择器，无需存储或相机权限；应用不申请定位、通讯录、麦克风等其他敏感权限。",
+                                "相册选图在应用内相册页完成，需要「照片和视频」读取权限（Android 14 及以上可选择仅授权部分照片）；麦克风仅在你发语音消息时申请；定位权限仅在位置页会话期间使用：进入位置页自动共享、退出位置页即停；点上方「定位权限」行可去授权，已开启时行尾展示已获取的精度（精确定位/大致位置），点击可进系统权限页查看或修改；不申请通讯录等其他敏感权限。",
                                 color = AppTheme.TextSecondary,
                                 fontSize = 12.sp,
                             )
@@ -443,12 +885,24 @@ private fun channelTag(pager: PermissionPager, tag: @Composable () -> Unit) {
     }
 }
 
+/** 「状态未知」胶囊(M29 查询失败兜底,各行共用):4s 未回包的诚实降级,中性灰不给假状态 */
+@Composable
+private fun unknownTag() {
+    AppTag(
+        "状态未知",
+        bgColor = Color(0xFFF0F1F5),
+        textColor = Color(0xFF9AA0AE),
+    )
+}
+
 /** 状态详情卡标题(与行内状态胶囊同一套判定,组合期纯函数;!checked 前置防首查回包前
  *  按缺省闪「已开启」——行内胶囊有同款守卫,卡片不能漏,3-skeptic minor) */
 private fun statusTitle(pager: PermissionPager): String {
     val st = pager.permState
     return when {
         !pager.supported -> "当前平台暂不支持"
+        // 查询失败兜底(M29):「正在查询」永不超时是缺陷,4s 后改口「查询失败」
+        !pager.checked && pager.queryStuck -> "状态查询失败"
         !pager.checked -> "正在查询通知状态…"
         st == null -> "通知已开启" // 不可达兜底(checked 置真时 permState 必已落),防御式走乐观文案
         !st.appGranted -> "通知已关闭"
@@ -463,6 +917,7 @@ private fun statusDesc(pager: PermissionPager): String {
     val st = pager.permState
     return when {
         !pager.supported -> "权限查询与授权仅 Android 端提供；其他端留意应用内红点提醒即可。"
+        !pager.checked && pager.queryStuck -> "权限状态没能取回（页面数据通道异常）。退出本页重新进入可重试；若反复出现请反馈开发者。"
         !pager.checked -> " "
         st == null -> "对方发来悄悄话时，会在通知栏与横幅提醒你。"
         !st.appGranted -> "收不到对方消息的后台提醒。点「去开启」重新授权；若系统不再弹框，请到系统设置手动开启。"

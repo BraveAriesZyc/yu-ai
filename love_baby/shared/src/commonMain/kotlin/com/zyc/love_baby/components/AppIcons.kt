@@ -30,6 +30,7 @@ enum class AppIconType {
     Star, Heart, Bell, Moon, Sun,    // 业务装饰
     Emoji, Play, Pause, Mic, Keyboard, Camera, // 聊天富媒体(M23:贴纸面板入口/语音气泡播放暂停态/录音入口;M24 五轮 Keyboard 语音模式切回文本供能;M24 六轮 Camera 加号面板拍照卡)
     Clock,                           // 聊天乐观发送(M24 修订:气泡旁「发送中」状态件)
+    Battery, Location,               // 电量互看/位置共享(M26:首页快捷入口两卡)
 }
 
 /**
@@ -565,6 +566,35 @@ fun DrawScope.drawAppIcon(type: AppIconType, color: Color, filled: Boolean = fal
             // 竖杆 + 横杠
             drawLine(color, off(12f, 14.2f), off(12f, 20.6f), strokeWidth = f(2f), cap = StrokeCap.Round)
             drawLine(color, off(8.8f, 17.4f), off(15.2f, 17.4f), strokeWidth = f(2f), cap = StrokeCap.Round)
+        }
+
+        AppIconType.Battery -> {
+            // M26 横向电池:圆角机身 + 右侧正极凸头 + 内部电芯条(填充短横)
+            val body = Path().apply {
+                moveTo(f(4f), f(8.5f))
+                lineTo(f(17.5f), f(8.5f))
+                quadraticBezierTo(f(19f), f(8.5f), f(19f), f(10f))
+                lineTo(f(19f), f(14f))
+                quadraticBezierTo(f(19f), f(15.5f), f(17.5f), f(15.5f))
+                lineTo(f(4f), f(15.5f))
+                quadraticBezierTo(f(2.5f), f(15.5f), f(2.5f), f(14f))
+                lineTo(f(2.5f), f(10f))
+                quadraticBezierTo(f(2.5f), f(8.5f), f(4f), f(8.5f))
+                close()
+            }
+            drawPath(body, color, style = strokeStyle)
+            drawLine(color, off(21.2f, 10.8f), off(21.2f, 13.2f), strokeWidth = f(2.4f), cap = StrokeCap.Round)
+            drawLine(color, off(5.4f, 12f), off(8.6f, 12f), strokeWidth = f(3f), cap = StrokeCap.Round)
+        }
+
+        AppIconType.Location -> {
+            // M26 定位准星:外圆 + 四向刻度 + 中心点(与 Pin 地标语义区分,「当前位置」感)
+            drawCircle(color, radius = f(5.5f), center = off(12f, 12f), style = strokeStyle)
+            drawLine(color, off(12f, 3.2f), off(12f, 6.2f), strokeWidth = f(2f), cap = StrokeCap.Round)
+            drawLine(color, off(12f, 17.8f), off(12f, 20.8f), strokeWidth = f(2f), cap = StrokeCap.Round)
+            drawLine(color, off(3.2f, 12f), off(6.2f, 12f), strokeWidth = f(2f), cap = StrokeCap.Round)
+            drawLine(color, off(17.8f, 12f), off(20.8f, 12f), strokeWidth = f(2f), cap = StrokeCap.Round)
+            drawCircle(color, radius = f(1.6f), center = off(12f, 12f))
         }
 
         AppIconType.GenderMale -> {

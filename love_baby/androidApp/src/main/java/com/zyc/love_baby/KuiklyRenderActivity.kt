@@ -28,11 +28,15 @@ import com.zyc.love_baby.adapter.KRRouterAdapter
 import com.zyc.love_baby.adapter.KRThreadAdapter
 import com.zyc.love_baby.adapter.KRUncaughtExceptionHandlerAdapter
 import com.zyc.love_baby.module.KRAudioModule
+import com.zyc.love_baby.module.KRBatteryModule
 import com.zyc.love_baby.module.KRBridgeModule
 import com.zyc.love_baby.module.KRFileModule
+import com.zyc.love_baby.module.KRLocationModule
 import com.zyc.love_baby.module.KRNotificationModule
 import com.zyc.love_baby.module.KRShareModule
 import com.zyc.love_baby.module.KRWebSocketModule
+import com.zyc.love_baby.module.PermissionSnapshot
+import com.zyc.love_baby.view.KRAMapView
 import com.zyc.love_baby.view.KRDefaultTypefaceTextFieldView
 import org.json.JSONObject
 
@@ -124,12 +128,17 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
     /** 权限申请结果统一转发:页面主动申请(METHOD_REQUEST)经 KRNotificationModule 静态
      *  桥回传 common;自动请求(本类 onCreate)无 pending 静默丢弃。
      *  M23 录音(RECORD_AUDIO)转发 KRFileModule 静态桥(request code 错开,双静态槽互不误收);
-     *  M24 十三轮相册弹层读库权限同款第三槽(2003) */
+     *  M24 十三轮相册弹层读库权限同款第三槽(2003);
+     *  M26 定位双权限(FINE/COARSE any-granted)同款第四槽(2004);
+     *  M29 权限页麦克风(2005)/相册读(2006)申请同款第五/六槽 */
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         KRNotificationModule.onPermissionResult(requestCode, grantResults)
         KRFileModule.onRecordPermissionResult(requestCode, grantResults)
         KRFileModule.onMediaPermissionResult(requestCode, grantResults)
+        KRLocationModule.onPermissionResult(requestCode, grantResults)
+        KRFileModule.onMicPermissionResult(requestCode, grantResults)
+        KRFileModule.onMediaRequestPermissionResult(requestCode, grantResults)
     }
 
     override fun onDestroy() {
@@ -173,6 +182,16 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
             moduleExport(KRAudioModule.MODULE_NAME) {
                 KRAudioModule()
             }
+            // 电量互看(M26):common base/BatteryModule 声明,BatteryStore 轮询+回前台上报驱动,
+            // sticky broadcast 窥视读值无权限;iOS/鸿蒙/H5 未注册自动降级「暂不支持」
+            moduleExport(KRBatteryModule.MODULE_NAME) {
+                KRBatteryModule()
+            }
+            // 位置共享(M26):common base/LocationModule 声明,LocationStore 节流上报/位置页驱动,
+            // 原生前台闸仅前台采集,单飞搭车双 provider 定位;iOS/鸿蒙/H5 未注册自动降级
+            moduleExport(KRLocationModule.MODULE_NAME) {
+                KRLocationModule()
+            }
         }
     }
 
@@ -186,6 +205,12 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
             // 到它上(renderViewExportCreator 漏参编译错),lambda 必须按位置传(toNative 回调/pickAndUpload 同款坑)
             renderViewExport(KRTextFieldView.VIEW_NAME, { context ->
                 KRDefaultTypefaceTextFieldView(context, softInputMode())
+            })
+            // 位置页原生动态地图(M27):common base/AMapNativeView 声明,LocationPage 全屏地图
+            // + 双人头像 Marker;高德 Android 平台 key 配 Manifest meta-data(未配 key 瓦片空白
+            // 不崩)。iOS/鸿蒙/H5 未注册,common 侧整页降级「暂不支持」
+            renderViewExport(KRAMapView.VIEW_NAME, { context ->
+                KRAMapView(context)
             })
         }
     }
@@ -222,6 +247,12 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         }
         // ④ api 基地址:WS 地址由 shared ApiConfig.wsUrl 派生,改此处 HTTP/WS 一处双生效
         param[API_BASE_URL_KEY] = BuildConfig.API_BASE_URL
+        // ⑤ 权限页状态快照(M29):模块回调在权限管理页静默丢失真机实证(页永卡「查询中」),
+        //    首帧真实状态由宿主直注绕开模块桥(theme/session 同款 pageData 通道);common 侧
+        //    PermissionPager.willInit 播种,四组查询与模块 check 回包同一 companion 单源
+        if (pageName == PAGE_PERMISSION) {
+            param[PermissionSnapshot.KEY_PERM_SNAPSHOT] = PermissionSnapshot.build(this)
+        }
         return param
     }
 
@@ -253,6 +284,9 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
 
         /** 根页面名(pageName 缺省值):仅此页面接管返回做双击退出 */
         private const val PAGE_MAIN = "main"
+
+        /** 权限管理页名(M29 快照直注闸;shared PermissionPage.kt PERMISSION_PAGE_NAME 同串) */
+        private const val PAGE_PERMISSION = "permissionPage"
 
         /** 双击返回退出的判定窗口 */
         private const val EXIT_INTERVAL_MS = 2_000L

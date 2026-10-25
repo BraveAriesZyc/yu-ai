@@ -42,6 +42,7 @@ import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.state.todayDayIndexGmt8
+import com.zyc.love_baby.features.location.openLocationPage
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
 import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.state.AnniversaryStore
@@ -134,6 +135,25 @@ fun HomePage(
                         icon = AppIconType.Flag,
                         modifier = Modifier.weight(1f),
                     ) { pager.openLovePage("wishListPage") }
+                }
+                // 第二行(M26 情侣互看组):电量互看/位置轨迹,2 卡均分双宽;配色沿用首行
+                // 四卡的「浅底深图标」 palette(绿=电量/青蓝=定位,与既有橙紫粉琥珀不撞色)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AppQuickAction(
+                        label = "情侣电量",
+                        iconTint = Color(0xFF34C77B),
+                        iconBg = Color(0xFFE6F8EF),
+                        icon = AppIconType.Battery,
+                        modifier = Modifier.weight(1f),
+                    ) { pager.openLovePage("batteryPage") }
+                    AppQuickAction(
+                        label = "位置轨迹",
+                        iconTint = Color(0xFF3AA6DC),
+                        iconBg = Color(0xFFE7F5FC),
+                        icon = AppIconType.Location,
+                        modifier = Modifier.weight(1f),
+                    ) { openLocationPage(pager) }
                 }
             }
         }

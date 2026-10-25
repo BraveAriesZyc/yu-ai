@@ -1134,3 +1134,94 @@ INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `p
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('模板新增', 'love:wish-template:create', 3, 2, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('模板编辑', 'love:wish-template:update', 3, 3, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
 INSERT INTO `system_menu` (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`, `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`, `create_time`, `updater`, `update_time`, `deleted`) VALUES ('模板删除', 'love:wish-template:delete', 3, 4, @parentId, '', '', '', NULL, 0, b'1', b'1', b'1', '1', NOW(), '1', NOW(), b'0');
+
+-- ============================================================================
+-- M26 段：电量互看 + 位置/轨迹共享（INTEGRATION-DESIGN.md §12.4 位置共享落位）
+-- 本段追加于 M25 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- 同段 DDL 同步交付于独立增量文件 2026-10-25-love-share-battery-location.sql
+-- （存量库只执行增量，新库以本文件一次建成）。
+-- 本期纯 app-api（anniversary 前例），无 system_menu 段。
+-- love_battery_snapshot：每用户一行 upsert 快照（永不删行），update_time 即 reportTime；
+-- love_location_snapshot：append-only 轨迹点，坐标存 GCJ-02，30 天物理保留（手写 @Delete 清除）；
+-- love_share_setting：每用户一行开关（懒创建），电量默认开、位置默认关（§12.4 强隐私）。
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS `love_battery_snapshot`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '快照编号',
+  `user_id` bigint NOT NULL COMMENT '用户编号（uk 一人一行，upsert 语义）',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（重绑后上报刷新到当前 couple）',
+  `battery_level` tinyint NOT NULL DEFAULT 0 COMMENT '电量百分比 0-100（-1=未知）',
+  `charging_status` tinyint NOT NULL DEFAULT 0 COMMENT '充电状态（0=未充电 1=充电中 2=已充满）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间（即 reportTime）',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_id`(`user_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '电量快照表（情侣业务，每用户一行 upsert）';
+
+CREATE TABLE IF NOT EXISTS `love_location_snapshot`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '位置点编号',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（重绑后新 couple 起新流，旧流随 30 天窗口消亡）',
+  `user_id` bigint NOT NULL COMMENT '上报用户编号',
+  `lat` decimal(10, 6) NOT NULL COMMENT '纬度（GCJ-02，-90.000000 ~ 90.000000）',
+  `lng` decimal(10, 6) NOT NULL COMMENT '经度（GCJ-02，-180.000000 ~ 180.000000）',
+  `accuracy` int NOT NULL DEFAULT 0 COMMENT '定位精度（米，0=未知）',
+  `report_time` datetime NOT NULL COMMENT '定位时刻（端上 fix 时间，非入库时间）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_couple_user_time`(`couple_id` ASC, `user_id` ASC, `report_time` ASC) USING BTREE,
+  INDEX `idx_user_time`(`user_id` ASC, `report_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '位置点表（情侣业务，append-only 轨迹，30 天物理保留）';
+
+CREATE TABLE IF NOT EXISTS `love_share_setting`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '设置编号',
+  `user_id` bigint NOT NULL COMMENT '用户编号（uk 一人一行）',
+  `battery_share` bit(1) NOT NULL DEFAULT b'1' COMMENT '电量共享开关（默认开，低敏）',
+  `location_share` bit(1) NOT NULL DEFAULT b'0' COMMENT '位置共享开关（默认关，强隐私 §12.4）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_id`(`user_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '共享开关表（情侣业务，每用户一行懒创建）';
+
+-- ============================================================================
+-- M28 段：行动轨迹地点记录（INTEGRATION-DESIGN.md §12.4 行动轨迹升级）
+-- 本段追加于 M26 段之后；历史段一字不动；本文件只追加、不修改历史段，保持可重放。
+-- 同段 DDL 同步交付于独立增量文件 2026-10-25-love-share-location-place.sql
+-- （存量库只执行增量，新库以本文件一次建成）。
+-- 本期纯 app-api（anniversary 前例），无 system_menu 段。
+-- love_location_place：地点粒度 append-only 记录（30min 粒度 + 换地 ≥300m 即记），
+--   由 location/report 顺路落库，坐标 GCJ-02、省市区/POI 端上解析随点上报（可空降级），
+--   30 天物理保留（手写 @Delete 清除，love_location_snapshot 同口径）。
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS `love_location_place`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '地点记录编号',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（重绑后新 couple 起新流，旧流随 30 天窗口消亡）',
+  `user_id` bigint NOT NULL COMMENT '上报用户编号',
+  `lat` decimal(10, 6) NOT NULL COMMENT '纬度（GCJ-02，-90.000000 ~ 90.000000）',
+  `lng` decimal(10, 6) NOT NULL COMMENT '经度（GCJ-02，-180.000000 ~ 180.000000）',
+  `province` varchar(32) NULL DEFAULT NULL COMMENT '省（端上 regeo 解析，直辖市可为空）',
+  `city` varchar(32) NULL DEFAULT NULL COMMENT '市（端上 regeo 解析，直辖市可为空）',
+  `district` varchar(32) NULL DEFAULT NULL COMMENT '区/县（端上 regeo 解析，可空）',
+  `address` varchar(128) NULL DEFAULT NULL COMMENT '完整地址（regeo formatted_address，可空）',
+  `poi` varchar(64) NULL DEFAULT NULL COMMENT '地名/POI（regeo pois[0].name，可空）',
+  `report_time` datetime NOT NULL COMMENT '到达时刻（端上 fix 时间，非入库时间）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_couple_user_time`(`couple_id` ASC, `user_id` ASC, `report_time` ASC) USING BTREE,
+  INDEX `idx_user_time`(`user_id` ASC, `report_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '行程地点表（情侣业务，30min 粒度地点记录，append-only，30 天物理保留）';

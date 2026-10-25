@@ -33,6 +33,8 @@
 
 16. **清焦后卸载必须迟一拍(2026-10-18 编辑浮层关闭页面自滚实锤,对抗验证三怀疑者源码级定稿)**:在横向 Pager 域内(MainPager 根级浮层/Gate 面板),「`focusManager.clearFocus()` 后同回合卸载浮层/切面板」是竞速形状——compose clearFocus 只同步清 compose 焦点,原生 blur 经 SoftwareKeyboardController 的 `setTimeout(0)` 批处理异步落地;若卸载命令先于 blur 被排水,持焦 EditText 带焦点被移除,Android ViewRootImpl 自动把焦点转给五页驻留树中的待办页输入框(KRTextFieldView 构造即 focusableInTouchMode,天然可作转移目标)→Pager 原生 KRRecyclerView requestChildRectangleOnScreen 横滚露出它+SnapHelper 吸附=页面自滚(1570d07 修的 submit 路径有网络窗口护住,遮罩/Close 等即时路径没有)。**正路:卸载/状态翻转推后一拍 `pager.setTimeout(0){...}`**——onDismiss 入同一 HRContextQueueHandlerThread MessageQueue(同 delay=0 按 AOSP enqueueMessage 插入序执行;Kuikly core 无自有 timer 队列),blur 必然先行,原生主队列排水亦 FIFO,落序是确定性非竞速。范式:FieldInputOverlay.dismiss(features/profile,确认钮同样前置清焦) / MoodOptionManageOverlay.dismiss / GatePanel.switchPanel。⚠ 红线:①依赖 clearFocus 真正清焦——输入框祖先链禁加 focusProperties exit 拦截(会使 clearFocus 变 no-op、blur 批不入队);②仅适用静态布局——LazyList 复用窗口存在原生先行触焦致 activeView 失同步、blur 不入队的通道(CoreTextField 复用窗口防御注释);③整类修复依赖 targetSdk≥28 的 `View.sAlwaysAssignFocus=false`(targetSdk=30 起 safe;M22 升 33 已过审,升降均须回归全部清焦路径)。独立 @Page 二级页(一页一 Activity)无横向 Pager 驻留树,不受此竞态约束。
 
+17. **Compose→原生视图桥(M27 首例,base/AMapNativeView ↔ androidApp/KRAMapView)**:无 AndroidView(官方 viewinterop 是空 stub),正路三段——①common 声明:老 DSL 四件套 `class X : DeclarativeBaseView<Attr, Event>()`(`createAttr()/createEvent()/viewName()`,core 包)+ 方法包装走 protected `callRenderViewMethod(method, params: String?)`(内部排队到 renderView 就绪,勿直接调 renderView);②Android 壳:`class Y : FrameLayout(ctx), IKuiklyRenderViewExport`,实现 `call(method, params, callback)` 分发 + `onDestroy` 清理,注册 `renderViewExport(VIEW_NAME, { ctx -> Y(ctx) })`——⚠ **creator 必须按位置传参**,尾随 lambda 会绑到末位参数 shadowExportCreator 上;③Compose 侧:`MakeKuiklyComposeNode(factory, modifier, viewInit, viewUpdate, measurePolicy)`(compose 包)包装成 `@Composable`——⚠ **viewUpdate 是 `(T)->Unit` 参数 lambda 非 receiver**(视图经参数 it 访问),它在挂载时与内部读到的快照状态变化时重跑,数据下发(方法调用)全走它,modifier 必须显式给尺寸。两端契约常量(viewName/方法名)双源同串勿单改一边。**原生侧子类化陷阱**:MapView 等带 final 生命周期方法的组件不可子类化实现 IKuiklyRenderViewExport(Kotlin 要求覆写接口默认实现而 final 拒绝),用 FrameLayout 容器包一层、直调子视图生命周期(构造 onCreate + LifecycleObserver onResume/onPause + onDestroy 转发)是唯一干净路线。先例:KRAMapView(高德 3dmap,Android key 走 Manifest meta-data,未配 key 瓦片空白不崩;iOS/鸿蒙/H5 未注册视图,common 侧按模块探测整页降级)。
+
 ## 常用操作
 
 - **Android 运行**:Android Studio 直接跑 `androidApp`
@@ -46,24 +48,38 @@
 
 ```text
 love_baby/
-├── androidApp/          # Android 宿主壳(原生扩展注册端;默认启动页 "main")
+├── androidApp/          # Android 宿主壳(原生扩展注册端;默认启动页 "main";M27 接入高德 3dmap SDK+
+│                        #   KRAMapView 首个原生视图导出[IKuiklyRenderViewExport,注册在
+│                        #   KuiklyRenderActivity.registerExternalRenderView,Android key 走 Manifest meta-data])
 ├── iosApp/              # iOS 宿主壳(CocoaPods)
 ├── ohosApp/             # 鸿蒙宿主壳
 ├── shared/              # ★ 核心跨端业务模块(KMP),业务代码都在这
 │   └── src/commonMain/kotlin/com/zyc/love_baby/
-│       ├── base/            # 基建 9 件:BasePager、BridgeModule(M23 +openUrlExternally 视频外放)、WebSocketModule、NotificationModule、
-│       │                    #   FileModule(M23 +pickVideo/uploadMedia/videoCover/recordAudio 媒体四件)、AudioModule(M23 语音播放单飞)、
-│       │                    #   Utils(含 Pager.openLovePage 路由收口)、IPagerIdKtx、PlatformExternalModules
+│       ├── base/            # 基建 13 件:BasePager、BridgeModule(M23 +openUrlExternally 视频外放)、WebSocketModule、NotificationModule、
+│       │                    #   FileModule(M23 +pickVideo/uploadMedia/videoCover/recordAudio 媒体四件;M29 +checkMic/requestMic/
+│       │                    #   checkMedia/requestMedia/openAppDetails 权限五件,权限管理页麦克风+相册读状态源)、AudioModule(M23 语音播放单飞)、
+│       │                    #   BatteryModule/LocationModule(M26 原生电量/单次定位桥,Android 宿主 KR*Module 实现,余端 getModule null 降级)、
+│       │                    #   AMapNativeView(M27 首个 Compose→原生视图桥:老 DSL 四件套声明+MakeKuiklyComposeNode 包装,
+│       │                    #   viewName "HRAMapView",Android 壳 KRAMapView[高德 3dmap]消费,余端未注册视图整页降级,写法见技术要点 17;
+│       │                    #   M28 +focusPoint 回看标注通道[地点列表点击,品牌圆点+相机飞 16 级,fitMarkers 清标注回实时])、
+│       │                    #   GeoKit(WGS-84→GCJ-02 纠偏唯一入口,M26)、Utils(含 Pager.openLovePage 路由收口)、IPagerIdKtx、PlatformExternalModules
 │       ├── main/MainPager.kt      # @Page("main") 主容器:底栏五 Tab,HorizontalPager 左右滑切换(五页全驻留)
-│       ├── components/      # 28 件:AppTheme(含 ThemeStore 主题切换)/AppIcons(矢量图标)/AppBottomBar(浮岛底栏)+ 通用组件库(AppGradientHeader/AppCheckbox/AppTag/AppAvatar/AppMenu/AppStats/AppSection/AppCards + AppStatus/AppGestures/AppButton/AppInputField/AppOverlayCard/AppPullRefresh/AppStaggeredPullRefresh(24 瀑布流自绘下拉刷新,官方件只挂 LazyListScope)/AppSegmentedChips/AppCalendar/AppDateCapsule/AppGhostIconButton/AppKeyboard/AppFeedback/AppPillChip/AppBrandIntroScreen——新浮层一律走 AppOverlayCard 壳,组件清单见画廊 6 大类分区)
-│       ├── state/           # 全局状态 9 件:AppState.kt(TodoStore/MoodStore/ChatStore + ChatPushStore WS 推送;
+│       ├── components/      # 29 件:AppTheme(含 ThemeStore 主题切换)/AppIcons(矢量图标)/AppBottomBar(浮岛底栏)+ 通用组件库(AppGradientHeader/AppCheckbox/AppTag/AppAvatar/AppMenu/AppStats/AppSection/AppCards + AppStatus/AppGestures/AppButton/AppInputField/AppOverlayCard/AppPullRefresh/AppStaggeredPullRefresh(24 瀑布流自绘下拉刷新,官方件只挂 LazyListScope)/AppSegmentedChips/AppSwitch(M26 开关,thumb 位移走 graphicsLayer)/AppCalendar/AppDateCapsule/AppGhostIconButton/AppKeyboard/AppFeedback/AppPillChip/AppBrandIntroScreen——新浮层一律走 AppOverlayCard 壳,组件清单见画廊 6 大类分区)
+│       ├── state/           # 全局状态 11 件:AppState.kt(TodoStore/MoodStore/ChatStore + ChatPushStore WS 推送;
 │       │                    #   M23 ChatStore 本地全量缓存:SharedPreferences 500 条截尾/冷启动秒出/换号 uid 校验)、
 │       │                    #   CoupleStore、SessionStore、StatsStore、LoveConfigStore(业务配置 KV 快照,M25 起
 │       │                    #   含 quick_stickers/mood_emoji_presets/mood_color_presets 三 JSON 数组取值器)、
 │       │                    #   TimeKit(时间工具)、ChatStickers.kt(M23 聊天贴纸字典,append-only 只增不改不删;
 │       │                    #   M25 起新角色=表情面板兜底单分类)、EmojiStore.kt/WishStore.kt(M25 字典快照单例:
-│       │                    #   表情面板分类字典/心愿墙模板,登录首拉+回前台重拉,登出不 reset,池空走端上内置兜底)
-│       ├── features/        # 15 个业务域(每域 = @Page 页面 + 域内 Widgets 小件)
+│       │                    #   表情面板分类字典/心愿墙模板,登录首拉+回前台重拉,登出不 reset,池空走端上内置兜底)、
+│       │                    #   BatteryStore/LocationStore(M26 电量/位置共享快照:轮询兼上报[原生桥单飞+ticker 节流]、
+│       │                    #   地点列表缓存、regeo 地址缓存;M27 位置侧 +applyPartnerPoint[WS love-location-new
+│       │                    #   实时帧直落]与 doReport 公开化[位置页 5s 会话循环每拍直调,单飞 Mutex 在飞即弃];
+│       │                    #   M28 上报链路加 regeo 明细随点上报[extensions=all 解析省市区+POI,100m 缓存锚点,
+│       │                    #   ⚠ Kuikly optString 对非 String 值回 "[]" 字面串须 opt()+is String 判型]+loadPlaceList
+│       │                    #   地点列表缓存;M29 会话共享:locationShareEnabled 改会话闸[进位置页开/
+│       │                    #   主页 closeShareSession 关,主页 5min ticker+4min 节流退役];reset 随登出/解绑清场)
+│       ├── features/        # 17 个业务域(每域 = @Page 页面 + 域内 Widgets 小件)
 │       │   ├── home/ HomePage.kt         # 首页(渐变头部+统计+快捷入口+今日打卡条)
 │       │   ├── todo/ TodoPage.kt         # 待办清单
 │       │   ├── mood/ MoodPage.kt 等      # 心情页 + 时间线 MoodTimelinePage/选项管理浮层/心愿时间线 WishTimelinePage;M25 心愿墙模板服务端化:WishStore.wishes 数据源(模板空走 allWishes 兜底)+chips「全部」+分类动态聚合+选中集随模板剪枝(顺带修 quirk:分类标签不再恒显首分类)
@@ -77,10 +93,26 @@ love_baby/
 │       │   ├── moment/ MomentPage.kt     # 我们的相册(M9,@Page 二级页;M24 双列瀑布流 LazyVerticalStaggeredGrid,卡高随首图压缩宽高比自适应、0 降级 140dp,自绘下拉刷新)
 │       │   ├── wish/ WishListPage.kt     # 恋爱清单(M14,@Page 二级页)
 │       │   ├── inspiration/ QuotePage.kt # 今日情话 QuotePage + 约会灵感 InspirationPage(M17,@Page 二级页)
-│       │   ├── permission/ PermissionPage.kt # 权限管理(M22,@Page 二级页)
+│       │   ├── permission/ PermissionPage.kt # 权限管理(M22,@Page 二级页;M29 全行状态化+查询失败兜底:六行各带状态胶囊[通知/渠道/横幅/相册读/麦克风/定位],进页 4s 未回包落「状态未知」绝不挂「查询中」;M29 新增麦克风行[FileModule checkMic/requestMic]与相册读行[checkMedia/requestMedia,Android14 部分授权示「部分授权」,修正旧「无需授权」失实];M29 首帧真实状态宿主直注——模块回调在本页静默丢失真机实证[两轮 mainHandler 投递修复未根治,根因排查面包屑 tag=PermissionPage/KRNotifChk 已埋],createPageData 对 permissionPage 注四组快照[KRNotificationModule/KRLocationModule/KRFileModule companion 单源]→willInit 播种绕开模块桥,10s 申请在飞保险防交互锁死)
+│       │   ├── battery/ BatteryPage.kt   # 情侣电量互看(M26,@Page 二级页;双方快照+提醒充电发悄悄话+共享开关)
+│       │   ├── location/ LocationPage.kt # 位置/行动轨迹(M27 重构,@Page 二级页;全屏原生动态地图[AMapNativeMap]双头像
+│       │   │                             #   marker+WS 实时帧秒推+页内 5s 会话上报/30s latest 兜底+顶部地址胶囊+「回到视野」
+│       │   │                             #   相机包络+行动轨迹 ModalBottomSheet;M28 地点记录列表,M28.1 真机定案
+│       │   │                             #   纯列表化:静态轨迹图退役[trailPoints==null 无失败分支恒卡「加载中」实锤],
+│       │   │                             #   点条目→跳 TrailPlacePage 独立回看页;TA 页签「提醒 TA」pill[WS 催对方上报];
+│       │   │                             #   M29 会话共享去开关:进页权限链[查→申请→拒绝引导系统设置,未就绪遮罩卡
+│       │   │                             #   「去开启」重试],授权即 updateShare(true) 进会话,回主页关闸;未桥接端整页降级)
+│       │   │    TrailPlacePage.kt        # 地点回看页(@Page("trailPlacePage"),M28.1:开页参数 lat/lng/title/subtitle,
+│       │   │                             #   全屏地图 focusPoint 品牌圆点+飞 16 级[attach 首帧 focusSeq=1 即下发],
+│       │   │                             #   顶部返回钮+白胶囊地点名牌;坐标 0,0 显缺失态)
 │       │   └── gallery/ GalleryPager.kt  # 组件列表(@Page("componentList"):通用组件 demo 画廊+GalleryMock 数据)
-│       ├── data/model/      # kotlinx.serialization 数据模型 10 文件(Auth/Couple/Todo/Wish/Message/Mood/Moment/Anniversary/Checkin/Inspiration)
-│       ├── network/         # 网络封装 14 文件:HttpClient(统一拆包/401 单飞静默刷新)+ ApiConfig + 各域 Api 对象,对接 yudao app-api
+│       ├── data/model/      # kotlinx.serialization 数据模型 12 文件(Auth/Couple/Todo/Wish/Message/Mood/Moment/Anniversary/Checkin/Inspiration/Battery[含 ShareSetting]/Location)
+│       ├── network/         # 网络封装 19 文件:HttpClient(统一拆包/401 单飞静默刷新)+ ApiConfig + 各域 Api 对象
+│       │                    #   + AMapConfig/AMapApi(M26 高德 Web 服务直连:regeo/haversine,裸 GET 不经
+│       │                    #   HttpClient,KEY 用户自填;M28 regeo 升级 regeoDetail[extensions=all,省市区+POI 明细];
+│       │                    #   M28.1 静态图 URL 构造族已随轨迹半层纯列表化移除,要用回 git 找)、
+│       │                    #   LocationApi(M28 +placeList 地点列表/pull 提醒对方上报;trail 轨迹区间暂无调用方,
+│       │                    #   端点保留待点级轨迹线二期),对接 yudao app-api
 │       ├── RouterPage.kt    # 模板自带:页面路由调试页(@Page("router");保留)
 │       ├── BasicWidget.kt   # 模板自带:同包 TextField(autoFocus 默认 false/maxLength 支持)/Button 封装(2026-10-22 死代码已清,511→172 行)
 │       └── ImageAdapterBenchmarks.kt # 模板自带图片基准页(保留)

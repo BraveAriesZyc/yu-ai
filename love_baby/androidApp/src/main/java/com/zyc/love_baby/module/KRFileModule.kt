@@ -19,6 +19,7 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.tencent.kuikly.core.render.android.export.KuiklyRenderBaseModule
 import com.tencent.kuikly.core.render.android.export.KuiklyRenderCallback
+import com.zyc.love_baby.KRApplication
 import com.zyc.love_baby.KRMediaPickerActivity
 import com.zyc.love_baby.KRPickImageActivity
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -108,6 +109,11 @@ class KRFileModule : KuiklyRenderBaseModule() {
             METHOD_UPLOAD_PROGRESS -> uploadProgressQuery(callback)
             METHOD_QUERY_MEDIA -> queryMediaLibrary(callback)
             METHOD_COPY_MEDIA -> copyMedia(params, callback)
+            METHOD_CHECK_MIC -> checkMicPermission(callback)
+            METHOD_REQUEST_MIC -> requestMicPermission(callback)
+            METHOD_CHECK_MEDIA -> checkMediaPermission(callback)
+            METHOD_REQUEST_MEDIA -> requestMediaPermission(callback)
+            METHOD_OPEN_APP_DETAILS -> openAppDetails()
             else -> callback?.invoke(mapOf("code" to -1, "msg" to "方法不存在"))
         }
     }
@@ -513,6 +519,201 @@ class KRFileModule : KuiklyRenderBaseModule() {
         }
         doQueryMediaLibrary(context, callback)
     }
+
+    // ---------- M29 权限管理页:麦克风/相册读权限的状态与申请(权限页四行状态胶囊数据源;
+    //  纯状态查询不弹框,申请独立方法;回调一律 mainHandler 投递——KRNotificationModule 类头
+    //  铁律,call() 内同步回包真机实证不送达) ----------
+
+    /** 麦克风权限申请挂起槽(静态桥转发收口,同 recordPendingPermission 套路) */
+    @Volatile
+    private var micRequestCallback: KuiklyRenderCallback? = null
+
+    @Volatile
+    private var micRequestPending = false
+
+    /** 相册读权限申请挂起槽(M29 权限页独立通道;与 2003 相册弹层查询通道分槽互不误收) */
+    @Volatile
+    private var mediaRequestCallback: KuiklyRenderCallback? = null
+
+    @Volatile
+    private var mediaRequestPending = false
+
+    /** 查询麦克风权限(M29):纯查询不弹框,granted=RECORD_AUDIO 已授权 */
+    private fun checkMicPermission(callback: KuiklyRenderCallback?) {
+        if (callback == null) return
+        val context = context
+        val granted = context != null && isPermissionGranted(context, android.Manifest.permission.RECORD_AUDIO)
+        mainHandler.post {
+            callback.invoke(mapOf("code" to CODE_OK, "data" to "{\"granted\":$granted}", "msg" to ""))
+        }
+    }
+
+    /** 发起麦克风运行时授权(M29):已授权短路(asked=false 零动作);否则挂系统申请,结果
+     *  静态桥收口;denied 引导(跳应用详情页)由 common 侧收口 */
+    private fun requestMicPermission(callback: KuiklyRenderCallback?) {
+        if (callback == null) return
+        val context = context
+        if (context == null) {
+            callback.invoke(mapOf("code" to CODE_ERROR, "msg" to "上下文不可用"))
+            return
+        }
+        if (isPermissionGranted(context, android.Manifest.permission.RECORD_AUDIO)) {
+            mainHandler.post {
+                callback.invoke(mapOf("code" to CODE_OK, "data" to "{\"granted\":true,\"asked\":false}", "msg" to ""))
+            }
+            return
+        }
+        val activity = activity
+        if (activity == null || activity.isFinishing) {
+            callback.invoke(mapOf("code" to CODE_ERROR, "msg" to "宿主不可用"))
+            return
+        }
+        micRequestCallback = callback
+        micRequestPending = true
+        try {
+            activity.requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC)
+        } catch (_: Exception) {
+            micRequestCallback = null
+            micRequestPending = false
+            callback.invoke(mapOf("code" to CODE_ERROR, "msg" to "无法申请麦克风权限"))
+        }
+    }
+
+    /** 麦克风权限结果转发(KuiklyRenderActivity.onRequestPermissionsResult 静态桥消费;
+     *  仅 pending 槽,游离结果静默) */
+    private fun handleMicPermission(grantResults: IntArray) {
+        val callback = micRequestCallback
+        val pending = micRequestPending
+        micRequestCallback = null
+        micRequestPending = false
+        if (!pending || callback == null) {
+            return
+        }
+        val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+        callback.invoke(mapOf("code" to CODE_OK, "data" to "{\"granted\":$granted,\"asked\":true}", "msg" to ""))
+    }
+
+    /** 查询相册读权限(M29):纯查询不弹框。granted=完整读权限;partial=Android14「仅选中
+     *  照片」部分授权(granted=false 才有意义) */
+    private fun checkMediaPermission(callback: KuiklyRenderCallback?) {
+        if (callback == null) return
+        val context = context
+        val state = context?.let { mediaPermState(it) } ?: MediaPermState(granted = false, partial = false)
+        mainHandler.post {
+            callback.invoke(
+                mapOf("code" to CODE_OK, "data" to "{\"granted\":${state.granted},\"partial\":${state.partial}}", "msg" to ""),
+            )
+        }
+    }
+
+    /** 发起相册读授权(M29):完整授权已持有则短路;否则挂系统申请(33+ 附 VISUAL_USER_SELECTED
+     *  保 Android14「仅选中照片」路径;部分授权态不短路——再申请系统给「选择更多照片」升级
+     *  弹层,是部分授权态的自然升级路径),结果静态桥收口 */
+    private fun requestMediaPermission(callback: KuiklyRenderCallback?) {
+        if (callback == null) return
+        val context = context
+        if (context == null) {
+            callback.invoke(mapOf("code" to CODE_ERROR, "msg" to "上下文不可用"))
+            return
+        }
+        if (mediaPermState(context).granted) {
+            mainHandler.post {
+                callback.invoke(
+                    mapOf("code" to CODE_OK, "data" to "{\"granted\":true,\"partial\":false,\"asked\":false}", "msg" to ""),
+                )
+            }
+            return
+        }
+        val activity = activity
+        if (activity == null || activity.isFinishing) {
+            callback.invoke(mapOf("code" to CODE_ERROR, "msg" to "宿主不可用"))
+            return
+        }
+        if (mediaRequestPending) {
+            callback.invoke(mapOf("code" to CODE_ERROR, "msg" to "处理中,请稍候"))
+            return
+        }
+        mediaRequestCallback = callback
+        mediaRequestPending = true
+        try {
+            val request = if (Build.VERSION.SDK_INT >= 33) {
+                arrayOf(
+                    android.Manifest.permission.READ_MEDIA_IMAGES,
+                    android.Manifest.permission.READ_MEDIA_VIDEO,
+                    android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+                )
+            } else {
+                arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+            activity.requestPermissions(request, REQUEST_CODE_MEDIA_REQUEST)
+        } catch (_: Exception) {
+            mediaRequestCallback = null
+            mediaRequestPending = false
+            callback.invoke(mapOf("code" to CODE_ERROR, "msg" to "无法申请相册权限"))
+        }
+    }
+
+    /** 相册读权限结果转发(申请序 33+=[IMAGES,VIDEO,VISUAL_USER_SELECTED] / 33-=[存储];
+     *  仅 pending 槽,游离结果静默) */
+    private fun handleMediaRequestPermission(grantResults: IntArray) {
+        val callback = mediaRequestCallback
+        val pending = mediaRequestPending
+        mediaRequestCallback = null
+        mediaRequestPending = false
+        if (!pending || callback == null) {
+            return
+        }
+        val state = grantResultsToMediaState(grantResults)
+        callback.invoke(
+            mapOf(
+                "code" to CODE_OK,
+                "data" to "{\"granted\":${state.granted},\"partial\":${state.partial},\"asked\":true}",
+                "msg" to "",
+            ),
+        )
+    }
+
+    /** 跳应用详情页(M29):麦克风/相册权限的「权限获取页」落点(应用详情 → 权限,可查看/
+     *  改授权);Application context 起页必须 FLAG_ACTIVITY_NEW_TASK(KRNotificationModule 同款) */
+    private fun openAppDetails() {
+        val context = context ?: KRApplication.application
+        try {
+            context.startActivity(
+                Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(Uri.parse("package:${context.packageName}"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        } catch (_: Exception) {
+            // 极端 ROM 深链无匹配 Activity,静默(官方文档要求 try/catch)
+        }
+    }
+
+    /** 相册读权限状态快照(查询/申请短路共用口径):33+ IMAGES+VIDEO 双授权=完整;仅
+     *  VISUAL_USER_SELECTED=Android14 部分授权(API 34 起该权限才有语义,33 恒查不到);33-
+     *  传统存储=完整 */
+    private fun mediaPermState(context: Context): MediaPermState {
+        return if (Build.VERSION.SDK_INT >= 33) {
+            val images = isPermissionGranted(context, android.Manifest.permission.READ_MEDIA_IMAGES)
+            val video = isPermissionGranted(context, android.Manifest.permission.READ_MEDIA_VIDEO)
+            if (images && video) {
+                MediaPermState(granted = true, partial = false)
+            } else {
+                MediaPermState(
+                    granted = false,
+                    partial = Build.VERSION.SDK_INT >= 34 &&
+                        isPermissionGranted(context, android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED),
+                )
+            }
+        } else {
+            MediaPermState(
+                granted = isPermissionGranted(context, android.Manifest.permission.READ_EXTERNAL_STORAGE),
+                partial = false,
+            )
+        }
+    }
+
+    // isPermissionGranted / mediaPermState / grantResultsToMediaState 三助手已上收 companion
+    // (M29 宿主直注 PermissionSnapshot 共用单源;companion 私有成员实例方法内直接解析)
 
     /** 两集合归并查询(模式固定全 API 级安全;BG_EXECUTOR 单线程串行;读失败落空数组,弹层空态) */
     private fun doQueryMediaLibrary(context: Context, callback: KuiklyRenderCallback) {
@@ -1258,6 +1459,13 @@ class KRFileModule : KuiklyRenderBaseModule() {
         private const val METHOD_UPLOAD_PROGRESS = "uploadProgress"
         private const val METHOD_QUERY_MEDIA = "queryMediaLibrary" // M24 十三轮 相册弹层
         private const val METHOD_COPY_MEDIA = "copyMedia" // M24 十三轮 已选落盘
+        // M29 权限管理页:麦克风/相册读权限状态与申请 + 应用详情跳转
+        private const val METHOD_CHECK_MIC = "checkMicPermission"
+        private const val METHOD_REQUEST_MIC = "requestMicPermission"
+        private const val METHOD_CHECK_MEDIA = "checkMediaPermission"
+        private const val METHOD_REQUEST_MEDIA = "requestMediaPermission"
+        private const val METHOD_OPEN_APP_DETAILS = "openAppDetails"
+        private const val CODE_OK = 0
         private const val CODE_CANCEL = 1
         private const val CODE_ERROR = -1
         /** 压缩边长缺省(头像场景;common 侧不传 maxEdge 时走此值,512px 对 3x 屏头像圆环充裕) */
@@ -1290,6 +1498,12 @@ class KRFileModule : KuiklyRenderBaseModule() {
         /** 相册读权限申请 requestCode(M24 十三轮;错开 2001/2002 三静态槽互不误收) */
         private const val REQUEST_CODE_MEDIA = 2003
 
+        /** 麦克风权限申请 requestCode(M29 权限页;错开 2001-2004 五静态槽互不误收) */
+        private const val REQUEST_CODE_MIC = 2005
+
+        /** 相册读权限申请 requestCode(M29 权限页独立通道;错开 2003 相册弹层查询通道) */
+        private const val REQUEST_CODE_MEDIA_REQUEST = 2006
+
         /** 媒体库查询条数上限(DATE_ADDED DESC 截头保最新;防超大媒体库全量入内存) */
         private const val QUERY_MAX_ITEMS = 1000
 
@@ -1306,6 +1520,21 @@ class KRFileModule : KuiklyRenderBaseModule() {
             if (requestCode != REQUEST_CODE_MEDIA) return
             val instance = current ?: return
             instance.mainHandler.post { instance.handleMediaPermissionResult(grantResults) }
+        }
+
+        /** 麦克风权限结果转发口(M29 权限页,同 onRecordPermissionResult 静态桥) */
+        fun onMicPermissionResult(requestCode: Int, grantResults: IntArray) {
+            if (requestCode != REQUEST_CODE_MIC) return
+            val instance = current ?: return
+            instance.mainHandler.post { instance.handleMicPermission(grantResults) }
+        }
+
+        /** 相册读权限结果转发口(M29 权限页独立通道,同上;2003=相册弹层查询、2006=权限页
+         *  申请,双通道各自独立 pending 槽互不误收) */
+        fun onMediaRequestPermissionResult(requestCode: Int, grantResults: IntArray) {
+            if (requestCode != REQUEST_CODE_MEDIA_REQUEST) return
+            val instance = current ?: return
+            instance.mainHandler.post { instance.handleMediaRequestPermission(grantResults) }
         }
 
         /** 当前活跃模块实例(桥 Activity 静态入口转发目标;init 登记、onDestroy 注销) */
@@ -1339,5 +1568,64 @@ class KRFileModule : KuiklyRenderBaseModule() {
         fun onPickResult(uris: List<Uri>?) {
             current?.handlePickResult(uris)
         }
+
+        // ---------- M29 权限快照单源(实例 check/申请 与宿主直注 PermissionSnapshot 共用;
+        //  无实例状态,companion 私有成员实例方法内直接解析) ----------
+
+        private fun isPermissionGranted(context: Context, permission: String): Boolean =
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+        /** 麦克风授权单值(宿主直注快照用;实例 checkMicPermission 同源) */
+        fun micGrantedSnapshot(context: Context): Boolean =
+            isPermissionGranted(context, android.Manifest.permission.RECORD_AUDIO)
+
+        /** 相册读权限状态快照(查询/申请短路共用口径):33+ IMAGES+VIDEO 双授权=完整;仅
+         *  VISUAL_USER_SELECTED=Android14 部分授权(API 34 起该权限才有语义,33 恒查不到);
+         *  33- 传统存储=完整 */
+        private fun mediaPermState(context: Context): MediaPermState {
+            return if (Build.VERSION.SDK_INT >= 33) {
+                val images = isPermissionGranted(context, android.Manifest.permission.READ_MEDIA_IMAGES)
+                val video = isPermissionGranted(context, android.Manifest.permission.READ_MEDIA_VIDEO)
+                if (images && video) {
+                    MediaPermState(granted = true, partial = false)
+                } else {
+                    MediaPermState(
+                        granted = false,
+                        partial = Build.VERSION.SDK_INT >= 34 &&
+                            isPermissionGranted(context, android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED),
+                    )
+                }
+            } else {
+                MediaPermState(
+                    granted = isPermissionGranted(context, android.Manifest.permission.READ_EXTERNAL_STORAGE),
+                    partial = false,
+                )
+            }
+        }
+
+        /** 相册读权限快照(宿主直注用;Map 形态与 check 回包 data 同构) */
+        fun mediaPermSnapshot(context: Context): Map<String, Any> =
+            mediaPermState(context).let { mapOf("granted" to it.granted, "partial" to it.partial) }
+
+        /** 申请结果 → 状态(数组序与申请序一致;33+ 双全量=granted,仅第三位部分授权=partial) */
+        private fun grantResultsToMediaState(grantResults: IntArray): MediaPermState {
+            if (Build.VERSION.SDK_INT >= 33) {
+                val g = grantResults
+                val full = g.size >= 2 &&
+                    g[0] == PackageManager.PERMISSION_GRANTED &&
+                    g[1] == PackageManager.PERMISSION_GRANTED
+                val visualOnly = !full && g.size >= 3 && g[2] == PackageManager.PERMISSION_GRANTED
+                return MediaPermState(granted = full, partial = visualOnly)
+            }
+            return MediaPermState(
+                granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED,
+                partial = false,
+            )
+        }
     }
 }
+
+/** 相册读权限状态快照(M29 查询/申请收口共用载荷形态,common 侧 checkMediaPermission
+ *  requestMediaPermission 回包同构):granted=完整读权限;partial=Android14「仅选中照片」
+ *  部分授权(granted=false 才有意义) */
+private data class MediaPermState(val granted: Boolean, val partial: Boolean)

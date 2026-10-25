@@ -209,6 +209,41 @@
 
 **快照式兼容（设计根基）**：kind=2 心愿消息上送四字段快照（wishKey/text/color/icon），服务端不校验、渲染不查字典 → admin 删/停模板**零影响历史消息**。种子 24 条 = 原 allWishes 一比一转录（判重按 title）；app 单端点 GET /love/wish-template/list（池空端上走 allWishes 内置兜底）；App 成功拉取后按新模板集剪枝选中集（MoodStore.retainSelected，防「已选 N」悬空）。
 
+### love_battery_snapshot（电量快照，**M26 新增 2026-10-25**）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | |
+| user_id | bigint **uk** | 快照单行制：**永不删行，report 即 upsert**（select→null?insert:updateById，DuplicateKey 兜底重试 update）；**update_time 即 report_time**（不设专列） |
+| couple_id | bigint idx | 归属（partner 侧按对方 user_id 反查快照） |
+| battery_level | tinyint | 0~100 |
+| charging_status | tinyint | 0=未充电 / 1=充电中 / 2=已充满 |
+
+低敏数据：共享开关默认**开**（love_share_setting.battery_share），可整域关（关=不再上报+服务端拒收双闸）。
+
+### love_location_snapshot（位置点，**M26 新增 2026-10-25**）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | |
+| couple_id / user_id | bigint | 联合 idx_couple_user_time(couple_id,user_id,report_time) 供 trail 扫描；另 idx_user_time 供清理扫 |
+| lat / lng | decimal(10,6) | **GCJ-02**（端上 GeoKit.wgs84ToGcj02 纠偏后上报，服务端原样存取，高德系直用） |
+| accuracy | int | 定位精度米，0=未知 |
+| report_time | datetime | 端上 fix 时间（非入库时间） |
+
+append-only 无 uk；**30 天滚动保留**：report 时顺带物理清除过期行——⚠ BaseDO @TableLogic 会把 mapper.delete 拦成逻辑删，须手写 @Delete 物理删除（CheckinMapper.reviveDeletedByUserIdAndDate 仓内先例）。**强隐私（§12.4 落地）**：共享开关默认**关**；30s 服务端限频（窗口内重复上报直接回 ok 不插行）；采集**仅 App 前台**（原生 isAppForeground 闸 + 端上协程 keyed foregroundTick 双保险，无后台服务）；上报/查询/轨迹全走开关双闸（客户端不上报 + 服务端拒收）。
+
+### love_share_setting（共享开关，**M26 新增 2026-10-25**）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | bigint PK | |
+| user_id | bigint **uk** | |
+| battery_share | bit(1) 默认 1 | 电量共享（低敏默认开） |
+| location_share | bit(1) 默认 0 | 位置共享（强隐私默认关） |
+
+**懒创建**：无行回默认值，首次 update 才落行。SQL 交付双轨：增量文件 `sql/mysql/2026-10-25-love-share-battery-location.sql`（存量库升级）+ love.sql 尾部同步追加（新库一次建成）。
+
 ## 5. API 设计
 
 ### 5.1 通用约定（已核实，非待确认）
@@ -723,6 +758,47 @@ MinePage 目前为本地假数据；M2 起：用户资料区（昵称/头像）�
 - [ ] (M25) 交互回归：emoji 点选插输入框（超长拒插）/发送 TEXT/退格代理对整删；心愿送出气泡渐变+图标正确（新 wishKey=模板数字 id）；历史 w1 时代消息与 kind=6 贴纸渲染不变；quirk 修正回归（分类标签不再恒显「想亲亲」）
 - [ ] (M25) web 后台两页（表情包/心愿模板）CRUD 走通：emoji 列大字号直显、色块预览列、icon Select 与 AppIconType 全集对齐、hex 正则校验；SQL 幂等（两表 24 行 / config +3 行 / 菜单两组各 4 按钮，重放无重复）
 
+### (M26) 首页快捷入口：情侣电量互看 + 位置/行动轨迹（2026-10-25 实施）
+
+首页快捷入口第二行两枚（情侣电量 0xFF34C77B / 位置轨迹 0xFF3AA6DC）。表 3 张（见 §4 M26 段，增量文件 + love.sql 双轨）；后端 share 域 7 端点（setting get/update、battery report/get、location report/latest/trail，`/love/share` 前缀），错误码 1_003_015 段。产品定案：电量=情侣互看**默认开**（低敏）；位置=完整版（实时+轨迹）**默认关**（二次确认+定位权限链才开启）；轨迹**仅 App 前台采集**（原生 isAppForeground 闸 + 端上协程 keyed foregroundTick 双保险，无后台服务，30 天物理保留）；地图=高德静态地图 API（Web 服务 key 免原生 SDK，`AMapConfig.KEY` 用户自填；坐标端上 GeoKit WGS-84→GCJ-02 纠偏）；Android 真机先行，其余端 getModule 判空整页降级「暂不支持」。
+
+- [ ] (M26) 服务端冒烟：setting/update 懒创建回显；battery/report 重复报 update_time 刷新表仍单行、回包 mine+partner；location/report 30s 内连发验表不增行（限频）；trail 升序+truncated+target=partner 开关关回空列表不报错；未登录/未绑定 401 / 1_003_004_003
+- [ ] (M26) 电量真机：插拔充电线状态翻转（未充/充电中/已充满）；<10 红 <20 橙 充电绿配色；「提醒 TA 充电」对方聊天流出消息；关共享后对方侧显「未开启电量共享」
+- [ ] (M26) 位置真机：开开关走二次确认+权限链（拒绝引导系统设置）；双 marker（A=我/B=TA）与轨迹线渲染；今天/昨天/近7天 + 我/TA 切换；truncated 注记；未配 AMapConfig.Key 降级文字；户外移动验轨迹点
+- [ ] (M26) 前后台口径：退后台 5min 查表无新点（原生前台闸）；回前台立即出一点；位置页开时 60s 轮询、关页后主页 5min ticker（4min 节流让位）节奏验证
+- [ ] (M26) 其余端冒烟：iOS/鸿蒙/H5 进电量/位置页显「暂不支持」不崩；权限页新增定位行与隐私文案更新；解绑/登出 reset 清场回归
+
+### (M27) 位置页改造：原生动态地图 + WS 实时推送（2026-10-25 实施）
+
+M26 静态地图卡片布局升级为**全屏原生动态地图**（诉求：动态地图 / 头像 marker / 一页一图双坐标，对标微信共享实时位置观感）。三项定案：布局=地图+底部悬浮条（共享开关+「行动轨迹」弹 ModalBottomSheet+「回到视野」，地址/相对时间做顶部悬浮胶囊）；电量保持轮询不动；「实时」=**会话型**——位置页打开期间 5s 高频上报+WS 推送，关页回 5min ticker（「仅前台采集」隐私定案不变）。技术落点：
+
+- **首个 Compose→原生视图桥**：`base/AMapNativeView`（老 DSL 四件套声明 viewName "HRAMapView"+`MakeKuiklyComposeNode` 包装；⚠ viewUpdate 是 `(T)->Unit` 参数 lambda）↔ `androidApp/KRAMapView`（**FrameLayout 容器**实现 IKuiklyRenderViewExport——MapView 生命周期方法 final 不可子类化；内嵌高德 3dmap 10.0.600 MapView，DefaultLifecycleObserver 挂宿主生命周期）。iOS/鸿蒙/H5 未注册视图，整页降级不变。**Android 平台 key**（Manifest `com.amap.api.v2.apikey`，与 Web 服务 key 是两个 key）用户申请后自填，未配 key 瓦片空白不崩、其余功能照常。
+- **双头像 marker**：`updatePoints` JSON 契约 `{points:[{role,lat,lng,avatarUrl,initial,colorStart,colorEnd,textColor}]}`（坐标 GCJ-02 直用）；有头像 URL Glide circleCrop 异步加载（文字圆先上兜底），无 URL 走主题渐变/品牌洗底文字圆+白描边；图标指纹懒重绘（位置更新不重绘），本轮缺席 role 移除（TA 关共享→marker 消失即语义）。相机=首点/对方首点出现各 fit 一次（LatLngBounds 包络 150dp），位移不拉相机，「回到视野」pill 手动重 fit。
+- **WS 实时帧**：`love-location-new`（复用聊天信号通道 {type,content}），`ShareServiceImpl.reportLocation` 落库成功分支 `webSocketMessageSender.send(MEMBER, partnerUserId, type, 点VO JSON)` 推给对方（`@Autowired(required=false)`，对方离线静默丢帧 latest 兜底；对方不开位置页点仍入库）；端上 ChatPushStore 新分支→`LocationStore.applyPartnerPoint` 直落，marker 秒级跟随。上报限频 30s→**3s**（会话期 5s 上报口径，端上其余节奏远大于该值不触发吞点）。
+- **页面节奏**：页内 `while(true){ doReport; 每 6 拍 refreshLatest+resolveAddress; delay(5s) }`（单飞 Mutex 在飞即弃）；关页 MainPager 5min ticker 不动；退后台无点定案不变。无 DDL、无新端点、无 admin 改动、电量页零改动。
+
+- [ ] (M27) 人工前置：高德开放平台申请「**Android 平台**」key（包名 `com.zyc.love_baby`+debug/release SHA1）填 Manifest meta-data；现有 Web 服务 key 继续供轨迹静态图/regeo
+- [ ] (M27) 双机真机：双开位置页互看 marker 秒级移动+头像正确（有图/无图两态）；单开页对方坐标按对方节奏更新；「回到视野」；轨迹半层（今天/昨天/近7天×我/TA）；关共享→对方 marker 消失+「TA 未开启」提示；退后台 5min 无新点回归
+- [ ] (M27) 服务端：report>3s 间隔放行（限频收紧验证）；wscat 挂对方会话观察 `love-location-new` 帧到达与 payload 结构（reportTime=epoch 毫秒）
+- [ ] (M27) 其余端冒烟：iOS/鸿蒙/H5 位置页降级态不崩（模块探测+视图未注册双闸）；Android key 未配时瓦片空白但采集/开关/轨迹功能不崩
+- [ ] (M27) 耗电：页面驻留 10min 电量消耗人工评估（过重则 5s→10s，LOCATION_POLL_INTERVAL_MS 单常量）
+
+### (M28) 行动轨迹升级：地点记录列表 + 地图回看标注 + 提醒对方更新（2026-10-25 实施）
+
+M27 实时地图之上的轨迹语义化（用户诉求：轨迹按「哪个省哪个市哪个地方」成列表、点进去地图标注、地方半小时到一小时记一次、可手动催对方更新地址）。定案：**布局=静态总览图（缩矮 150dp）+ 地点列表（280dp 定高）**；**频率=30 分钟一条 + 换地（≥300m）即记**（底层 GPS 采集节奏 5s/5min 不动）。技术落点：
+
+- **新表 `love_location_place`**（增量 `sql/mysql/2026-10-25-love-share-location-place.sql` + love.sql 尾部双轨）：地点粒度 append-only（id/couple_id/user_id/lat/lng GCJ-02/province/city/district/address/poi 可空/report_time + BaseDO），双索引同 snapshot 口径；30 天物理保留（手写 @Delete purgeBefore）；解绑重绑历史行天然隐没。
+- **落库在 report 顺路**：`recordPlaceIfDue`（无记录/距最新 place ≥30min/位移 ≥300m haversine 任一成立才插，**服务端时钟与库内数据判定**防多端绕过）；try/catch 全吞只 log——地点是上报附属产物，失败不影响回包与 WS 推送；地址字段 service 落库前按列宽截断（VO 不设 @Size 防连坐标一起拒收）。3s 吞点分支不落 place（3s≪30min 无漏记）。
+- **地址随点上报**：端上 `AMapApi.regeoDetail`（URL 加 `extensions=all`）解析 formatted_address + addressComponent（省市区）+ pois[0].name，`LocationReportReq` 加五可空字段（仅非空才 put）随 report 上报；服务端无高德 key 不做逆地理，全空也落地点行（UI 降级显坐标）。**⚠ Kuikly `optString` 对非 String 值回 `"[]"` 字面串（core AbstractJSONObject 源实锤）——省市区/POI 一律 `opt()` + `is String` 判型；直辖市 city 可能是空数组**。
+- **新端点**：`GET /love/share/location/place/list`（参数/翻转/truncated 口径与 trail 完全一致，LIMIT 100）+ `POST /love/share/location/pull`（推 `love-location-pull` content="{}" 给对方，离线静默恒 success——sender 返回 void 拿不到投递结果，端上 toast 用「已提醒」语义）。
+- **端上 WS 闭环**：ChatPushStore 新分支 → `launchTracked { LocationStore.doReport(pager) }`（对方开共享+前台才实际出点，双闸静默；pull 不触发 pull 无回路）；对方回点走既有 `love-location-new` 帧秒落 marker。
+- **UI/标注**：TrailSheet 改「静态图缩矮 + 地点列表 + TA 页签『提醒 TA』pill」；条目=POI>地址>坐标三级降级主行 + 省市区 distinct 去重（直辖市「上海市 黄浦区」）· relativeTimeLabel 副行；**点击条目关半层 → `AMapNativeView.focusPoint` 第三方法**（{"lat","lng","color"} 品牌圆点白描边 + animateCamera 飞 16 级；focusMarker 不进 markers map 不参与增量生命周期；fitMarkers「回到视野」清标注=回实时语义）。
+- **M28.1 真机定案（同日）——半层纯列表化 + 独立回看页**：M28 原设计两处真机不适——半层静态轨迹图 `trailPoints==null` 无失败分支恒卡「加载中」；点条目回主地图被半层遮挡观感割裂。定案：**静态轨迹图整体退役**（半层=chips+地点列表），点击条目 → 关半层 → 跳新独立页 **`trailPlacePage`**（开页参数 lat/lng/title/subtitle 经 RouterModule 传入；页内全屏原生地图 `focusPoint` 品牌圆点+飞 16 级，`focusSeq=1` attach 首帧即下发；顶部返回钮+白胶囊地点名牌；坐标 0,0 显缺失态）。随迁清理：LocationStore.loadTrail/trailCache、AMapApi 静态图 URL 构造族（staticMapUrl/trailMapUrl/fitZoom/MAX_PATH_POINTS）无调用方移除；**LocationApi.trail 端点保留**（点级轨迹线二期复用）。
+
+- [ ] (M28) 存量库执行 `2026-10-25-love-share-location-place.sql`（幂等，仅新表）；重启服务端
+- [ ] (M28) 双机真机：地点列表出条目（30min/换地两路径各验一次，可临时调小 PLACE_MIN_INTERVAL_MINUTES）；点击条目→半层关+跳 trailPlacePage 回看页（标注落位+飞 16 级，M28.1 定案）；「提醒 TA」对方（前台+开共享）秒级回点；对方关共享列表「未开启」态；regeo 失败条目降级显坐标
+- [ ] (M28) 服务端 curl：report 带地址 → place 行省市区/POI 落值；连发验 30min/300m 节流；place/list target=self|partner；pull → wscat 收 `love-location-pull` 帧
+
 ### 上线前（M4，D-4 强制项）
 
 - [ ] mock-enable=false；captcha.enable=true（仅后台登录生效）；application.yaml 的 sms-code begin-code/end-code 改随机区间；补真实短信渠道；VITE_GLOB_API_URL 改实际域名
@@ -769,7 +845,7 @@ MinePage 目前为本地假数据；M2 起：用户资料区（昵称/头像）�
 | 相册 / 瞬间 | love_moment（+love_moment_like） | **已实现（M9，2026-10-17；M15 多图+点赞二期同日落；M24 瀑布流 2026-10-22）**：couple_id + user_id + image_url（M15 起=首图冗余）+ **image_urls（M15，JSON 数组 ≤9）** + **image_width/image_height（M24，首图压缩后像素，0=未知端上降级 140dp 定高）** + text（≤64 可空配文）；**点赞 love_moment_like uk(moment_id,user_id)，unlike 物理删（D-20b），点赞不发消息无 WS（D-20c）**；媒资复用 infra 文件服务，不新建存储（端上 pickAndUpload maxEdge=1080，M15 多选 maxCount ≤9）；游标分页 id 倒序；仅上传者本人可删（1_003_008_001 用户维度，admin 兜底）；无 uk（同人可发多条）、无 update（删了重发）；视频/评论留后续 |
 | 打卡 | love_checkin | **已实现（M8，2026-10-17）**：couple_id + user_id + checkin_date，uk_user_date 防重复（照 mood record 先例）；App 月历双角色点（我实心/TA 空心）+ 共同连续 streak（服务端聚合）；admin delete 逻辑删行复活回退，App 当日重打回原行 |
 | 心愿库 | love_wish | **已实现（M14，2026-10-17）**：couple_id + user_id（创建人）+ title（≤64）+ done/done_by/done_time；勾选完成自动发 kind=1 庆祝消息（CAS 单闸恰一条，D-19b）；**wish_key 不升级外键**（快照哲学不变：kind=2 快照与实体表并存不替代，D-19a）；仅创建者可删（1_003_009_001，admin 兜底）；无 uk、无 update；无分页全量拉（todo 先例） |
-| 位置共享 | love_location_snapshot | 强隐私：默认关、couple 双方显式开关、上报频率受限 |
+| 位置共享 | love_location_snapshot | **已实现（M26，2026-10-25；M27 同日升级实时）**：实时位置+行动轨迹完整版；强隐私落地——默认关、二次确认+定位权限链才开启、限频 3s（M27 由 30 收紧，会话期 5s 上报口径）、**仅前台采集**（原生闸+端上协程闸双保险）、30 天物理清除；地图=高德静态图（Web key）→ **M27 Android 全屏原生动态地图**（3dmap SDK，首个 Compose→原生视图桥 KRAMapView，双头像 marker，WS `love-location-new` 实时帧，页开 5s 会话上报/关页回 5min ticker）；同批落地 **love_battery_snapshot 情侣电量互看**（默认开、upsert 单行）与 **love_share_setting 双开关**（懒创建）。**M28（同日）行动轨迹升级**：新表 **love_location_place**（30min 粒度+换地 ≥300m 即记，服务端节流，30 天保留）+ `place/list`、`location/pull` 两端点 + 地址随点上报（端上 regeo `extensions=all`）+ WS `love-location-pull` 催对方上报 + 原生 `focusPoint` 回看标注 |
 | 推送 | （外部通道） | 厂商通道/个推；凭 love_device.push_token 下发，服务端不建推送表 |
 
 接线规则不变：`love_` 前缀、couple_id 归属、BaseDO 公共字段 + @TenantIgnore、admin/app 双通道、codegen 优先。另：buildUserInfo 对 MEMBER 返回空 Map 的分支（OAuth2TokenServiceImpl.java:223-236）将来可按 userId 查 love_user 填充昵称——改动集中、向后兼容，列为可选优化，首期仍按 M-6 回查。

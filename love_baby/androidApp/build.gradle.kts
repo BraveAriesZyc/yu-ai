@@ -42,7 +42,7 @@ android {
             // (§7.5 pageData 覆盖通道);真机联调改此处,模拟器直跑走 shared 默认 10.0.2.2
 //            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.4:48080\"")
 //            buildConfigField("String", "API_BASE_URL", "\"http://172.16.31.44:48080\"")
-            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.5:48080\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.3:48080\"")
         }
         getByName("release") {
             isMinifyEnabled = false
@@ -79,6 +79,14 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
 
     implementation("com.squareup.picasso:picasso:2.71828")
+
+    // 位置页原生动态地图(M27):高德 3D 地图 SDK(Maven Central 最新稳定版);头像 Marker 经
+    // BitmapDescriptorFactory.fromBitmap 渲染。Manifest 需配 Android 平台 key(与 Web 服务
+    // key 两码事),未配 key 瓦片空白但不崩,其余功能不受影响
+    implementation("com.amap.api:3dmap:10.0.600")
+    // KRAMapView 生命周期桥:DefaultLifecycleObserver(2.4 起才在 lifecycle-common,
+    // appcompat 1.3.1 传递的 2.3.1 没有它)
+    implementation("androidx.lifecycle:lifecycle-common:2.6.2")
 
     implementation("androidx.core:core-ktx:1.6.0")
     implementation("androidx.dynamicanimation:dynamicanimation:1.0.0")

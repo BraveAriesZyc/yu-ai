@@ -112,45 +112,18 @@ class KRNotificationModule : KuiklyRenderBaseModule() {
      *    引导去确认,不能断言)
      *  - dndOn:勿扰模式(getCurrentInterruptionFilter!=ALL,横幅与声音被系统压制)
      *  - powerSaveOn:省电模式(部分 ROM 省电下临时关横幅)
-     *  采集异常也回兜底形态,必达(见类头铁律) */
+     *  采集异常也回兜底形态,必达(见类头铁律)。⚠ Log 面包屑(M29):M22 mainHandler 投递修复后
+     *  权限页仍卡「查询中」真机复现,与 common 侧 KLog(tag=PermissionPage)配对二分——本侧两条
+     *  都在而 common 回包不在=死在回程桥;本侧一条都没有=死在 common→native 派发。根因定位后移除 */
     private fun checkPermission(callback: KuiklyRenderCallback?) {
+        android.util.Log.d("KRNotifChk", "check dispatched, callback=${callback != null}")
         val payload = try {
-            queryPermState()
+            queryPermStateSnapshot()
         } catch (_: Exception) {
             FALLBACK_STATE_PAYLOAD
         }
+        android.util.Log.d("KRNotifChk", "check posting: $payload")
         dispatchCallback(callback, payload)
-    }
-
-    /** 采集通知权限六值快照(仅 checkPermission 调用;自身不 catch,由调用方兜底收口) */
-    private fun queryPermState(): Map<String, Any> {
-        val context = KRApplication.application
-        val manager = NotificationManagerCompat.from(context)
-        val appGranted = manager.areNotificationsEnabled()
-        var channelExists = false
-        var channelBlocked = false
-        var channelHigh = false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = manager.getNotificationChannel(CHANNEL_ID_CHAT)
-            if (channel != null) {
-                channelExists = true
-                channelBlocked = channel.importance == NotificationManager.IMPORTANCE_NONE
-                channelHigh = channel.importance >= NotificationManager.IMPORTANCE_HIGH
-            }
-        }
-        // 勿扰/省电:minSdk 23=M/21 起可用,无版本闸;系统服务异常让上层兜底
-        val notifyManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val dndOn = notifyManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val powerSaveOn = powerManager.isPowerSaveMode
-        return mapOf(
-            "appGranted" to appGranted,
-            "channelExists" to channelExists,
-            "channelBlocked" to channelBlocked,
-            "channelHigh" to channelHigh,
-            "dndOn" to dndOn,
-            "powerSaveOn" to powerSaveOn,
-        )
     }
 
     /** 权限管理页「去开启」:33+ 且未授权时对宿主 Activity 发运行时申请(结果经
@@ -333,6 +306,38 @@ class KRNotificationModule : KuiklyRenderBaseModule() {
             "dndOn" to false,
             "powerSaveOn" to false,
         )
+
+        /** 通知权限六值快照采集(实例 checkPermission 与宿主直注 PermissionSnapshot 共用单源;
+         *  无实例状态,checkPermission 前置 try/catch 兜底) */
+        fun queryPermStateSnapshot(): Map<String, Any> {
+            val context = KRApplication.application
+            val manager = NotificationManagerCompat.from(context)
+            val appGranted = manager.areNotificationsEnabled()
+            var channelExists = false
+            var channelBlocked = false
+            var channelHigh = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = manager.getNotificationChannel(CHANNEL_ID_CHAT)
+                if (channel != null) {
+                    channelExists = true
+                    channelBlocked = channel.importance == NotificationManager.IMPORTANCE_NONE
+                    channelHigh = channel.importance >= NotificationManager.IMPORTANCE_HIGH
+                }
+            }
+            // 勿扰/省电:minSdk 23=M/21 起可用,无版本闸;系统服务异常让上层兜底
+            val notifyManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val dndOn = notifyManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            val powerSaveOn = powerManager.isPowerSaveMode
+            return mapOf(
+                "appGranted" to appGranted,
+                "channelExists" to channelExists,
+                "channelBlocked" to channelBlocked,
+                "channelHigh" to channelHigh,
+                "dndOn" to dndOn,
+                "powerSaveOn" to powerSaveOn,
+            )
+        }
 
         /** 未知方法回包(与旧 else 分支语义一致,走统一收口异步投递) */
         private val UNKNOWN_METHOD_PAYLOAD: Map<String, Any> =

@@ -38,12 +38,14 @@ import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.AuthApi
 import com.zyc.love_baby.network.UserApi
 import com.zyc.love_baby.state.AnniversaryStore
+import com.zyc.love_baby.state.BatteryStore
 import com.zyc.love_baby.state.ChatPushStore
 import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
 import com.zyc.love_baby.state.EmojiStore
+import com.zyc.love_baby.state.LocationStore
 import com.zyc.love_baby.state.LoveConfigStore
 import com.zyc.love_baby.state.MoodStore
 import com.zyc.love_baby.state.StatsStore
@@ -487,6 +489,9 @@ internal fun MainPageImpl(pager: BasePager) {
                 CheckinStore.reset()
                 ChatStore.reset(pager)
                 MoodStore.reset()
+                // 电量/位置共享清场(M26):快照/开关/轨迹地址缓存全复位,防换号残留
+                BatteryStore.reset()
+                LocationStore.reset()
             }
         }
 
@@ -504,6 +509,9 @@ internal fun MainPageImpl(pager: BasePager) {
                 MoodStore.reset()
                 // 统计随关系清场归零(首页「在一起(天)」回 "--",我的页三项回 0)
                 StatsStore.reset()
+                // 电量/位置共享清场(M26):上一段关系的快照/开关/轨迹缓存不得带给新伴侣
+                BatteryStore.reset()
+                LocationStore.reset()
             }
         }
 
@@ -528,6 +536,9 @@ internal fun MainPageImpl(pager: BasePager) {
                     // 今日打卡条校准(M18 修复:回前台此前不刷 CheckinStore,上午打过卡下午回前台
                     // 首页仍显未打卡/对方打卡后恒「等 TA 中」;syncToday 只动 flags 不拽打卡页月缓存)
                     CheckinStore.syncToday(pager)
+                    // 电量上报(M26):回前台报一次自己(否则 TA 不开页电量永不更新),refresh 兼
+                    // 回拉双方;失败静默走 60s 轮询兜底
+                    BatteryStore.refresh(pager)
                 }
             }
         }
@@ -543,6 +554,18 @@ internal fun MainPageImpl(pager: BasePager) {
             } else {
                 ChatPushStore.disconnect(pager)
             }
+        }
+
+        // 位置共享会话收口(M29,共享开关已退役):共享会话化——只在位置页开着时共享,
+        // 本 effect 兜两层,① 回主页(foregroundTick,即每次 pageDidAppear)若 store 闸仍开
+        // 则关(正常路径位置页离开时已关,store 关时零写网络);② 冷启动/重连(key 含登录+
+        // 绑定态)loadSetting 同步服务端开关,杀进程残态(上次会话未收口)在此归位。
+        // 后台不出点由原生前台闸+会话闸双保险;位置页 5s 会话循环只在其页面内存活
+        LaunchedEffect(SessionStore.isLoggedIn, CoupleStore.bindState, CoupleStore.foregroundTick) {
+            if (!SessionStore.isLoggedIn || CoupleStore.bindState != CoupleBindState.BOUND) {
+                return@LaunchedEffect
+            }
+            LocationStore.closeShareSession(pager)
         }
 
         // 切 Tab 静默补拉(M3,§7.4 拉取触发点):Pager 常驻五页,「再进入」由本副作用承接——

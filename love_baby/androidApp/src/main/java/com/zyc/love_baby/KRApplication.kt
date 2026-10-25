@@ -32,6 +32,23 @@ class KRApplication : Application() {
         super.onCreate()
         registerActivityLifecycleCallbacks(foregroundCounter)
         ensureNotifyChannel()
+        ensureAmapPrivacyCompliance()
+    }
+
+    /**
+     * 高德 SDK 隐私合规(2021 铁律:任何高德 SDK 接口调用前必须先隐私确认;本 App 自身首启
+     * Gate 登录即用户明确使用意愿,未同意协议无法进主功能,视作已同意,合规接口照调):
+     * updatePrivacyShow/updatePrivacyAgree 必须在 MapView 创建前调一次,Application.onCreate
+     * 是全 App 最早时点;10.0.600 未调会拒绝初始化地图(瓦片空白/回调缺),不会崩。
+     * 仅 3dmap 一件(定位走系统 LocationManager,未引高德定位 SDK 无需其合规对)
+     */
+    private fun ensureAmapPrivacyCompliance() {
+        try {
+            com.amap.api.maps.MapsInitializer.updatePrivacyShow(this, true, true)
+            com.amap.api.maps.MapsInitializer.updatePrivacyAgree(this, true)
+        } catch (_: Throwable) {
+            // 极端场景(SDK 未打包/初始化异常)静默:地图降级,不拖垮 App 启动
+        }
     }
 
     /**

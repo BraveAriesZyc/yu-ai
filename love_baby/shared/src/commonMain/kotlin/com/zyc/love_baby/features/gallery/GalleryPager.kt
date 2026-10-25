@@ -75,6 +75,7 @@ import com.zyc.love_baby.components.AppSegmentedChips
 import com.zyc.love_baby.components.AppSelectableCard
 import com.zyc.love_baby.components.AppStatBar
 import com.zyc.love_baby.components.AppStatItem
+import com.zyc.love_baby.components.AppSwitch
 import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
@@ -149,8 +150,9 @@ internal fun GalleryPage(pager: Pager) {
             item { PillChipSection(pager) }
 
             // ---------- 选择与勾选 ----------
-            item { GalleryCategory("选择与勾选", "勾选框 · 筛选 · 分段") }
+            item { GalleryCategory("选择与勾选", "勾选框 · 开关 · 筛选 · 分段") }
             item { CheckSection() }
+            item { SwitchSection() }
             item { FilterChipSection() }
             item { SegmentedChipsSection() }
 
@@ -424,6 +426,28 @@ private fun CheckSection() {
 }
 
 /** AppFilterChipRow / AppFilterChip — 横向滚动筛选胶囊(动态选中态,灵感页分类同构) */
+@Composable
+private fun SwitchSection() {
+    var demoOn by remember { mutableStateOf(true) }
+    GallerySection(title = "AppSwitch", note = "M26 开关 · 轨道双色+滑块位移") {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "开关状态:${if (demoOn) "开" else "关"}",
+                color = AppTheme.TextSecondary,
+                fontSize = 13.sp,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            AppSwitch(checked = demoOn, onCheckedChange = { demoOn = it })
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            "隐私/功能开关通用件:轨道 background color 重载两态切换(同参类型铁律),滑块 graphicsLayer.translationX + tween 纯变换位移(勿 offset)。",
+            color = AppTheme.TextTertiary,
+            fontSize = 11.sp,
+        )
+    }
+}
+
 @Composable
 private fun FilterChipSection() {
     var selected by remember { mutableStateOf(0) }

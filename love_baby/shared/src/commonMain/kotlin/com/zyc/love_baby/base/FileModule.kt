@@ -205,6 +205,67 @@ internal class FileModule : Module() {
         toNative(false, METHOD_COPY_MEDIA, methodArgs.toString(), onResult)
     }
 
+    // ---------- M29 权限管理页:麦克风/相册读权限的状态与申请(Android KRFileModule 实现;
+    //  iOS/ohos/H5 未注册 getModule=null,权限页判空落「不支持」渐进降级。查询与申请分立
+    //  两方法:纯状态查询不弹框,行点击语义与状态展示解耦) ----------
+
+    /** 查询麦克风权限(M29 权限页数据源,一次性回调):granted=RECORD_AUDIO 已授权,纯查询
+     *  不弹框 */
+    fun checkMicPermission(onResult: (granted: Boolean) -> Unit) {
+        val callback: CallbackFn = { result ->
+            onResult(result?.optBoolean("granted", false) ?: false)
+        }
+        toNative(false, METHOD_CHECK_MIC, "{}", callback)
+    }
+
+    /** 发起麦克风运行时授权(M29,一次性回调,语义同 NotificationModule.requestPermission):
+     *  granted=请求出结果后是否已授权;asked=false=请求未发出(已授权短路/宿主不可用)——
+     *  denied 引导策略由调用方收口(权限页一律跳应用详情页,33+ 两次拒绝后系统静默拒绝,
+     *  asked 区分不了真假弹框) */
+    fun requestMicPermission(onResult: (granted: Boolean, asked: Boolean) -> Unit) {
+        val callback: CallbackFn = { result ->
+            onResult(
+                result?.optBoolean("granted", false) ?: false,
+                result?.optBoolean("asked", false) ?: false,
+            )
+        }
+        toNative(false, METHOD_REQUEST_MIC, "{}", callback)
+    }
+
+    /** 查询相册读权限(M29 权限页数据源,一次性回调,纯查询不弹框):granted=完整读权限
+     *  (33+ IMAGES+VIDEO 双授权 / 33- 传统存储);partial=Android14「仅选中照片」部分授权
+     *  (VISUAL_USER_SELECTED,仅 granted=false 时有意义) */
+    fun checkMediaPermission(onResult: (granted: Boolean, partial: Boolean) -> Unit) {
+        val callback: CallbackFn = { result ->
+            onResult(
+                result?.optBoolean("granted", false) ?: false,
+                result?.optBoolean("partial", false) ?: false,
+            )
+        }
+        toNative(false, METHOD_CHECK_MEDIA, "{}", callback)
+    }
+
+    /** 发起相册读授权(M29,一次性回调):granted/partial 同 checkMediaPermission;
+     *  asked=false=请求未发出;已完整授权短路零动作(部分授权态不短路——再申请系统给
+     *  「选择更多照片」升级弹层,是部分授权态的自然升级路径) */
+    fun requestMediaPermission(onResult: (granted: Boolean, partial: Boolean, asked: Boolean) -> Unit) {
+        val callback: CallbackFn = { result ->
+            onResult(
+                result?.optBoolean("granted", false) ?: false,
+                result?.optBoolean("partial", false) ?: false,
+                result?.optBoolean("asked", false) ?: false,
+            )
+        }
+        toNative(false, METHOD_REQUEST_MEDIA, "{}", callback)
+    }
+
+    /** 跳应用详情页(M29,fire-and-forget,null 回调 notify 同款):麦克风/相册权限的
+     *  「权限获取页」落点(应用详情 → 权限,可查看/改授权;系统无直达权限子页的公开 API);
+     *  与 LocationModule.openSettings 同 ACTION,分立实现避免跨模块耦合 */
+    fun openAppDetails() {
+        toNative(false, METHOD_OPEN_APP_DETAILS, "{}", null)
+    }
+
     companion object {
         /** 与各端原生注册名一致(Android KRFileModule.MODULE_NAME 同串) */
         const val MODULE_NAME = "HRFileModule"
@@ -230,5 +291,11 @@ internal class FileModule : Module() {
         // M24 十三轮 相册弹层:媒体库查询 + 已选落盘(多选主路径)
         private const val METHOD_QUERY_MEDIA = "queryMediaLibrary"
         private const val METHOD_COPY_MEDIA = "copyMedia"
+        // M29 权限管理页:麦克风/相册读权限状态与申请 + 应用详情跳转
+        private const val METHOD_CHECK_MIC = "checkMicPermission"
+        private const val METHOD_REQUEST_MIC = "requestMicPermission"
+        private const val METHOD_CHECK_MEDIA = "checkMediaPermission"
+        private const val METHOD_REQUEST_MEDIA = "requestMediaPermission"
+        private const val METHOD_OPEN_APP_DETAILS = "openAppDetails"
     }
 }

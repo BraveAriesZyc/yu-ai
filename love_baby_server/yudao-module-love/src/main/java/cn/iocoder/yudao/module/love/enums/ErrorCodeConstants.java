@@ -158,4 +158,16 @@ public interface ErrorCodeConstants {
      */
     ErrorCode WISH_TEMPLATE_NOT_EXISTS = new ErrorCode(1_003_014_000, "心愿模板不存在");
 
+    // ========== 共享域（电量/位置/开关） 模块 1-003-015-xxx（M26 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。share 域 = 电量互看 + 位置/轨迹 +
+     * 共享开关三资源合组（7 端点合一 Controller，本期纯 app-api）。
+     * 未绑定复用 {@link #COUPLE_NOT_EXISTS}（1_003_004_003）、停用复用 {@link #AUTH_LOGIN_USER_DISABLED}
+     * （1_003_005_002），不重复定义；开关关 = 对方查询只回 shareEnabled:false（不打错），
+     * 我方上报被服务端拒收无独立码（位置共享关闭时上报直接按参数非法拒绝，见 LOCATION_SHARE_DISABLED）
+     */
+    ErrorCode LOCATION_SHARE_DISABLED = new ErrorCode(1_003_015_000, "位置共享未开启");
+    ErrorCode LOCATION_PARAM_INVALID = new ErrorCode(1_003_015_001, "位置参数不合法");
+    ErrorCode BATTERY_SHARE_DISABLED = new ErrorCode(1_003_015_002, "电量共享未开启");
+
 }

@@ -5,3 +5,7 @@
 # .claude/skills 为 npx skills 生成的符号链接(Windows 检出不可靠),
 # 换机器后重新执行 `npx skills add Tencent-TDS/KuiklyUI-AI/skills` 重建
 .claude/skills/
+
+# ─── IDE 本地配置(2026-10-25)───
+.idea/
+.vscode/

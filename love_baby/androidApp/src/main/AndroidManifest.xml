@@ -16,6 +16,11 @@
 	<uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
 	<uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+	<!-- 位置共享(M26):定位运行时权限,位置页开启共享时经 KRLocationModule 主动申请
+	     (FINE+COARSE 一次申请 any-granted 放行);仅 App 前台采集(原生 isAppForeground 闸 +
+	     common 协程闸双保险),不申请 BACKGROUND 常驻定位 -->
+	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+	<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
 	<application
 			android:name=".KRApplication"
@@ -26,6 +31,12 @@
 			android:label="予爱"
 			android:networkSecurityConfig="@xml/network_security_config"
 			android:theme="@style/Theme.LoveBaby">
+		<!-- 位置页原生动态地图(M27):高德 Android 平台 key(开放平台按 包名 com.zyc.love_baby +
+		     签名 SHA1 申请,与 Web 服务 key 是两个 key);占位空值=地图瓦片空白但不崩,
+		     common 层感知不到 key,由用户在开放平台申请后填入 -->
+		<meta-data
+				android:name="com.amap.api.v2.apikey"
+				android:value="86395694bdf5d0a0981187a6c581bee1"/>
 		<activity
 				android:name=".KuiklyRenderActivity"
 				android:exported="true">
