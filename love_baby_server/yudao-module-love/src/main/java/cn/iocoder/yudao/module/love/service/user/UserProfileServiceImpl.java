@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.love.service.user;
 
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.love.controller.app.user.vo.AppUserProfileRespVO;
@@ -15,10 +16,15 @@ import cn.iocoder.yudao.module.love.dal.dataobject.user.LoveUserDO;
 import cn.iocoder.yudao.module.love.dal.mysql.couple.LoveCoupleMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.message.MessageMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.mood.MoodRecordMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.share.LoveBatterySnapshotMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.share.LoveLocationPlaceMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.share.LoveLocationSnapshotMapper;
+import cn.iocoder.yudao.module.love.dal.mysql.share.LoveShareSettingMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.todo.TodoMapper;
 import cn.iocoder.yudao.module.love.dal.mysql.user.LoveUserMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -54,6 +60,18 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     @Resource
     private MoodRecordMapper moodRecordMapper;
+
+    @Resource
+    private LoveLocationSnapshotMapper locationSnapshotMapper;
+
+    @Resource
+    private LoveLocationPlaceMapper locationPlaceMapper;
+
+    @Resource
+    private LoveBatterySnapshotMapper batterySnapshotMapper;
+
+    @Resource
+    private LoveShareSettingMapper shareSettingMapper;
 
     @Override
     public AppUserProfileRespVO getUser() {
@@ -122,6 +140,39 @@ public class UserProfileServiceImpl implements UserProfileService {
         stats.setTodoCount(todoMapper.selectCount(LoveTodoDO::getCoupleId, couple.getId()));
         stats.setMoodCount(moodRecordMapper.selectCount(LoveMoodRecordDO::getCoupleId, couple.getId()));
         return stats;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelAccount() {
+        // §6.5 停用账号收口
+        LoveUserDO user = getValidatedCurrentUser();
+        // 1. 解绑：couple 行物理 DELETE（DO 无 @TableLogic，D-11）。语义同 CoupleServiceImpl.unbind
+        //    但不复用——注销对未绑定用户也须成立（unbind 空绑定时抛 COUPLE_NOT_EXISTS）
+        LoveCoupleDO couple = loveCoupleMapper.selectByUserId(user.getId());
+        if (couple != null) {
+            loveCoupleMapper.deleteById(couple.getId());
+        }
+        // 2. 个人敏感数据物理清除（M33 注销隐私口径，不留 deleted 墓碑）：位置轨迹/地点记录/
+        //    电量快照/共享开关。四表皆 BaseDO，mapper.delete 会被 @TableLogic 拦成逻辑删，
+        //    须手写 @Delete（LoveLocationSnapshotMapper.purgeBefore 先例）
+        locationSnapshotMapper.deletePhysicalByUserId(user.getId());
+        locationPlaceMapper.deletePhysicalByUserId(user.getId());
+        batterySnapshotMapper.deletePhysicalByUserId(user.getId());
+        shareSettingMapper.deletePhysicalByUserId(user.getId());
+        // 3. mobile 改写释放 uk_mobile（照 LoveAdminUserServiceImpl.deleteUser 同款 yudao 手法，
+        //    见 LoveUserDO 类注释）：必须先于逻辑删除（@TableLogic 下 update 只命中 deleted = 0 行），
+        //    改写保留原值可追溯，原手机号可重新注册全新账号
+        if (user.getMobile() != null) {
+            loveUserMapper.update(null, new LambdaUpdateWrapper<LoveUserDO>()
+                    .eq(LoveUserDO::getId, user.getId())
+                    .set(LoveUserDO::getMobile, user.getMobile() + "#" + user.getId()));
+        }
+        // 4. 逻辑删除用户（@TableLogic → UPDATE deleted = 1）：行保留可追溯；昵称/头像不清洗——
+        //    伴侣侧历史渲染吃消息/作答快照或端上缓存（快照哲学 §12.5.2），不回查本表
+        loveUserMapper.deleteById(user.getId());
+        // 待办/心情/悄悄话/相册等 couple 共同业务数据保留：注销不抹掉对方一侧的历史
+        // （D-11「解绑留数据」同精神）；userId 失去可登录主体，行内数据不可再被访问
     }
 
     /**

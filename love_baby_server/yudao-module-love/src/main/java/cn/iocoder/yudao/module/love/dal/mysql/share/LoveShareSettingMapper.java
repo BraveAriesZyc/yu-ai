@@ -2,7 +2,9 @@ package cn.iocoder.yudao.module.love.dal.mysql.share;
 
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
 import cn.iocoder.yudao.module.love.dal.dataobject.share.LoveShareSettingDO;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 /**
  * 共享开关 Mapper
@@ -22,5 +24,14 @@ public interface LoveShareSettingMapper extends BaseMapperX<LoveShareSettingDO> 
     default LoveShareSettingDO selectByUserId(Long userId) {
         return selectOne(LoveShareSettingDO::getUserId, userId);
     }
+
+    /**
+     * 物理清除某用户的共享开关行（M33 账号注销）
+     *
+     * ⚠ 手写 @Delete 物理 SQL（BaseDO @TableLogic 会把 mapper.delete 拦成逻辑删，注销的
+     * 隐私删除必须物理）——LoveLocationSnapshotMapper.purgeBefore 同款先例
+     */
+    @Delete("DELETE FROM love_share_setting WHERE user_id = #{userId}")
+    int deletePhysicalByUserId(@Param("userId") Long userId);
 
 }

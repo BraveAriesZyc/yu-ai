@@ -65,4 +65,13 @@ public interface LoveLocationSnapshotMapper extends BaseMapperX<LoveLocationSnap
     @Delete("DELETE FROM love_location_snapshot WHERE user_id = #{userId} AND report_time < #{time}")
     int purgeBefore(@Param("userId") Long userId, @Param("time") LocalDateTime time);
 
+    /**
+     * 物理清除某用户全部位置点（M33 账号注销：注销即物理删，无时间窗）
+     *
+     * ⚠ 手写 @Delete 物理 SQL 同 purgeBefore（BaseDO @TableLogic 会把 mapper.delete 拦成逻辑删，
+     * 注销的隐私删除必须物理）——走 idx_user_time(user_id) 前缀
+     */
+    @Delete("DELETE FROM love_location_snapshot WHERE user_id = #{userId}")
+    int deletePhysicalByUserId(@Param("userId") Long userId);
+
 }

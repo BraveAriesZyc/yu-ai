@@ -36,4 +36,14 @@ public interface UserProfileService {
      */
     AppUserStatsRespVO getStats();
 
+    /**
+     * 注销当前登录账号（M33 上架合规，商店硬性要求）
+     *
+     * 口径：解绑（物理删 couple）+ 个人敏感数据物理清除（位置轨迹/地点记录/电量快照/共享开关）
+     * + mobile 改写释放 uk_mobile（原手机号可重新注册）+ 逻辑删除用户；couple 共同业务数据
+     * 保留不抹（D-11「解绑留数据」同精神，注销不抹掉对方一侧的历史）。token 撤销由 controller
+     * 在本方法成功后执行
+     */
+    void cancelAccount();
+
 }
