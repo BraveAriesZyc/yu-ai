@@ -5696,6 +5696,11 @@ INSERT INTO `system_menu` VALUES (13607, '模板查询', 'love:wish-template:que
 INSERT INTO `system_menu` VALUES (13608, '模板新增', 'love:wish-template:create', 3, 2, 13606, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-23 10:04:07', '1', '2026-10-23 10:04:07', b'0');
 INSERT INTO `system_menu` VALUES (13609, '模板编辑', 'love:wish-template:update', 3, 3, 13606, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-23 10:04:07', '1', '2026-10-23 10:04:07', b'0');
 INSERT INTO `system_menu` VALUES (13610, '模板删除', 'love:wish-template:delete', 3, 4, 13606, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-23 10:04:07', '1', '2026-10-23 10:04:07', b'0');
+-- M31 心情记录后台页菜单增量（2026-10-26，D-13 裁决变更）：LoveMoodRecordController /love/mood-record page+delete 配套，
+-- 权限串 love:mood-record:query|delete 与 @PreAuthorize 严格一致
+INSERT INTO `system_menu` VALUES (13611, '心情记录', '', 2, 14, 13560, 'mood-record', 'ep:sunny', 'love/moodRecord/index', 'LoveMoodRecord', 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
+INSERT INTO `system_menu` VALUES (13612, '心情记录查询', 'love:mood-record:query', 3, 1, 13611, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
+INSERT INTO `system_menu` VALUES (13613, '心情记录删除', 'love:mood-record:delete', 3, 2, 13611, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
 -- ----------------------------
 -- ----------------------------
 -- Records of system_notice
