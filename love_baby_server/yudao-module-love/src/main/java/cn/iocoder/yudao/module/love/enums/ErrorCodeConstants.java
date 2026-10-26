@@ -176,4 +176,18 @@ public interface ErrorCodeConstants {
     ErrorCode LOCATION_PARAM_INVALID = new ErrorCode(1_003_015_001, "位置参数不合法");
     ErrorCode BATTERY_SHARE_DISABLED = new ErrorCode(1_003_015_002, "电量共享未开启");
 
+    // ========== 每日一问 模块 1-003-016-xxx（M32 追加） ==========
+    /**
+     * 错误码次序恒定（§12.5 演进原则：只增不删不改义）。admin 侧按物理 id 更新/删除题库行时判空
+     * （LoveAdminInspirationServiceImpl 同款口径）；app 侧 answer 时题库无启用题（今日无题不可答）
+     * 复用本码——today 端点题库空返回全 null VO 不打错（端上显「今日无题」占位），仅
+     * 「无题还提交答案」的过期端态走本码
+     */
+    ErrorCode DAILY_QUESTION_NOT_EXISTS = new ErrorCode(1_003_016_000, "题目不存在");
+    /**
+     * D-21 自动互见：双方都已提交（revealed）即锁定，任何再写拒绝——端上揭晓态隐藏编辑入口，
+     * 本码兜过期端态（双设备旧页面）与直连接口改答案
+     */
+    ErrorCode DAILY_ANSWER_LOCKED = new ErrorCode(1_003_016_001, "已揭晓，答案锁定不可修改");
+
 }
