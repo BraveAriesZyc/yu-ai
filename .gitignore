@@ -12,5 +12,5 @@
 
 # ─── 构建产物与本地数据(2026-10-26)───
 love_baby/build*.log
-# 全库转储的插入数据文件(含用户数据与 oauth 登录态,只留本地;结构文件照常入库)
-love_baby_server/sql/mysql/2026-10-26-拆分3-全部插入数据.sql
+# love 业务数据转储(含用户隐私数据与 oauth 登录态,只留本地;yudao 基础数据照常入库)
+love_baby_server/sql/mysql/2026-10-26-拆分4-love业务数据.sql
