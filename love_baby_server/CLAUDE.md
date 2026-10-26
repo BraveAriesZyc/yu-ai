@@ -26,6 +26,7 @@
 13. **mood_type 列废弃**(M3.5/D-14):新记录恒写 NULL,值域改 optionId + 快照三列;`MoodTypeEnum` 零引用保留。存量行端上按旧 1-5 映射兜底渲染。
 14. **上传体量**:multipart max-file-size 16MB / max-request-size 32MB(聊天视频上限在此,客户端压缩链对齐)。
 15. **错误码纪律**:次序恒定,只增不删不改义;新码先 grep `ErrorCodeConstants` 现有段取下一空槽。
+16. **账号注销口径(M33)**:`POST /love/user/cancel`(app 通道 UserProfileService.cancelAccount,@Transactional)——解绑(couple 物理删,未绑定跳过)+ 位置轨迹/地点/电量/共享开关**四表手写 @Delete 物理清**(mapper.delete 会被 @TableLogic 拦成逻辑删,purgeBefore 先例)+ mobile 改写 `mobile#id` 释放 uk_mobile(admin deleteUser 同款)+ love_user 逻辑删;**couple 共同业务数据保留**(D-11,不抹对方一侧历史)。token 撤销在 controller(service 成功后 logout 同款提取,失败不回滚,停用收口兜底)。
 
 ## 常用操作
 

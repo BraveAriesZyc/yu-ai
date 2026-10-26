@@ -816,6 +816,22 @@ M27 实时地图之上的轨迹语义化（用户诉求：轨迹按「哪个省�
 - [ ] (M32) 后台「情侣业务→每日一问管理」出现且种子 40 条可见，增删改走查；停用全部题目后 App 显「今日无题」
 - [ ] (M32) App 双账号：A 首页出「每日一问」条 → 答题变「我已答，等 TA 中」→ B 答题 → 双方进页见互见答案 + 「💕 已揭晓」→ 再改答案应 toast「已揭晓，答案锁定不可修改」→ 往期一问出当日条目
 
+### (M33) 上架准备（2026-10-26 实施）
+
+应用商店上架硬性合规四件套 + 发布配置（用户拍板：targetSdk 升 34 / 原生首启弹窗 / 本轮实现账号注销 / 「我的」页加协议常驻入口）：
+
+- **首启隐私 Gate（androidApp 原生，`PrivacyGate` + `PrivacyWebActivity`）**：KuiklyRenderActivity.onCreate 未同意时弹《用户协议与隐私政策》AlertDialog（正文两条可点链接进应用内 WebView 读全文），**同意前不装 Kuikly 渲染、不申请通知权限、不调任何高德接口**（bootKuikly 从 onCreate 抽出受 Gate 管控）；「不同意并退出」→ 二级确认（重新查看 / finishAffinity 退出，满足商店「拒绝后可退出」）。同意态落独立 prefs `love_privacy_gate`（不进 KRSharedPreferencesModule——登出清场不得抹掉同意记录），POLICY_VERSION 版本化支持将来重新弹窗。高德合规对 `updatePrivacyShow/updatePrivacyAgree` 从 KRApplication.onCreate 无条件直调改为 **Gate 后调用**（isAgreed 补调 / onAgreed 补调两处时点）——2021 高德铁律「同意前不得调任何高德接口」由「登录即视作同意」口径升级为真实弹窗同意。
+- **账号注销（商店硬性要求，全仓原本无注销功能）**：app 端 `POST /love/user/cancel`（UserProfileService.cancelAccount，@Transactional）——① 解绑：couple 物理删（未绑定跳过，语义同 unbind 但不复用——unbind 空绑定抛 COUPLE_NOT_EXISTS）；② **个人敏感数据物理清除**（注销即删不留 deleted 墓碑）：love_location_snapshot / love_location_place / love_battery_snapshot / love_share_setting 四表手写 `@Delete deletePhysicalByUserId`（BaseDO @TableLogic 会把 mapper.delete 拦成逻辑删，purgeBefore 先例）；③ mobile 改写 `mobile#id` 释放 uk_mobile（admin deleteUser 同款 yudao 手法，原手机号可重新注册）；④ love_user 逻辑删。**couple 共同业务数据保留**（D-11 同精神，注销不抹对方一侧历史；伴侣侧渲染吃快照/端上缓存不回查实体表）。token 撤销由 controller 在 service 成功后调 authService.logout（提取同 AppAuthController.logout；失败不回滚——残留由 getValidatedCurrentUser 停用收口兜底）。App 侧：MinePage「注销账号」弱化入口（退出登录下方次级卡）→ MainPager 根级 AppConfirmOverlay 二次确认 → UserApi.cancel → 成功 toast + SessionStore.clear 回 Gate（Store 清理走既有 isLoggedIn 链路）。
+- **协议常驻入口**：MinePage 菜单组「用户协议与隐私政策」行（Info 图标）→ BridgeModule.openUrlExternally 开系统浏览器看全文（复用 M23 桥；未注册端 ?. no-op）。协议 URL 常量两处：PrivacyGate.URL_AGREEMENT/URL_PRIVACY（弹窗链接）+ MinePage.AGREEMENT_URL（入口行）。
+- **targetSdk 33→34**：华为/小米等商店 2025 起新上架普遍要求 ≥34。审计结论升级面零代码：无前台服务；动态注册仅 ACTION_BATTERY_CHANGED 系统保护广播（豁免 RECEIVER_EXPORTED）；媒体权限已 34 形态（READ_MEDIA_VISUAL_USER_SELECTED 在列）。
+- **release 禁明文**：network_security_config 主配置 cleartextTrafficPermitted=false（商店安全检测项；release 仅 HTTPS API_BASE_URL 与高德瓦片），debug 变体 src/debug 同名资源覆写放开（真机联机 `http://LAN`）。
+- **协议全文静态页**：仓库外 `Desktop\上架材料\`（privacy.html + agreement.html 草稿 + README-上架清单.md——含高德发布版 SHA1 keytool 命令、商店资质清单、真机回归清单），上传至 love.shattered-dream.top 站点根目录后 URL 生效（URL 写死在 App 两处，换域须同步改）。
+
+- [ ] (M33) 上传两份协议 HTML 到服务器根目录并验证 URL 可访问；替换 HTML 内【请填写】占位（运营者/联系方式）
+- [ ] (M33) 高德控制台补「发布版安全码 SHA1」（keytool 命令见上架材料 README）→ release 包位置页瓦片验证
+- [ ] (M33) 远程重新部署新 jar（含 /love/user/cancel 端点，无新表无新 SQL）；真机回归上架清单第 5 节（首启弹窗/拒绝退出/同意进入/注销全链）
+- [ ] (M33) 商店资质（软著/App 备案/开发者账号）与表单材料（简介/截图/测试账号）——用户办理
+
 ### 上线前（M4，D-4 强制项）
 
 - [ ] mock-enable=false；captcha.enable=true（仅后台登录生效）；application.yaml 的 sms-code begin-code/end-code 改随机区间；补真实短信渠道；VITE_GLOB_API_URL 改实际域名
