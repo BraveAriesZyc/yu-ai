@@ -43,6 +43,7 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.state.todayDayIndexGmt8
 import com.zyc.love_baby.features.location.openLocationPage
+import com.zyc.love_baby.features.report.openMonthlyReport
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
 import com.zyc.love_baby.features.profile.openProfilePage
 import com.zyc.love_baby.state.AnniversaryStore
@@ -136,8 +137,9 @@ fun HomePage(
                         modifier = Modifier.weight(1f),
                     ) { pager.openLovePage("wishListPage") }
                 }
-                // 第二行(M26 情侣互看组):电量互看/位置轨迹,2 卡均分双宽;配色沿用首行
-                // 四卡的「浅底深图标」 palette(绿=电量/青蓝=定位,与既有橙紫粉琥珀不撞色)
+                // 第二行(M26 情侣互看组,M30 增补恋爱月报):电量互看/位置轨迹/恋爱月报 3 卡均分;
+                // 配色沿用首行四卡的「浅底深图标」 palette(绿=电量/青蓝=定位/紫罗兰=月报,
+                // 与既有橙粉琥珀不撞色)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     AppQuickAction(
@@ -154,6 +156,13 @@ fun HomePage(
                         icon = AppIconType.Location,
                         modifier = Modifier.weight(1f),
                     ) { openLocationPage(pager) }
+                    AppQuickAction(
+                        label = "恋爱月报",
+                        iconTint = Color(0xFF9B6CFF),
+                        iconBg = Color(0xFFF4EDFF),
+                        icon = AppIconType.Moon,
+                        modifier = Modifier.weight(1f),
+                    ) { openMonthlyReport(pager) }
                 }
             }
         }
