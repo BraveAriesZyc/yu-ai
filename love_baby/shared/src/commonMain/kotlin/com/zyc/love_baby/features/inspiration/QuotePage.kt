@@ -35,6 +35,7 @@ import com.zyc.love_baby.components.AppLoadFailed
 import com.zyc.love_baby.components.AppLoading
 import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTheme
+import com.zyc.love_baby.components.REFRESH_MIN_VISIBLE_MS
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.data.model.InspirationQuote
@@ -42,6 +43,8 @@ import com.zyc.love_baby.features.couple.BindPrimaryButton
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.InspirationApi
+import com.zyc.love_baby.state.nowEpochMs
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -51,7 +54,8 @@ import kotlinx.coroutines.launch
  * 依赖:InspirationApi/InspirationQuote(页内自持不进 AppState,D-19g——页销毁即弃);
  *      components.AppLoading/AppLoadFailed(加载/失败态);couple.BindPrimaryButton(换一句钮);
  *      closeLovePage(返回)
- * 事件:返回钮 closePage;「换一句」→ quote-random(服务端排除今日句,池 >1 必换),单飞锁防双击
+ * 事件:返回钮 closePage;「换一句」→ quote-random(服务端排除今日句,池 >1 必换),单飞锁防双击;
+ *      钮态最少可见 600ms(REFRESH_MIN_VISIBLE_MS)——快包不足补 delay,防一帧闪烁(AppPullRefresh 同款)
  * 功能:
  *  - today 进页拉取:data 单对象 InspirationQuote.from(content);池空服务端回兜底文案,
  *    本页零错误码分支——失败仅网络/鉴权通道(普通 BizError)
@@ -125,7 +129,9 @@ internal fun QuotePage(pager: Pager) {
                     else -> QuoteCard(content, modifier = Modifier.padding(horizontal = 28.dp))
                 }
             }
-            // 换一句(服务端排除今日句,池 >1 必换;单飞锁防双击并发——switching 期间拦截点击)
+            // 换一句(服务端排除今日句,池 >1 必换;单飞锁防双击并发——switching 期间拦截点击;
+            // 最少可见 REFRESH_MIN_VISIBLE_MS:本机直连回包快,钮态一帧即逝呈「闪烁」——
+            // 对齐 AppPullRefresh 同一 UX 规则,不足 600ms 补 delay,内容换新与钮态复位同拍落地)
             BindPrimaryButton(
                 text = "换 一 句",
                 submitting = switching,
@@ -133,7 +139,13 @@ internal fun QuotePage(pager: Pager) {
             ) {
                 switching = true
                 scope.launch {
+                    val startedAt = nowEpochMs()
                     val result = InspirationApi.quoteRandom(pager)
+                    // 请求耗时不足最少可见时长时补齐再落态:「换一句」至少完整显示一拍(下拉刷新同款)
+                    val elapsed = nowEpochMs() - startedAt
+                    if (elapsed < REFRESH_MIN_VISIBLE_MS) {
+                        delay(REFRESH_MIN_VISIBLE_MS - elapsed)
+                    }
                     if (result is ApiResult.Ok) {
                         InspirationQuote.from(result.data)?.let { content = it.content }
                     } else {
