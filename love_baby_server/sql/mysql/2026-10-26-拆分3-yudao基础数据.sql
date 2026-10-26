@@ -5701,6 +5701,13 @@ INSERT INTO `system_menu` VALUES (13610, '模板删除', 'love:wish-template:del
 INSERT INTO `system_menu` VALUES (13611, '心情记录', '', 2, 14, 13560, 'mood-record', 'ep:sunny', 'love/moodRecord/index', 'LoveMoodRecord', 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
 INSERT INTO `system_menu` VALUES (13612, '心情记录查询', 'love:mood-record:query', 3, 1, 13611, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
 INSERT INTO `system_menu` VALUES (13613, '心情记录删除', 'love:mood-record:delete', 3, 2, 13611, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
+-- M32 每日一问菜单增量（2026-10-26）：LoveDailyQuestionController /love/daily-question 全 CRUD 配套，
+-- 权限串 love:daily-question:query|create|update|delete 与 @PreAuthorize 严格一致
+INSERT INTO `system_menu` VALUES (13614, '每日一问管理', '', 2, 15, 13560, 'dailyQuestion', 'ep:chat-dot-round', 'love/dailyQuestion/index', 'LoveDailyQuestion', 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
+INSERT INTO `system_menu` VALUES (13615, '题目查询', 'love:daily-question:query', 3, 1, 13614, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
+INSERT INTO `system_menu` VALUES (13616, '题目新增', 'love:daily-question:create', 3, 2, 13614, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
+INSERT INTO `system_menu` VALUES (13617, '题目编辑', 'love:daily-question:update', 3, 3, 13614, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
+INSERT INTO `system_menu` VALUES (13618, '题目删除', 'love:daily-question:delete', 3, 4, 13614, '', '', '', NULL, 0, b'1', b'1', b'1', '1', '2026-10-26 12:00:00', '1', '2026-10-26 12:00:00', b'0');
 -- ----------------------------
 -- ----------------------------
 -- Records of system_notice

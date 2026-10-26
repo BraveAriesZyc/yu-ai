@@ -78,8 +78,10 @@ love_baby/
 │       │                    #   M28 上报链路加 regeo 明细随点上报[extensions=all 解析省市区+POI,100m 缓存锚点,
 │       │                    #   ⚠ Kuikly optString 对非 String 值回 "[]" 字面串须 opt()+is String 判型]+loadPlaceList
 │       │                    #   地点列表缓存;M29 会话共享:locationShareEnabled 改会话闸[进位置页开/
-│       │                    #   主页 closeShareSession 关,主页 5min ticker+4min 节流退役];reset 随登出/解绑清场)
-│       ├── features/        # 18 个业务域(每域 = @Page 页面 + 域内 Widgets 小件)
+│       │                    #   主页 closeShareSession 关,主页 5min ticker+4min 节流退役];reset 随登出/解绑清场)、
+│       │                    #   DailyQuestionStore.kt(M32 每日一问今日题态:today 快照单对象,首页条与题目页
+│       │                    #   共用同一事实源,submit 回包整对象覆盖即时翻转;reset 随登出/解绑清场)
+│       ├── features/        # 19 个业务域(每域 = @Page 页面 + 域内 Widgets 小件)
 │       │   ├── home/ HomePage.kt         # 首页(渐变头部+统计+快捷入口+今日打卡条)
 │       │   ├── todo/ TodoPage.kt         # 待办清单
 │       │   ├── mood/ MoodPage.kt 等      # 心情页 + 时间线 MoodTimelinePage/选项管理浮层/心愿时间线 WishTimelinePage;M25 心愿墙模板服务端化:WishStore.wishes 数据源(模板空走 allWishes 兜底)+chips「全部」+分类动态聚合+选中集随模板剪枝(顺带修 quirk:分类标签不再恒显首分类)
@@ -110,9 +112,14 @@ love_baby/
 │       │   │                             #   天数],服务端聚合 GET /love/report/monthly[AppReportController
 │       │   │                             #   三件套,零 DDL,未绑定静默全 0];首页快捷入口第三卡进页;
 │       │   │                             #   月份切换页内自持[MoodTimelinePage 先例],次月禁切未来)
+│       │   ├── dailyquestion/ DailyQuestionPage.kt # 每日一问(M32,@Page 二级页;今日题卡三态[未答=输入胶囊+
+│       │   │                             #   提交钮 600ms 最少可见/我已答=答案块+「改答案」预填展开,揭晓前覆盖写/
+│       │   │                             #   已揭晓=双方答案对比块锁定零操作]+「往期一问」当月列表页内自持[D-19g],
+│       │   │                             #   未揭晓条目只显状态文案——错过没答的天对方答案永不揭晓;首页状态条同款
+│       │   │                             #   形态吃 DailyQuestionStore,partnerAnswer 仅 revealed 非空空串契约)
 │       │   └── gallery/ GalleryPager.kt  # 组件列表(@Page("componentList"):通用组件 demo 画廊+GalleryMock 数据)
-│       ├── data/model/      # kotlinx.serialization 数据模型 13 文件(Auth/Couple/Todo/Wish/Message/Mood/Moment/Anniversary/Checkin/Inspiration/Battery[含 ShareSetting]/Location/Report)
-│       ├── network/         # 网络封装 20 文件:HttpClient(统一拆包/401 单飞静默刷新)+ ApiConfig + 各域 Api 对象
+│       ├── data/model/      # kotlinx.serialization 数据模型 14 文件(Auth/Couple/Todo/Wish/Message/Mood/Moment/Anniversary/Checkin/Inspiration/DailyQuestion/Battery[含 ShareSetting]/Location/Report)
+│       ├── network/         # 网络封装 21 文件:HttpClient(统一拆包/401 单飞静默刷新)+ ApiConfig + 各域 Api 对象
 │       │                    #   + AMapConfig/AMapApi(M26 高德 Web 服务直连:regeo/haversine,裸 GET 不经
 │       │                    #   HttpClient,KEY 用户自填;M28 regeo 升级 regeoDetail[extensions=all,省市区+POI 明细];
 │       │                    #   M28.1 静态图 URL 构造族已随轨迹半层纯列表化移除,要用回 git 找)、

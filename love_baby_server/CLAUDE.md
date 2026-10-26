@@ -14,7 +14,7 @@
 1. **双通道自动前缀**:Controller 的 `@RequestMapping` 不含 `/admin-api`、`/app-api`——框架按包名 `controller.admin` / `controller.app` 自动加。管理后台端点进 `controller/admin` + `@PreAuthorize("@ss.hasPermission('love:xxx:yyy')")`;App 端点进 `controller/app`。**权限串必须落 `system_menu`(type=3 按钮)才能过**——`@ss.hasPermission` 严格查表,缺行恒 false(403);菜单/按钮 SQL 随任务并入 `sql/mysql/` 拆分套件。
 2. **love 模块分层(实际)**:`controller/admin|app(VO+Controller) → service(接口+Impl) → dal(dataobject+mysql)+ enums + framework/validation`。**没有 convert/ 目录、没有 job/ mq/、没有 src/test**——VO 转换统一 `BeanUtils.toBean`(MapStruct 仅 system/infra 官方层);根总览画的六层树是照 module-system 写的,love 模块以本条为准。
 3. **命名不对称(现状如此,照抄)**:admin 域服务 = `service/admin/LoveAdminXxxService(+Impl)`;app 域服务 = `service/<域>/XxxService`(无前缀,auth 例外叫 `AppAuthService`)。Mapper/DO 按域分包(`dal/mysql/<域>/`、`dal/dataobject/<域>/`),两端共用同一 Mapper。
-4. **新业务域套路**:自下而上 DO → Mapper → Service → Controller;错误码进 `enums/ErrorCodeConstants` 开新段(`1_003_0XX_XXX`,现用 001-015,**段次序恒定只增不删不改义**);admin 按物理 id 删/改时判空抛**专属 NOT_EXISTS 码**(app 侧无按 id 写端点用不到它——`MOOD_RECORD_NOT_EXISTS`/`CHECKIN_NOT_EXISTS` 等七处先例)。
+4. **新业务域套路**:自下而上 DO → Mapper → Service → Controller;错误码进 `enums/ErrorCodeConstants` 开新段(`1_003_0XX_XXX`,现用 001-016,**段次序恒定只增不删不改义**);admin 按物理 id 删/改时判空抛**专属 NOT_EXISTS 码**(app 侧无按 id 写端点用不到它——`MOOD_RECORD_NOT_EXISTS`/`CHECKIN_NOT_EXISTS` 等七处先例)。
 5. **逻辑删除 vs 物理删除**:20 个 DO 里 19 个 `extends BaseDO`(deleted + @TableLogic);**唯一例外 `LoveCoupleDO` 不继承**——解绑=物理 DELETE(uk_user_a/uk_user_b 天然支持解绑重绑),且其 creator/createTime 等审计字段由 **service 显式赋值**(自动填充器只处理 BaseDO)。
 6. **`@TenantIgnore` 双保险**:全部 love DO 都挂(口径:「租户配置漂移被误开时跳过本表 tenant_id 过滤」;`yudao.tenant.enable: false`,biz-tenant 依赖经 module-system 传递引入)。
 7. **uk 冲突覆盖写**:一人一天一条(uk_user_date)并发场景走「应用层 select 命中 → update 覆盖写,uk 终审并发,**不打错误码**」(mood record / checkin 先例)。
@@ -41,25 +41,25 @@
 ```text
 yudao-module-love/src/main/java/cn/iocoder/yudao/module/love/
 ├── controller/
-│   ├── admin/          # 14 Controller / 13 包(mood 包双控制器:OptionDefault + Record),
-│   │                   #   路径 /love/{anniversary,checkin,config,couple,emoji,inspiration,
+│   ├── admin/          # 15 Controller / 14 包(mood 包双控制器:OptionDefault + Record),
+│   │                   #   路径 /love/{anniversary,checkin,config,couple,daily-question,emoji,inspiration,
 │   │                   #   message,moment,mood-option-default,mood-record,todo,user,wish,wish-template}
 │   │                   #   —— 无 report/share(admin 不看月报,共享域纯 App)
-│   └── app/            # 16 Controller / 16 包(/love/{...同上 + auth,report,share};mood 单控制器)
+│   └── app/            # 17 Controller / 17 包(/love/{...同上 + auth,report,share};mood 单控制器)
 ├── service/
-│   ├── admin/          # 14 组 LoveAdminXxxService(+Impl):page+delete 两件套为主,
+│   ├── admin/          # 15 组 LoveAdminXxxService(+Impl):page+delete 两件套为主,
 │   │                   #   moment/checkin/user/couple/mood-option-default/inspiration/emoji/
-│   │                   #   wish-template/config 有更全 CRUD(全列 VO 口径)
-│   └── <域>/           # 17 组 App 服务(接口+Impl;mood 包双服务 MoodService+MoodOptionService)
+│   │                   #   wish-template/daily-question/config 有更全 CRUD(全列 VO 口径)
+│   └── <域>/           # 18 组 App 服务(接口+Impl;mood 包双服务 MoodService+MoodOptionService)
 ├── dal/
-│   ├── dataobject/     # 20 DO / 14 包(moment 2:moment+like;mood 3:record+option+optionDefault;
-│   │                   #   share 4:setting+battery+location 快照+place)
-│   └── mysql/          # 20 Mapper(分组与 DO 一一对应;BaseMapperX + LambdaQueryWrapperX 惯例)
-├── enums/              # ErrorCodeConstants(1_003 段 15 个子段)+ MoodTypeEnum(废弃保留)
+│   ├── dataobject/     # 23 DO / 15 包(moment 2:moment+like;mood 3:record+option+optionDefault;
+│   │                   #   share 4:setting+battery+location 快照+place;dailyquestion 3:question+day+answer)
+│   └── mysql/          # 23 Mapper(分组与 DO 一一对应;BaseMapperX + LambdaQueryWrapperX 惯例)
+├── enums/              # ErrorCodeConstants(1_003 段 16 个子段)+ MoodTypeEnum(废弃保留)
 └── framework/validation/ # Password 自定义校验注解(注册/重置密码 VO 专用)
 
-sql/mysql/              # 拆分1 yudao 结构(59 表)/ 拆分2 love 结构(20 表)/ 拆分3 yudao 基础数据
-                        #   (7315 条,含 system_menu 全表)/ 拆分4 love 业务数据(650 条,含用户隐私,
+sql/mysql/              # 拆分1 yudao 结构(59 表)/ 拆分2 love 结构(23 表,M32 起 20+3)/ 拆分3 yudao 基础数据
+                        #   (7320 条,含 system_menu 全表)/ 拆分4 love 业务数据(690 条,含用户隐私,
                         #   远程仓库必须保持私有);其余方言目录为 yudao 官方原版,未做 love 拆分
 ```
 

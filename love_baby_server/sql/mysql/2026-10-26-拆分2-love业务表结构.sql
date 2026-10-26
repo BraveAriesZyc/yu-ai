@@ -465,3 +465,73 @@ CREATE TABLE `love_wish_template`  (
   INDEX `idx_category`(`category` ASC, `sort` ASC, `id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '心愿墙挑选模板表（情侣业务，B 端配置，App 只读，M25）' ROW_FORMAT = Dynamic;
 
+-- ----------------------------
+-- Table structure for love_daily_question
+-- ----------------------------
+-- ----------------------------
+-- M32 每日一问题库表（2026-10-26 追加）：B 端全 CRUD（LoveDailyQuestionController）。
+-- 无 uk：内容级重复靠运营自律（同 wish_template 惯例）；改题/删题不影响历史——
+-- 当日题以 love_daily_question_day 快照行落地（D-19a）。
+DROP TABLE IF EXISTS `love_daily_question`;
+CREATE TABLE `love_daily_question`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '题目编号',
+  `content` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '题目内容（≤200 字；day 表持快照，改题不影响已出历史）',
+  `category` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '分类（自由文本不做字典，建议：情感/日常/回忆/脑洞/未来；空串=未分类）',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态（0启用 1停用；停用行退出当日轮换池，已出过的天走 day 快照不受影响）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_status`(`status` ASC, `id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '每日一问题库表（情侣业务，B 端全 CRUD，M32）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for love_daily_question_day
+-- ----------------------------
+-- ----------------------------
+-- M32 每日一问当日题表（2026-10-26 追加）：懒生成 get-or-create（无定时任务），按启用池
+-- id asc 稳定序 + 日期取模轮换取题；uk_question_date 一天一行。快照列（D-19a）使题库
+-- 增删改/停用不影响已出过的天，历史永不漂移。无删除路径。
+DROP TABLE IF EXISTS `love_daily_question_day`;
+CREATE TABLE `love_daily_question_day`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '当日题编号',
+  `question_date` date NOT NULL COMMENT '题目日期（uk 一天一行；懒生成，同一天恒同题）',
+  `question_id` bigint NOT NULL COMMENT '题库题目编号（溯源；展示一律以快照列为准）',
+  `content` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '题目内容快照（D-19a：生成即与题库解耦，改题/删题不影响历史）',
+  `category` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '分类快照（同上）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_question_date`(`question_date` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '每日一问当日题表（懒生成快照行，无删除路径，M32）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for love_daily_answer
+-- ----------------------------
+-- ----------------------------
+-- M32 每日一问作答表（2026-10-26 追加）：覆盖写 + 揭晓锁（双方都提交即锁定，D-21）。
+-- uk_user_question 一人一题一条；answer_date 冗余恒 = day.question_date，供
+-- couple+日期区间查询走 idx_couple_date。无删除路径、无补答（只能答当天）。
+DROP TABLE IF EXISTS `love_daily_answer`;
+CREATE TABLE `love_daily_answer`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '作答编号',
+  `couple_id` bigint NOT NULL COMMENT '情侣关系编号（覆盖写时刷新；解绑重绑后当日改答案同步新 couple）',
+  `user_id` bigint NOT NULL COMMENT '作答人用户编号',
+  `question_id` bigint NOT NULL COMMENT '题库题目编号（与 day.question_id 同源）',
+  `answer_date` date NOT NULL COMMENT '作答日期（冗余恒 = day.question_date，供 couple+日期区间查询）',
+  `content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '答案内容（≤500 字，端上渲染层与服务端 @Length 双保险）',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_question`(`user_id` ASC, `question_id` ASC) USING BTREE,
+  INDEX `idx_couple_date`(`couple_id` ASC, `answer_date` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '每日一问作答表（覆盖写+揭晓锁，无删除路径，M32）' ROW_FORMAT = Dynamic;
+

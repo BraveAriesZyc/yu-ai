@@ -588,6 +588,8 @@ MinePage 目前为本地假数据；M2 起：用户资料区（昵称/头像）�
 
 **D-20 相册二期：多图 + 点赞裁决（M15 新增，2026-10-17）**：**多图存储 = love_moment 加 `image_urls` TEXT（JSON 数组字符串 ≤9 元素）单列，不建图片子表**（单行原子写、列表查询零改动）；`image_url` 列**保留 = 首图冗余**（admin LoveMomentRespVO/web 管理页只读 imageUrl → 管理后台零改动，多图瞬间 admin 显示首图）；create 归一：imageUrls 空 → [imageUrl]（老版 App 兼容出口），image_url 恒 = imageUrls[0]；存量单图回填 JSON_ARRAY(image_url) 幂等（information_schema 判列 + PREPARE 可重放，M11/M12 一次性迁移段先例升级）；读侧 parseImageUrls 对 NULL/空/损坏 JSON 一律兜底 [imageUrl]（与存量单图同一出口）。⚠ hutool BeanUtils 遇 DO imageUrls(String)→VO imageUrls(List) 走 CollectionConverter 按逗号切分产垃圾列表——**组装时无条件覆写，不依赖同名拷贝**。**点赞存储 = love_moment_like 新表 uk_moment_user(moment_id,user_id)**：like = INSERT IGNORE 吸收并发重复（幂等），unlike = **物理 DELETE**（uk 与逻辑删除冲突唯一解——墓碑行永久占 uk 位，显式 SQL 不经 @TableLogic），本表 deleted 恒 0；couple_id 冗余落库作归属第二道闸；删瞬间不级联清赞（D-20h，残留行永不被查询）。**点赞权限 = 双方均可赞任意瞬间（含自己）**，回包恒操作后服务端真值 {likeCount, liked}（端上按 id 原位替换，D-19h 同款）。**同步机制 = 不发悄悄话消息、无新 WS 信号**（用户裁决：点赞是高频轻互动不轰炸悄悄话，庆祝消息仍只属心愿完成类仪式事件 D-19b 先例）——App 相册页**可见期 5s 静默轮询对账**（WishListPage fetchSilent 同款；游标分页合并策略：恒拉首页按窗口删账——本地 id > 首页最小 id 且不在回包者判删，data class 相等跳过原位替换，hasMore 顺带纠偏；**窗口外更老条目的删除不可见 = 接受**，下拉刷新全量纠偏；preview 浮层开着不拦轮询——preview 是独立状态副本，合并时同步真值）。**防探测 = 零新增错误码**：like 对不存在/跨 couple 统一 1_003_008_000，超 9 张走 400 参数校验。**原生多选 = pickAndUpload 扩 maxCount 参数（缺省 1，三老调用方头像/聊天图/单图零改动）**：Android 走 ACTION_PICK + EXTRA_ALLOW_MULTIPLE（minSdk 23 覆盖，零新依赖零 manifest；PickVisualMedia 否决——需 androidx.activity≥1.7 + ComponentActivity 基类）+ clipData 迭代 + data.data 回退（OEM 忽略 extra 只回单张）；**串行压缩上传 fail-fast「第N张上传失败」**不做部分成功；回调契约：maxCount=1 → data 恒单 URL 字符串（老契约字节不变），>1 → data 为 JSON 数组字符串；multipart 文件名前缀 avatar_ → img_。
 
+**D-21 每日一问落位裁决（M32 新增，2026-10-26）**：三表分工——`love_daily_question` 题库（admin 全 CRUD，无 uk 运营自律）/ `love_daily_question_day` 当日题（**懒生成 get-or-create**，无定时任务：按启用池 id asc 稳定序 + `date.toEpochDay() % size` 确定性轮换取题，uk_question_date 一天一行，并发 DuplicateKeyException 回退再查；**持有 content/category 快照列**，题库改题/删题/停用不影响已出过的天，历史永不漂移——D-19a 快照哲学，day 表同时为将来「admin 手动指定今日题」留好落点）/ `love_daily_answer` 作答（uk_user_question 一人一题一条；**覆盖写 + 揭晓锁**：双方都已提交即锁定拒绝再写 1_003_016_001，单方已提交前可改（last-write-wins），覆盖写顺带刷新 couple_id 防解绑重绑错挂）。**用户拍板三机制**：① 答完自动互见（双方都提交即 revealed，无手动揭晓按钮）；② 只能答当天（无补答，错过的天历史显题但答案永不揭晓；服务端以服务端当天为准不收日期参数，防端上时钟作弊）；③ 内置约 40 条种子题（情感/日常/回忆/脑洞/未来 各 8，随拆分4 入库）。**全局同题**：所有情侣同一天同题（今日情话轮换同口径，个人产品无隔离需求）。**隐私口径**：partnerAnswer 仅 revealed 时下发（揭晓前只给 partnerAnswered 布尔，防接口层扒答案）；未答/未揭晓字段端上契约 = **空串不发 null**（optString 恒定字符串契约）。题库空 = today 返回全字段 null/false VO 端上显「今日无题」占位，**不开错误码**；answer 端点题库空才抛 1_003_016_000。历史月列表 = day 按月区间 + answer 按 couple+月区间两查内存合并（ReportServiceImpl 先例），历史行 couple_id 计入防解绑重绑错挂。App 侧首页状态条 + 独立页（QuotePager 同款壳），today 态进 DailyQuestionStore（首页条与题目页共用，登出/解绑清场），历史列表页内自持（D-19g）。
+
 ## 10. 风险与坑（分级）
 
 ### blocker
@@ -799,6 +801,21 @@ M27 实时地图之上的轨迹语义化（用户诉求：轨迹按「哪个省�
 - [ ] (M28) 双机真机：地点列表出条目（30min/换地两路径各验一次，可临时调小 PLACE_MIN_INTERVAL_MINUTES）；点击条目→半层关+跳 trailPlacePage 回看页（标注落位+飞 16 级，M28.1 定案）；「提醒 TA」对方（前台+开共享）秒级回点；对方关共享列表「未开启」态；regeo 失败条目降级显坐标
 - [ ] (M28) 服务端 curl：report 带地址 → place 行省市区/POI 落值；连发验 30min/300m 节流；place/list target=self|partner；pull → wscat 收 `love-location-pull` 帧
 
+### (M32) 每日一问（2026-10-26 实施）
+
+管理后台维护题库，每对情侣每天一道题，双方各自作答，都提交后自动互见并锁定（D-21，用户拍板三机制：答完自动互见 / 只能答当天 / 内置约 40 条种子题）。技术落点：
+
+- **三张表**（增量并入拆分2/3/4，⚠️ 并入≠已应用，须对本地 `yudao` 库执行）：题库 `love_daily_question`（content ≤200/category 自由文本/status 0启用1停用，admin 全 CRUD）；当日题 `love_daily_question_day`（question_date uk 一天一行 + **content/category 快照列**，懒生成 get-or-create：按启用池 id asc 稳定序 + `date.toEpochDay() % size` 确定性轮换，无定时任务，并发 DuplicateKeyException 回退再查——今日情话轮换同口径，改题/删题/停用不影响已出过的天）；作答 `love_daily_answer`（uk_user_question + answer_date 冗余 + idx_couple_date；覆盖写 + **揭晓锁**：mine && partner 均存在即拒绝写 1_003_016_001；并发 uk 冲突回退按覆盖写收口）。
+- **错误码新段 1_003_016**：000 题目不存在（admin 判空 / app answer 题库空）、001 已揭晓答案锁定不可修改。题库空时 **today 端点返回全字段 null/false VO 端上显「今日无题」占位不开错误码**；answer 端点题库空才抛 000。
+- **端点（app 通道 `/love/daily-question/*`，仅 GET/POST）**：`today`（今日题 + 双方作答态）、`answer`（body `{content≤500}`，返回提交后 latest 态——本次提交可能正是揭晓的那一答）、`list?month=yyyy-MM`（当月 day 行 + answer 两查内存合并，含没答的天；month 非法走 400）。**隐私口径**：partnerAnswer 仅 revealed 时下发，揭晓前只给 partnerAnswered 布尔（防接口层扒答案）；未答/未揭晓字段恒**空串不发 null**（端上 optString 契约）。
+- **admin 通道**：`/love/daily-question` page/create/update/delete 全 CRUD（inspiration 域同款克隆），权限串 `love:daily-question:query|create|update|delete`，菜单增量 id 13614-13618（parent 13560「情侣业务」sort=15，并入拆分3）。改题/删题不影响历史（day 快照），后台页 KDoc 显式声明。
+- **App 侧（第 19 业务域 `features/dailyquestion/`）**：首页新增「每日一问」状态条（TodayCheckinEntry 同形态 💬 方块 + 状态文案：绑定引导/今日无题/已揭晓/我已答等 TA/TA 已答就差你/还没人回答，吃 `DailyQuestionStore.today`）；独立页 `@Page("dailyQuestionPage")`（QuotePager 同款壳：ThemeStore initFromPageData/restore 三件套）——今日卡（分类 chip + 题目 + 状态机三态：未答=AppInputPill 输入胶囊落 bg + BindPrimaryButton 提交钮含 600ms 最少可见防一帧闪烁、我已答=答案块 + 「改答案」预填展开（揭晓前覆盖写）、已揭晓=双方答案对比块锁定零操作）+「往期一问」当月历史列表（页内自持 D-19g，未揭晓条目只显状态文案——错过没答的天对方答案永不揭晓）。DailyQuestionStore 登出/解绑双清场接线（MainPager）。
+- **明确不做**：手动揭晓按钮、补答错过的题、答案删除/撤销、admin 指定某天的题（day 表已留好落点）、答案 >500 字、分类字典化（自由文本）。
+
+- [ ] (M32) 本地 `yudao` 库执行拆分2 尾部三张 CREATE TABLE + 拆分3 菜单增量 13614-13618 + 拆分4 种子 40 条（⚠️ 拆分2 整文件重放会 DROP 全部 love 表，只执行追加段）；重启后端（local profile）
+- [ ] (M32) 后台「情侣业务→每日一问管理」出现且种子 40 条可见，增删改走查；停用全部题目后 App 显「今日无题」
+- [ ] (M32) App 双账号：A 首页出「每日一问」条 → 答题变「我已答，等 TA 中」→ B 答题 → 双方进页见互见答案 + 「💕 已揭晓」→ 再改答案应 toast「已揭晓，答案锁定不可修改」→ 往期一问出当日条目
+
 ### 上线前（M4，D-4 强制项）
 
 - [ ] mock-enable=false；captcha.enable=true（仅后台登录生效）；application.yaml 的 sms-code begin-code/end-code 改随机区间；补真实短信渠道；VITE_GLOB_API_URL 改实际域名
@@ -846,6 +863,7 @@ M27 实时地图之上的轨迹语义化（用户诉求：轨迹按「哪个省�
 | 打卡 | love_checkin | **已实现（M8，2026-10-17）**：couple_id + user_id + checkin_date，uk_user_date 防重复（照 mood record 先例）；App 月历双角色点（我实心/TA 空心）+ 共同连续 streak（服务端聚合）；admin delete 逻辑删行复活回退，App 当日重打回原行 |
 | 心愿库 | love_wish | **已实现（M14，2026-10-17）**：couple_id + user_id（创建人）+ title（≤64）+ done/done_by/done_time；勾选完成自动发 kind=1 庆祝消息（CAS 单闸恰一条，D-19b）；**wish_key 不升级外键**（快照哲学不变：kind=2 快照与实体表并存不替代，D-19a）；仅创建者可删（1_003_009_001，admin 兜底）；无 uk、无 update；无分页全量拉（todo 先例） |
 | 位置共享 | love_location_snapshot | **已实现（M26，2026-10-25；M27 同日升级实时）**：实时位置+行动轨迹完整版；强隐私落地——默认关、二次确认+定位权限链才开启、限频 3s（M27 由 30 收紧，会话期 5s 上报口径）、**仅前台采集**（原生闸+端上协程闸双保险）、30 天物理清除；地图=高德静态图（Web key）→ **M27 Android 全屏原生动态地图**（3dmap SDK，首个 Compose→原生视图桥 KRAMapView，双头像 marker，WS `love-location-new` 实时帧，页开 5s 会话上报/关页回 5min ticker）；同批落地 **love_battery_snapshot 情侣电量互看**（默认开、upsert 单行）与 **love_share_setting 双开关**（懒创建）。**M28（同日）行动轨迹升级**：新表 **love_location_place**（30min 粒度+换地 ≥300m 即记，服务端节流，30 天保留）+ `place/list`、`location/pull` 两端点 + 地址随点上报（端上 regeo `extensions=all`）+ WS `love-location-pull` 催对方上报 + 原生 `focusPoint` 回看标注 |
+| 每日一问 / 情侣问答 | love_daily_question（+love_daily_question_day +love_daily_answer） | **已实现（M32/D-21，2026-10-26）**：题库 admin 全 CRUD + 40 条种子（拆分4）；当日题懒生成轮换 + 内容快照（day 表，历史不漂移）；作答覆盖写 + 揭晓锁（答完自动互见），只能答当天无补答；partnerAnswer 仅 revealed 下发（隐私口径，空串契约） |
 | 推送 | （外部通道） | 厂商通道/个推；凭 love_device.push_token 下发，服务端不建推送表 |
 
 接线规则不变：`love_` 前缀、couple_id 归属、BaseDO 公共字段 + @TenantIgnore、admin/app 双通道、codegen 优先。另：buildUserInfo 对 MEMBER 返回空 Map 的分支（OAuth2TokenServiceImpl.java:223-236）将来可按 userId 查 love_user 填充昵称——改动集中、向后兼容，列为可选优化，首期仍按 M-6 回查。
