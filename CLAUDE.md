@@ -1,6 +1,6 @@
 # CLAUDE.md — love_baby 仓库总览（三端一体）
 
-本仓库是「情侣互动」产品的 monorepo，含三个子项目：**C 端跨端 App**、**Java 后端**、**B 端管理后台**。本文件只写架构定位、代码分层与后续开发的放置约定；每个项目的详细开发手册见各自目录（逐个补充中，见文末规划表）。
+本仓库是「情侣互动」产品的 monorepo，含三个子项目：**C 端跨端 App**、**Java 后端**、**B 端管理后台**。本文件只写架构定位、代码分层与后续开发的放置约定；每个项目的详细开发手册见各自目录（三份已全部就位，见文末规划表）。
 
 ## 总体架构
 
@@ -55,7 +55,7 @@ components/（AppTheme / ThemeStore 主题系统、AppIcons、通用组件库 32
 
 **定位**：基于芋道 yudao `2026.09-jdk25-SNAPSHOT` 的 Spring Boot 单体后端。当前仅启用 **system（系统管理）** 与 **infra（基础设施）** 两个业务模块，其余官方模块（member / pay / mall / crm / erp / ai…）在根 `pom.xml` 中注释待按需开启。
 
-**技术栈**：Java 25 + Spring Boot `4.1.1` + MyBatis Plus + Redis；MySQL 必需（建表脚本在 `sql/mysql/`，官方脚本附带多数据库方言）；MQ 可选（RocketMQ / Kafka / RabbitMQ 配置默认未启用，默认走 Redis pub/sub）；Spring AI 相关依赖随框架带入但模块未启用。
+**技术栈**：Java 25 + Spring Boot `4.1.0`（根 pom 实际值）+ MyBatis Plus + Redis；MySQL 必需（建表脚本在 `sql/mysql/` 拆分套件，官方脚本附带多数据库方言）；MQ 可选（RocketMQ / Kafka / RabbitMQ 配置 dormant——server pom 未依赖 starter-mq）；Spring AI 相关依赖随框架带入但模块未启用。
 
 **Maven 多模块结构**：
 
@@ -90,7 +90,7 @@ enums / job / mq / framework（模块级配置与扩展）
 - **现有模块加功能**：自下而上 DO → Mapper → Service → Controller；管理后台用的进 `controller/admin`，App 用的进 `controller/app`。
 - **环境配置**：`application-local.yaml`（本地，Quartz 默认关）/ `application-dev.yaml`；版本号由 `yudao-dependencies` 统一管理，不要在业务模块写死版本。
 
-➡️ **详细开发手册：待补充（建议落在 `love_baby_server/CLAUDE.md`）**
+➡️ **详细开发手册：[love_baby_server/CLAUDE.md](love_baby_server/CLAUDE.md)（✅ 已完备，2026-10-26：双通道/分层实况[love 无 convert/、无测试]/错误码段纪律/逻辑删 vs 物理删/@TenantIgnore/uk 覆盖写/IDOR 口径/双环境配置与编译验证铁律）**
 
 ---
 
@@ -121,7 +121,7 @@ app 内部结构（以 web-antd 为例）：`views/<业务域>/` 页面、`api/<
 
 **后续开发套路（架构级）**：新功能 = api 封装（对接 admin-api）+ views 页面 + 路由注册，优先复用 `effects/common-ui` 现成封装；确需改 `packages/` 时先想清楚是否五变体同构、是否影响 vben 升级。
 
-➡️ **详细开发手册：待补充（建议落在 `love_baby_web/CLAUDE.md`）**
+➡️ **详细开发手册：[love_baby_web/CLAUDE.md](love_baby_web/CLAUDE.md)（✅ 已完备，2026-10-26：动态菜单零路由/新功能三件套/CRUD 两形态清单/RangePicker 日期坑/401 刷新与加解密/vite 双环境代理）**
 
 ---
 
@@ -130,8 +130,8 @@ app 内部结构（以 web-antd 为例）：`views/<业务域>/` 页面、`api/<
 | 子项目 | 手册位置 | 状态 |
 | --- | --- | --- |
 | love_baby（Kuikly 客户端） | `love_baby/CLAUDE.md` | ✅ 已完备 |
-| love_baby_server（Java 后端） | `love_baby_server/CLAUDE.md` | ⏳ 待补充 |
-| love_baby_web（管理后台） | `love_baby_web/CLAUDE.md` | ⏳ 待补充 |
+| love_baby_server（Java 后端） | `love_baby_server/CLAUDE.md` | ✅ 已完备（2026-10-26） |
+| love_baby_web（管理后台） | `love_baby_web/CLAUDE.md` | ✅ 已完备（2026-10-26） |
 
 三端对接实施设计（App 登录注册 + yudao-module-love 业务模块 + 后台管理页，含表设计/API/里程碑）：[INTEGRATION-DESIGN.md](INTEGRATION-DESIGN.md)（2026-10-15 定稿）。
 
