@@ -19,7 +19,9 @@ import java.time.LocalDate;
  * 2. 月历查询按 couple 维度：GET /love/mood/record/list?month= 返回双方记录（§7.4 MoodPage 切月拉取）；
  * 3. M3.5 起 mood_type 废弃（置 NULL，列允许 NULL），新值 = optionId（couple 私有字典）+ 快照三列
  *    （moodLabel/emoji/color 记录时点快照，端上月历渲染只吃快照，删除选项后历史不变灰，§12.5.2）；
- * 4. 无 admin 管理页与权限（D-13：心情记录不设后台页；M3.5 仅默认模板有后台页，非本表）。
+ * 4. M31 起有 admin 管理页（D-13 裁决变更：用户拍板补页）——page + delete 两件套
+ *    （LoveMoodRecordController，权限串 love:mood-record:query|delete）；无 create/update
+ *    （记录由 App 端覆盖写产生）。
  *
  * 依赖：继承 BaseDO 走【逻辑删除】（deleted + @TableLogic），与 love_couple 的物理删除路线相反。
  *

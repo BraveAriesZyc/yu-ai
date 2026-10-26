@@ -1,6 +1,9 @@
 package cn.iocoder.yudao.module.love.dal.mysql.mood;
 
+import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.mybatis.core.mapper.BaseMapperX;
+import cn.iocoder.yudao.framework.mybatis.core.query.LambdaQueryWrapperX;
+import cn.iocoder.yudao.module.love.controller.admin.mood.vo.LoveMoodRecordPageReqVO;
 import cn.iocoder.yudao.module.love.dal.dataobject.mood.LoveMoodRecordDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -11,7 +14,8 @@ import java.util.List;
 /**
  * 每日心情记录 Mapper
  *
- * 功能：当日记录查改（uk_user_date 覆盖写）+ 月历区间查询（INTEGRATION-DESIGN.md §5.2 mood 组）。
+ * 功能：当日记录查改（uk_user_date 覆盖写）+ 月历区间查询（INTEGRATION-DESIGN.md §5.2 mood 组）
+ * + admin 分页（M31，D-13 裁决变更补后台页）。
  *
  * @author 芋道源码
  */
@@ -39,6 +43,22 @@ public interface MoodRecordMapper extends BaseMapperX<LoveMoodRecordDO> {
                 .eq(LoveMoodRecordDO::getCoupleId, coupleId)
                 .between(LoveMoodRecordDO::getMoodDate, startDate, endDate)
                 .orderByAsc(LoveMoodRecordDO::getMoodDate));
+    }
+
+    /**
+     * admin 分页：eqIfPresent coupleId / userId + likeIfPresent moodLabel + moodDate 区间
+     * + orderByDesc(id)（MomentMapper.selectPage 同款惯例；M31 D-13 裁决变更补后台页）
+     *
+     * mood_date 是纯 DATE 列（无时分秒），between 不会像 moment 的 DATETIME 列那样把结束日
+     * 隐式截断到当日零点，直接 betweenIfPresent 即可（MomentMapper.java:37-44 注释同源）
+     */
+    default PageResult<LoveMoodRecordDO> selectPage(LoveMoodRecordPageReqVO reqVO) {
+        return selectPage(reqVO, new LambdaQueryWrapperX<LoveMoodRecordDO>()
+                .eqIfPresent(LoveMoodRecordDO::getCoupleId, reqVO.getCoupleId())
+                .eqIfPresent(LoveMoodRecordDO::getUserId, reqVO.getUserId())
+                .likeIfPresent(LoveMoodRecordDO::getMoodLabel, reqVO.getMoodLabel())
+                .betweenIfPresent(LoveMoodRecordDO::getMoodDate, reqVO.getMoodDate())
+                .orderByDesc(LoveMoodRecordDO::getId));
     }
 
 }

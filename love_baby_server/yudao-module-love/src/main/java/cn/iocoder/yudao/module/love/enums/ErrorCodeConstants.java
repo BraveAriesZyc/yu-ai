@@ -25,8 +25,8 @@ public interface ErrorCodeConstants {
     ErrorCode TODO_NOT_EXISTS = new ErrorCode(1_003_001_000, "待办不存在");
     ErrorCode TODO_NO_PERMISSION = new ErrorCode(1_003_001_001, "无权操作该待办");
 
-    // ========== 心情选项 模块 1-003-002-xxx（M3.5 激活，D-14） ==========
-    // record 仍无独立错误码（uk_user_date 冲突走覆盖写不打错，§6.4）；
+    // ========== 心情 模块 1-003-002-xxx（M3.5 激活，D-14；M31 起含记录 admin 判空码） ==========
+    // record 的 app 覆盖写仍无独立错误码（uk_user_date 冲突走覆盖写不打错，§6.4）；
     // M3.5 心情选项字典（couple 私有）接入后从预留号段起分配，次序恒定只增不删（§12.5）
     ErrorCode MOOD_OPTION_NOT_EXISTS = new ErrorCode(1_003_002_000, "心情选项不存在");
     ErrorCode MOOD_OPTION_NO_PERMISSION = new ErrorCode(1_003_002_001, "无权操作该心情选项");
@@ -37,6 +37,12 @@ public interface ErrorCodeConstants {
      * app 侧不需要此码——app 全部以当前 couple 反查，行不存在统一按 1_003_002_000 处理
      */
     ErrorCode MOOD_OPTION_DEFAULT_NOT_EXISTS = new ErrorCode(1_003_002_004, "心情默认选项不存在");
+    /**
+     * admin 通道按物理 id 删除心情记录的判空码（M31，D-13 裁决变更补后台页）：记录由 App 端
+     * 覆盖写产生（uk_user_date），app 侧无按 id 写端点用不到它——口径同
+     * {@link #MOOD_OPTION_DEFAULT_NOT_EXISTS} / {@link #CHECKIN_NOT_EXISTS}（admin 判空专属码）
+     */
+    ErrorCode MOOD_RECORD_NOT_EXISTS = new ErrorCode(1_003_002_005, "心情记录不存在");
 
     // ========== 消息 模块 1-003-003-xxx（M3 追加，M12 起两码） ==========
     /**
