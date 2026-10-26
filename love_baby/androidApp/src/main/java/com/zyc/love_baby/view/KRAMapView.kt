@@ -41,8 +41,8 @@ import org.json.JSONObject
  * common 侧 base/AMapNativeView(viewName "HRAMapView") 经 callMethod 驱动,
  * 全页地图 + 双人头像 Marker。
  * 依赖:com.amap.api:3dmap:10.0.600(Maven Central);Android 平台 key 在 AndroidManifest
- *      meta-data(未配 key 瓦片空白不崩,marker/采集/推送照常);隐私合规在 KRApplication
- *      (updatePrivacyShow/updatePrivacyAgree 必须先于本类任何调用)
+ *      meta-data(未配 key 瓦片空白不崩,marker/采集/推送照常);隐私合规在 PrivacyGate
+ *      (M33 首启 Gate 挂管,updatePrivacyShow/updatePrivacyAgree 必须先于本类任何调用)
  * 用法:KuiklyRenderActivity.registerExternalRenderView 注册(⚠ creator 按位置传参,尾随
  *      lambda 会绑到末位 shadowExportCreator 上);iOS/鸿蒙/H5 未注册,common 侧整页降级
  * 方法(call 分发,参数 JSON 字符串):

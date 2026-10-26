@@ -31,6 +31,7 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.base.BridgeModule
 import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppGradientHeader
@@ -63,7 +64,7 @@ import kotlinx.coroutines.launch
 
 /**
  * MinePage — 我的页:主题渐变头部 + 悬浮统计(恋爱数据) + 情侣空间卡(M2) + 主题外观切换 + 设置分组
- * 用法:MinePage(pager, profile, onUnbindClick, onLogoutClick)。M3(F6,§7.7)起本页无浮层/无拉取:
+ * 用法:MinePage(pager, profile, onUnbindClick, onLogoutClick, onCancelAccountClick)。M3(F6,§7.7)起本页无浮层/无拉取:
  *      profile 由 MainPager 提升持有并拉取(user/get),「解绑」「退出登录」仅回调上报,浮层统一挂在
  *      MainPageImpl 根 Box(后于底栏组合,盖住底栏且遮罩挡触摸)——浮层陷入本页 LazyColumn 时
  *      滚动项仍可穿透点击,且被底栏压住,均需根级承载
@@ -73,19 +74,24 @@ import kotlinx.coroutines.launch
  *      「帮助与客服」→ 复制客服微信号(M23 后台业务配置动态下发,LoveConfigStore 具名取值器,
  *      缺键走内置兜底)+ toast(页内自持);「关于我们」→ onAboutClick()(信息卡
  *      MineAboutOverlay 挂 MainPager 根);右上角「详情」/资料区整块 → openProfilePage(mine);
- *      「解绑」→ onUnbindClick();「退出登录」→ onLogoutClick()(动作由 MainPager 收口)
+ *      「解绑」→ onUnbindClick();「退出登录」→ onLogoutClick();「注销账号」→ onCancelAccountClick()
+ *      「用户协议与隐私政策」→ openUrlExternally 系统浏览器开全文(三者动作均由 MainPager 收口,M33)
  * 功能:
  *  - 资料区(§7.7):昵称/头像展示由 profile 参数给定;资料编辑收进详情页(2026-10-18 用户裁决:
  *    右上角「编辑」改「详情」跳 profilePage,详情页 QQ 式行内编辑,各行点击直接改)
  *  - 情侣空间卡:已绑定时展示伴侣昵称/绑定时间 + 解绑入口(二次确认浮层在 MainPager);
  *    未绑定时本页被 BindingGuide 整屏覆盖不可达,故不设未绑定分支
  */
+/** 协议全文 URL(M33 上架合规):服务端 nginx 托管静态页,与 privacy.html 互链;商店表单同填此域 */
+private const val AGREEMENT_URL = "https://love.shattered-dream.top/agreement.html"
+
 @Composable
 internal fun MinePage(
     pager: Pager,
     profile: UserProfile?,
     onUnbindClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onCancelAccountClick: () -> Unit,
     onAboutClick: () -> Unit = {},
     listScrollEnabled: Boolean = true,
 ) {
@@ -147,6 +153,20 @@ internal fun MinePage(
                         onClick = { openPermissionPage(pager) },
                     )
                     AppMenuDivider()
+                    // 用户协议与隐私政策(M33 上架合规,商店审核常查):系统浏览器打开全文
+                    // (静态页服务端 nginx 托管);复用 M23 openUrlExternally 桥(ACTION_VIEW),
+                    // 未注册该桥的端(iOS/鸿蒙/H5)由 ?. 静默 no-op
+                    AppMenuRow(
+                        icon = AppIconType.Info,
+                        iconTint = Color(0xFF4D8AFF),
+                        iconBg = Color(0xFFE9F0FF),
+                        title = "用户协议与隐私政策",
+                        onClick = {
+                            pager.getModule<BridgeModule>(BridgeModule.MODULE_NAME)
+                                ?.openUrlExternally(AGREEMENT_URL)
+                        },
+                    )
+                    AppMenuDivider()
                     // 组件列表:通用组件 demo 画廊
                     AppMenuRow(
                         icon = AppIconType.Components,
@@ -167,6 +187,19 @@ internal fun MinePage(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("退出登录", color = AppTheme.Danger, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                // 注销账号(M33 上架合规,商店硬性要求):弱化次级样式区别于「退出登录」的强提示;
+                // 确认浮层挂 MainPager 根(同款),服务端注销口径见 UserApi.cancel 注释
+                Box(
+                    modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)
+                        .fillMaxWidth()
+                        .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
+                        .clickable { onCancelAccountClick() }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("注销账号", color = AppTheme.TextTertiary, fontSize = 12.sp)
                 }
                 Spacer(modifier = Modifier.height(AppTheme.BottomBarAvoidExtra + navBarSafePaddingDp())) // 底部导航避让(M18 统一常数,原 100dp 与首页 96dp 不一致)
             }

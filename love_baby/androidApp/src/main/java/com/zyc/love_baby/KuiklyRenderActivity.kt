@@ -98,6 +98,25 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         loadingView = findViewById(R.id.hr_loading)
         errorView = findViewById(R.id.hr_error)
         onBackPressedDispatcher.addCallback(this, backToExitCallback)
+        // 首启隐私 Gate(M33 上架合规):同意前不装 Kuikly 渲染、不申请通知权限、不做任何采集,
+        // 加载动画一并隐藏(弹窗背后不应见 spinner);同意回调里再走原启动链。二级页(每页独立
+        // Activity)仅能从已同意会话内打开,天然过闸
+        if (PrivacyGate.isAgreed(this)) {
+            bootKuikly(savedInstanceState)
+        } else {
+            loadingView.visibility = View.INVISIBLE
+            PrivacyGate.showAgreementDialog(this) {
+                loadingView.visibility = View.VISIBLE
+                bootKuikly(null)
+            }
+        }
+    }
+
+    /**
+     * Kuikly 启动链(M33 从 onCreate 抽出):通知权限申请 + 渲染挂载,受首启隐私 Gate 管控——
+     * 同意后才走。语义与原直连完全一致,仅多了 Gate 这一层时序
+     */
+    private fun bootKuikly(savedInstanceState: Bundle?) {
         maybeRequestNotificationPermission(savedInstanceState)
         kuiklyRenderViewDelegator.onAttach(hrContainerView, "", pageName, createPageData())
     }

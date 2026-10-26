@@ -22,7 +22,10 @@ android {
         minSdk = 23
         // M22:targetSdk 33 起 POST_NOTIFICATIONS 为运行时权限,应用可主动弹授权框(打开时
         // 请求,KuiklyRenderActivity 主页 onCreate;30→31/32/33 全部门槛已审计合规,见提交说明)
-        targetSdk = 33
+        // M33 上架:33→34——华为/小米等商店 2025 起新上架普遍要求 ≥34。审计(升级面零代码):
+        // 无前台服务;动态注册仅系统保护广播 ACTION_BATTERY_CHANGED(KRBatteryModule,豁免
+        // RECEIVER_EXPORTED 标记);媒体权限已 34 形态(READ_MEDIA_VISUAL_USER_SELECTED 在列)
+        targetSdk = 34
         versionCode = 1
         // 与 MinePage.kt 的 APP_VERSION_NAME 手工双源同步(关于我们卡展示;ohosApp app.json5 同 1.0.0)
         versionName = "1.0.0"

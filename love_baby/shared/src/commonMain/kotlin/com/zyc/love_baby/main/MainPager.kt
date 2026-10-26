@@ -187,11 +187,14 @@ internal fun MainPageImpl(pager: BasePager) {
     // 心情字典管理浮层(M3.5)同款——MoodPage 选择器「＋」回调上报
     var showUnbindConfirm by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
+    // 注销账号确认浮层(M33 上架合规,商店硬性要求):MinePage「注销账号」回调上报,根级挂载同款
+    var showCancelAccountConfirm by remember { mutableStateOf(false) }
     var showMoodManage by remember { mutableStateOf(false) }
     // 「关于我们」信息卡(M18 死入口接轻功能):MinePage 菜单行回调打开,纯展示零网络
     var showMineAbout by remember { mutableStateOf(false) }
     var unbindSubmitting by remember { mutableStateOf(false) }
     var logoutSubmitting by remember { mutableStateOf(false) }
+    var cancelSubmitting by remember { mutableStateOf(false) }
     // M12 聊天页两枚全屏浮层状态提升(2026-10-17 二轮修复):大图预览/撤回确认挂本根 Box 底栏
     // 之后(与本文件其余根级浮层同语言:黑幕盖住底栏、遮罩挡触摸、底栏压暗可见不可点)
     // ——页内挂载在 Pager 子树 z 序盖不住浮岛底栏,首轮「浮层开着底栏不组合」真机反馈生硬弃用。
@@ -209,7 +212,7 @@ internal fun MainPageImpl(pager: BasePager) {
     // 背景/横滑切页」)——LazyColumn/LazyVerticalGrid/HorizontalPager 均有官方 userScrollEnabled
     // 开关,浮层任一开着即全关,是最干净的阻断通道(遮罩拦截方案在 Kuikly 原生视图层不成立)
     val overlayActive =
-        showUnbindConfirm || showLogoutConfirm || showMoodManage ||
+        showUnbindConfirm || showLogoutConfirm || showCancelAccountConfirm || showMoodManage ||
             chatImagePreviewUrl.isNotEmpty() || chatRecallTargetId.isNotEmpty() ||
             todoDeleteTargetId.isNotEmpty() || showMineAbout
     // Tab 跳转统一走 scrollToPage 瞬时直达(底栏点切/首页快捷入口/心情页「去悄悄话」),胶囊由
@@ -227,6 +230,7 @@ internal fun MainPageImpl(pager: BasePager) {
     val goChat = remember { { goTo(3) } }
     val openUnbindConfirm = remember { { showUnbindConfirm = true } }
     val openLogoutConfirm = remember { { showLogoutConfirm = true } }
+    val openCancelAccountConfirm = remember { { showCancelAccountConfirm = true } }
     val openMoodManage = remember { { showMoodManage = true } }
     // 双通道回写/开关回调同款 remember(理由同上):值+回写两通道的「回写端」也必须缓存——
     // 否则翻转帧/浮层开关帧新建 lambda 实例,收回调的 TodoPage/ChatPage/MinePage 参数恒不等,
@@ -283,6 +287,26 @@ internal fun MainPageImpl(pager: BasePager) {
             SessionStore.clear(pager)
             logoutSubmitting = false
             showLogoutConfirm = false
+        }
+    }
+
+    // 注销账号(M33 上架合规,不可逆):服务端注销(解绑+物理清位置轨迹等个人敏感数据+释放
+    // 手机号 uk+逻辑删用户+撤 token,口径见 UserApi.cancel),成功即清本地会话回 Gate——
+    // 后续 Store 清理由 LaunchedEffect(isLoggedIn) 既有链路承接(与登出同路,不另造机制);
+    // 失败 toast 保留浮层可重试。确认浮层文案已述明后果(商店审核关注点)
+    fun submitCancelAccount() {
+        if (cancelSubmitting) return
+        cancelSubmitting = true
+        scope.launch {
+            val result = UserApi.cancel(pager)
+            cancelSubmitting = false
+            if (result is ApiResult.Ok) {
+                showCancelAccountConfirm = false
+                toastCouple(pager, "账号已注销,感谢陪伴")
+                SessionStore.clear(pager)
+            } else {
+                toastCoupleResult(pager, result)
+            }
         }
     }
 
@@ -363,6 +387,7 @@ internal fun MainPageImpl(pager: BasePager) {
                     profile = profile,
                     onUnbindClick = openUnbindConfirm,
                     onLogoutClick = openLogoutConfirm,
+                    onCancelAccountClick = openCancelAccountConfirm,
                     onAboutClick = openMineAbout,
                     listScrollEnabled = !overlayActive,
                 )
@@ -441,6 +466,21 @@ internal fun MainPageImpl(pager: BasePager) {
                 busy = logoutSubmitting,
                 onConfirm = { submitLogout() },
                 onDismiss = { if (!logoutSubmitting) showLogoutConfirm = false },
+            )
+        }
+
+        // 注销账号二次确认浮层(M33 上架合规,AppConfirmOverlay 根级挂载同款):不可逆动作,
+        // 文案须述明后果(商店审核关注点);提交中不关浮层(dismiss 拦截)防重复提交
+        if (showCancelAccountConfirm) {
+            AppConfirmOverlay(
+                title = "注销账号?",
+                message = "注销后无法恢复:情侣绑定自动解除,位置轨迹等个人信息将被删除," +
+                    "原手机号可重新注册全新账号。确定要注销吗?",
+                confirmText = "确认注销",
+                busyText = "注销中…",
+                busy = cancelSubmitting,
+                onConfirm = { submitCancelAccount() },
+                onDismiss = { if (!cancelSubmitting) showCancelAccountConfirm = false },
             )
         }
 

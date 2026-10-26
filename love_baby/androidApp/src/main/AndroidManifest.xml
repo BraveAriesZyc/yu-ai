@@ -62,6 +62,12 @@
 		<!-- 拍照输出(M24 六轮):FileProvider 授权系统相机写 filesDir/camera 原图(ACTION_IMAGE_CAPTURE
 		     EXTRA_OUTPUT),exported=false 仅 grantUriPermissions 临时授权;应用未声明 CAMERA 权限,
 		     调系统相机免运行时申请 -->
+		<!-- 协议全文页(M33 上架合规):首启隐私弹窗链接入口,应用内 WebView 读静态页;
+		     不开 JS,URL 恒 HTTPS -->
+		<activity
+				android:name=".PrivacyWebActivity"
+				android:exported="false"
+				android:theme="@style/Theme.LoveBaby"/>
 		<provider
 				android:name="androidx.core.content.FileProvider"
 				android:authorities="${applicationId}.fileprovider"

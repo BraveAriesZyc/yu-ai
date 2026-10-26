@@ -19,6 +19,7 @@ internal object UserApi {
     private const val PATH_GET = "/love/user/get"
     private const val PATH_UPDATE = "/love/user/update"
     private const val PATH_STATS = "/love/user/stats"
+    private const val PATH_CANCEL = "/love/user/cancel"
 
     suspend fun getUser(pager: Pager): ApiResult =
         HttpClient.request(pager, PATH_GET, isPost = false)
@@ -45,4 +46,13 @@ internal object UserApi {
         isPost = true,
         body = UserUpdateReq(nickname, avatar, sex, birthday, signature).toJson(),
     )
+
+    /**
+     * 注销账号(M33 上架合规,商店硬性要求):无请求体,确认浮层二次确认后调用。
+     * 服务端口径 = 解绑(物理删 couple)+ 个人敏感数据物理清除(位置轨迹/地点/电量/共享开关)
+     * + mobile 改写释放 uk + 逻辑删用户 + 撤当前 token;共同业务数据保留(对方一侧历史不抹)。
+     * 不可逆:成功后调用方 SessionStore.clear 回 Gate(与登出同路)
+     */
+    suspend fun cancel(pager: Pager): ApiResult =
+        HttpClient.request(pager, PATH_CANCEL, isPost = true)
 }

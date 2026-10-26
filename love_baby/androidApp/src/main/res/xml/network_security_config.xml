@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- M33 上架:release 禁明文(商店安全检测项;release 仅 HTTPS 的 API_BASE_URL 与高德瓦片)。
+     debug 联机真机走 http://LAN(API_BASE_URL),由 src/debug 同名资源覆写放开 -->
 <network-security-config>
-	<base-config cleartextTrafficPermitted="true"/>
+	<base-config cleartextTrafficPermitted="false"/>
 </network-security-config>
