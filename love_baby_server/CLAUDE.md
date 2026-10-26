@@ -59,8 +59,9 @@ yudao-module-love/src/main/java/cn/iocoder/yudao/module/love/
 └── framework/validation/ # Password 自定义校验注解(注册/重置密码 VO 专用)
 
 sql/mysql/              # 拆分1 yudao 结构(59 表)/ 拆分2 love 结构(23 表,M32 起 20+3)/ 拆分3 yudao 基础数据
-                        #   (7320 条,含 system_menu 全表)/ 拆分4 love 业务数据(690 条,含用户隐私,
-                        #   远程仓库必须保持私有);其余方言目录为 yudao 官方原版,未做 love 拆分
+                        #   (7320 条,含 system_menu 全表)/ 拆分4 love 业务数据(145 条,纯字典/配置/种子,
+                        #   2026-10-26 净化:用户真实数据 11 表 545 行已出库,git 历史 ae31849d4c 可找回);
+                        #   其余方言目录为 yudao 官方原版,未做 love 拆分
 ```
 
 **后续规划**:yudao-server/CLAUDE.md 本册即;模块级新功能照「技术要点 4」套路;三端对接设计与 D-决策全录见根 [INTEGRATION-DESIGN.md](../INTEGRATION-DESIGN.md)。
