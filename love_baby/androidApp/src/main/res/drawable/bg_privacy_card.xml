@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 隐私弹窗白卡:R20 对齐 AppConfirmOverlay 卡片圆角(AppTheme.CardBg 纯白) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+	<solid android:color="#FFFFFFFF"/>
+	<corners android:radius="20dp"/>
+</shape>

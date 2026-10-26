@@ -3,4 +3,13 @@
 	<!-- 启动期背景色:取默认主题「蜜桃恋语」页面背景(与 shared ThemeStore.all[peach].bg 一致),
 		 冷启动系统 starting window / Activity window / 加载期容器三级同色,白屏变主题底色无缝衔接 -->
 	<color name="splash_bg">#FDF6F4</color>
+
+	<!-- 首启隐私弹窗用色(M33):对齐 shared 侧 AppTheme 中性色 + ThemeStore 默认主题「蜜桃恋语」
+	     渐变;弹窗先于 Kuikly 渲染无法吃 Compose 主题,shared 侧值改动须同步这里 -->
+	<color name="brand_start">#FF8FA3</color>
+	<color name="brand_end">#FFB199</color>
+	<color name="text_primary">#2B2E3F</color>
+	<color name="text_secondary">#8A90A0</color>
+	<color name="secondary_bg">#F3F4F8</color>
+	<color name="danger">#FF5A6E</color>
 </resources>

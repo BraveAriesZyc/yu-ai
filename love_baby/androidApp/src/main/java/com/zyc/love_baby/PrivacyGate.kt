@@ -1,6 +1,7 @@
 package com.zyc.love_baby
 
 import android.app.Activity
+import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
 import android.text.SpannableString
@@ -9,14 +10,15 @@ import android.text.TextPaint
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 
 /**
  * PrivacyGate — 首启隐私合规 Gate(M33 上架准备)
  * 用法:KuiklyRenderActivity.onCreate 未同意时 showAgreementDialog(activity) { bootKuikly() };
  *      KRApplication.onCreate 仅 isAgreed 时补调高德合规对
- * 依赖:appcompat AlertDialog;PrivacyWebActivity(应用内全文页);高德 MapsInitializer(合规对)
+ * 依赖:自绘弹窗布局 dialog_privacy_gate(LoveBabyDialog 透明底样式);PrivacyWebActivity
+ *      (应用内全文页);高德 MapsInitializer(合规对)
  * 事件:同意 → onAgreed 落库 + 高德合规补调 + onGranted 回调(宿主拉起 Kuikly);
  *      不同意 → 二级确认(重新查看 / 退出应用 finishAffinity)
  * 功能:
@@ -73,35 +75,86 @@ object PrivacyGate {
 
     /**
      * 首启协议弹窗(仅未同意时由宿主调用;cancelable=false 挡返回键关闭——退出路径只有
-     * 「不同意并退出」,满足商店「拒绝后可退出」要求)
+     * 「不同意并退出」,满足商店「拒绝后可退出」要求)。
+     * 视觉:自绘白卡对齐 App 弹窗语言(AppConfirmOverlay 同款参数),非裸 AlertDialog;
+     * 按钮沿用 AppDialogButtonRow 语义——左灰次要 / 右渐变主行动作
      */
     fun showAgreementDialog(activity: Activity, onGranted: () -> Unit) {
-        val dialog = AlertDialog.Builder(activity)
-            .setTitle("用户协议与隐私政策")
-            .setMessage(buildSpannedMessage(activity))
-            .setCancelable(false)
-            .setPositiveButton("同意并继续") { _, _ ->
-                onAgreed(activity.applicationContext, onGranted)
-            }
-            .setNegativeButton("不同意并退出") { _, _ -> showRefuseConfirm(activity, onGranted) }
-            .create()
-        dialog.show()
-        // 正文链接可点(appcompat 默认 message TextView 不吃 ClickableSpan,须挂 LinkMovementMethod)
-        (dialog.findViewById(android.R.id.message) as? TextView)?.apply {
-            movementMethod = LinkMovementMethod.getInstance()
-            highlightColor = Color.TRANSPARENT
-        }
+        showGateDialog(
+            activity,
+            showBadge = true,
+            title = "欢迎使用予爱",
+            message = buildSpannedMessage(activity),
+            leftText = "不同意并退出",
+            onLeft = { showRefuseConfirm(activity, onGranted) },
+            rightText = "同意并继续",
+            onRight = { onAgreed(activity.applicationContext, onGranted) },
+            rightBg = R.drawable.bg_privacy_btn_primary,
+        )
     }
 
     /** 不同意二级确认:重新查看回到首启弹窗,退出应用走 finishAffinity(商店要求给退出路径) */
     private fun showRefuseConfirm(activity: Activity, onGranted: () -> Unit) {
-        AlertDialog.Builder(activity)
-            .setTitle("温馨提示")
-            .setMessage("未同意《用户协议》与《隐私政策》无法使用予爱。你可以重新查看协议,或退出应用。")
-            .setCancelable(false)
-            .setPositiveButton("重新查看") { _, _ -> showAgreementDialog(activity, onGranted) }
-            .setNegativeButton("退出应用") { _, _ -> activity.finishAffinity() }
-            .show()
+        showGateDialog(
+            activity,
+            showBadge = false,
+            title = "暂时无法使用予爱",
+            message = "未同意《用户协议》与《隐私政策》无法使用予爱。你可以重新查看协议,或退出应用。",
+            leftText = "重新查看",
+            onLeft = { showAgreementDialog(activity, onGranted) },
+            rightText = "退出应用",
+            onRight = { activity.finishAffinity() },
+            rightBg = R.drawable.bg_privacy_btn_danger,
+        )
+    }
+
+    /**
+     * Gate 弹窗统一注入器(dialog_privacy_gate 布局复用):白卡 R20 / 徽标显隐 / 文案 /
+     * 右钮底色(首启=品牌渐变,拒绝确认=危险红)全部参数注入;
+     * cancelable=false 挡返回键;正文链接由调用方的 Spanned 自带,统一挂 LinkMovementMethod
+     */
+    private fun showGateDialog(
+        activity: Activity,
+        showBadge: Boolean,
+        title: String,
+        message: CharSequence,
+        leftText: String,
+        onLeft: () -> Unit,
+        rightText: String,
+        onRight: () -> Unit,
+        rightBg: Int,
+    ) {
+        val dialog = Dialog(activity, R.style.LoveBabyDialog)
+        dialog.setContentView(R.layout.dialog_privacy_gate)
+        dialog.setCancelable(false)
+        dialog.setCanceledOnTouchOutside(false)
+        // 窗口拉满宽,水平留白交给布局根 36dp padding(与 AppConfirmOverlay 边距一致)
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
+        dialog.findViewById<View>(R.id.flGateBadge).visibility =
+            if (showBadge) View.VISIBLE else View.GONE
+        dialog.findViewById<TextView>(R.id.tvGateTitle).text = title
+        dialog.findViewById<TextView>(R.id.tvGateMessage).apply {
+            text = message
+            movementMethod = LinkMovementMethod.getInstance()
+            highlightColor = Color.TRANSPARENT
+        }
+        dialog.findViewById<TextView>(R.id.tvGateLeft).text = leftText
+        dialog.findViewById<View>(R.id.btnGateLeft).setOnClickListener {
+            dialog.dismiss()
+            onLeft()
+        }
+        dialog.findViewById<TextView>(R.id.tvGateRight).text = rightText
+        dialog.findViewById<View>(R.id.btnGateRight).apply {
+            setBackgroundResource(rightBg)
+            setOnClickListener {
+                dialog.dismiss()
+                onRight()
+            }
+        }
+        dialog.show()
     }
 
     /** 弹窗正文:承诺要点 + 两条可点链接(应用内 WebView 全文) */

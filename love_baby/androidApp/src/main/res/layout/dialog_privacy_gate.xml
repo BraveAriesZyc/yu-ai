@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 首启隐私 Gate 弹窗布局(M33):自绘白卡对齐 App 弹窗语言(AppConfirmOverlay 同款参数——
+     白卡 R20 / 标题 16sp 主字色 / 正文 13sp 次字色 / 42dp 胶囊双钮左灰右实色,水平留白 36dp
+     同浮层边距),替换裸 AlertDialog;布局被首启协议弹窗与不同意二次确认复用,
+     文案 / 右钮底色 / 徽标显隐由 PrivacyGate 代码注入 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:paddingStart="36dp"
+	android:paddingEnd="36dp">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:background="@drawable/bg_privacy_card"
+		android:orientation="vertical"
+		android:paddingStart="20dp"
+		android:paddingTop="22dp"
+		android:paddingEnd="20dp"
+		android:paddingBottom="20dp">
+
+		<!-- 欢迎徽标:品牌渐变方块 + 白心;不同意二次确认时整块 GONE -->
+		<FrameLayout
+			android:id="@+id/flGateBadge"
+			android:layout_width="44dp"
+			android:layout_height="44dp"
+			android:layout_marginBottom="2dp"
+			android:background="@drawable/bg_privacy_badge">
+
+			<ImageView
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:contentDescription="@null"
+				android:padding="12dp"
+				android:src="@drawable/ic_notify_heart"
+				android:tint="#FFFFFFFF"/>
+		</FrameLayout>
+
+		<TextView
+			android:id="@+id/tvGateTitle"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="12dp"
+			android:textColor="@color/text_primary"
+			android:textSize="16sp"
+			android:textStyle="bold"/>
+
+		<TextView
+			android:id="@+id/tvGateMessage"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:lineSpacingExtra="5dp"
+			android:textColor="@color/text_secondary"
+			android:textSize="13sp"/>
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="20dp"
+			android:orientation="horizontal">
+
+			<!-- 左钮 = 次要动作(不同意并退出 / 重新查看),灰胶囊 -->
+			<FrameLayout
+				android:id="@+id/btnGateLeft"
+				android:layout_width="0dp"
+				android:layout_height="42dp"
+				android:layout_weight="1"
+				android:background="@drawable/bg_privacy_btn_gray"
+				android:foreground="?android:attr/selectableItemBackground">
+
+				<TextView
+					android:id="@+id/tvGateLeft"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="center"
+					android:textColor="@color/text_primary"
+					android:textSize="14sp"/>
+			</FrameLayout>
+
+			<Space
+				android:layout_width="12dp"
+				android:layout_height="1dp"/>
+
+			<!-- 右钮 = 主行动作(同意并继续 / 退出应用),底色代码注入(渐变 or 危险红) -->
+			<FrameLayout
+				android:id="@+id/btnGateRight"
+				android:layout_width="0dp"
+				android:layout_height="42dp"
+				android:layout_weight="1"
+				android:background="@drawable/bg_privacy_btn_primary"
+				android:foreground="?android:attr/selectableItemBackground">
+
+				<TextView
+					android:id="@+id/tvGateRight"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="center"
+					android:textColor="#FFFFFFFF"
+					android:textSize="14sp"/>
+			</FrameLayout>
+		</LinearLayout>
+	</LinearLayout>
+</FrameLayout>

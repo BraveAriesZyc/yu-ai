@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 危险/终止动作胶囊钮:红底(AppTheme.Danger),AppConfirmOverlay 确认钮同款语义 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+	<solid android:color="@color/danger"/>
+	<corners android:radius="21dp"/>
+</shape>

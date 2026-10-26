@@ -12,4 +12,12 @@
 		<item name="android:windowIsTranslucent">true</item>
 		<item name="android:windowBackground">@android:color/transparent</item>
 	</style>
+
+	<!-- 首启隐私弹窗(M33):透明底自绘白卡,灰幕 45% 黑对齐 AppConfirmOverlay 遮罩浓度 -->
+	<style name="LoveBabyDialog" parent="android:Theme.Material.Dialog">
+		<item name="android:windowBackground">@android:color/transparent</item>
+		<item name="android:windowNoTitle">true</item>
+		<item name="android:backgroundDimEnabled">true</item>
+		<item name="android:backgroundDimAmount">0.45</item>
+	</style>
 </resources>

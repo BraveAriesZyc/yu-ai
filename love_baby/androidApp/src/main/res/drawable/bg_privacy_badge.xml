@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 欢迎徽标底:蜜桃恋语品牌渐变圆角方块(ThemeStore.all[peach] 同色,默认主题),
+     上叠白色心形 ic_notify_heart -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+	<gradient
+		android:angle="0"
+		android:startColor="@color/brand_start"
+		android:endColor="@color/brand_end"/>
+	<corners android:radius="14dp"/>
+</shape>

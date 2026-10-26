@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 次要胶囊钮:灰底(AppTheme.SecondaryBg),AppDialogButtonRow 左钮同款 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+	<solid android:color="@color/secondary_bg"/>
+	<corners android:radius="21dp"/>
+</shape>
