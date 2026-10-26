@@ -49,16 +49,17 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.nvi.serialization.json.JSONArray
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.components.AppConfirmOverlay
 import com.zyc.love_baby.components.AppEmptyHint
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppOverlayCard
 import com.zyc.love_baby.components.AppInputField
 import com.zyc.love_baby.components.AppLoading
 import com.zyc.love_baby.components.AppLoadFailed
@@ -96,7 +97,7 @@ import kotlinx.coroutines.launch
  *      附压缩后宽高 M24);couple 组 toast;chat.chatDayLabelFriendly(时间文案);components.
  *      AppLoading/AppLoadFailed(原 mood.Timeline 同款,收编单源);AppStaggeredPullRefresh(瀑布流
  *      下拉刷新,M24 自绘——官方 pullToRefreshItem 只挂 LazyListScope 挂不上 staggered grid);
- *      RouterModule(返回)
+ *      closeLovePage(返回)
  * 事件:返回钮 closePage;卡片点击开大图预览;FAB「+」开发布浮层;失败态「重试」重拉;
  *      「加载更多」beforeId=当前最小 id 翻页;下拉刷新(自绘被动观察器,到顶下拉越阈松手)重拉首页
  * 功能:
@@ -312,7 +313,7 @@ internal fun MomentPage(pager: Pager) {
             // 二级页头单源化 AppSubPageHeader(38dp 白 25% 圆返回钮 + Spacer10 + 标题列,
             // 与原件手写件同构,视觉逐字一致)
             AppSubPageHeader("我们的相册", "每一帧都值得收藏", onBack = {
-                pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                pager.closeLovePage()
             })
             // M24 瀑布流:LazyVerticalStaggeredGrid 双列(替代原 LazyColumn+chunked(2) Row 自排
             // ——图块 140dp 定高不随图比例,用户要求瀑布流错落)。⚠ 2.29 签名无 reverseLayout/
@@ -480,7 +481,7 @@ internal fun MomentPage(pager: Pager) {
  * 错落;0=旧数据降级 140dp 全宽 Crop 现状,浅灰底常驻充当加载占位),多图右上「N张」黑胶囊
  * 角标(三层胶囊写法铁律 14/15;全部图进大图预览横滑——三列迷你九宫格半宽卡内 cell 过小,
  * 2026-10-17 真机反馈二轮弃用)+ 配文(空串不显,maxLines=2)+ 我/TA 与时间 + 纯展示红心
- * (不可点,点赞入口在预览浮层)。「我」= 主题色,「TA」= 暖橙(CheckinPage PartnerRingDot
+ * (不可点,点赞入口在预览浮层)。「我」= 主题色,「TA」= 暖橙(components.AppRingDot
  * 同款语义色);background+clickable 同节点(铁律⑤)
  */
 @Composable
@@ -505,7 +506,7 @@ private fun MomentCard(info: MomentInfo, modifier: Modifier = Modifier, onClick:
                         Modifier.height(140.dp)
                     }
                 )
-                .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp)),
+                .background(AppTheme.InputBg, RoundedCornerShape(12.dp)),
         ) {
             Image(
                 modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
@@ -749,144 +750,129 @@ private fun MomentAddOverlay(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-                // 键盘起时整体顶到键盘上方(原生 KeyboardParams.height 不含导航栏区域的补偿
-                // 已收口 components.keyboardLiftBottomDp = 键盘高 + navBar + 12dp,与原件
-                // 逐字一致),收起归零回正中(AnniversaryAddOverlay 同款几何)
-                .padding(
-                    bottom = if (keyboardHeight.value > 0f) {
-                        keyboardLiftBottomDp(keyboardHeight.value)
-                    } else {
-                        0.dp
-                    },
-                ),
-            contentAlignment = if (keyboardHeight.value > 0f) Alignment.BottomCenter else Alignment.Center,
-        ) {
-            // 灰幕:收键盘 + 关浮层一体
+    // 键盘起时整体顶到键盘上方(补偿收口 components.keyboardLiftBottomDp = 键盘高+navBar+12dp,
+    // 与原件逐字一致),收起归零回正中(AnniversaryAddOverlay 同款几何)。灰幕由 AppOverlayCard
+    // 自带(原键盘补偿条区域无灰幕裸透,迁后全屏覆盖=净改善,记真机回归点);关闭动作
+    // clearFocus 前置逐字保真
+    AppOverlayCard(
+        onDismiss = {
+            focusManager.clearFocus()
+            onDismiss()
+        },
+        contentAlignment = if (keyboardHeight.value > 0f) Alignment.BottomCenter else Alignment.Center,
+        cardOuterPadding = PaddingValues(
+            start = 28.dp,
+            top = 0.dp,
+            end = 28.dp,
+            bottom = if (keyboardHeight.value > 0f) keyboardLiftBottomDp(keyboardHeight.value) else 0.dp,
+        ),
+        cardPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
+    ) {
+        Text(
+            "发布瞬间",
+            color = AppTheme.TextPrimary,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        // 选图区(M15 多图):未选 = 虚位引导(Plus + 文案);已选 = LazyRow 缩略条
+        // (72dp 方图,本地 URI 直载 + 右上 X 删除 + 条尾余量内 Plus 追加;LazyRow 横向
+        // 嵌在竖向 Column = 跨轴嵌套合法铁律);发布中拦选图/删图
+        if (localUris.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f))
-                    .clickable {
-                        focusManager.clearFocus()
-                        onDismiss()
-                    },
-            )
-            Column(
-                modifier = Modifier.padding(horizontal = 28.dp)
-                    .fillMaxWidth()
-                    .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
-                    .clickable { } // 吞点击防透传(铁律⑤:background 与 clickable 同节点)
-                    .padding(horizontal = 18.dp, vertical = 18.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .height(150.dp)
+                    .background(AppTheme.InputBg, RoundedCornerShape(14.dp))
+                    .clickable { if (!publishing) pickImage() },
             ) {
-                Text(
-                    "发布瞬间",
-                    color = AppTheme.TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                // 选图区(M15 多图):未选 = 虚位引导(Plus + 文案);已选 = LazyRow 缩略条
-                // (72dp 方图,本地 URI 直载 + 右上 X 删除 + 条尾余量内 Plus 追加;LazyRow 横向
-                // 嵌在竖向 Column = 跨轴嵌套合法铁律);发布中拦选图/删图
-                if (localUris.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
-                            .height(150.dp)
-                            .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
-                            .clickable { if (!publishing) pickImage() },
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            AppIcon(AppIconType.Plus, Color(0xFFC8CCD8), Modifier.size(30.dp))
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("点击选择照片", color = AppTheme.TextSecondary, fontSize = 13.sp)
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text("从手机相册选,可多选至 ${MOMENT_IMAGE_MAX} 张,发布后 TA 也能看到", color = AppTheme.TextTertiary, fontSize = 10.sp)
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    AppIcon(AppIconType.Plus, Color(0xFFC8CCD8), Modifier.size(30.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("点击选择照片", color = AppTheme.TextSecondary, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text("从手机相册选,可多选至 ${MOMENT_IMAGE_MAX} 张,发布后 TA 也能看到", color = AppTheme.TextTertiary, fontSize = 10.sp)
+                }
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    itemsIndexed(localUris) { index, uri ->
+                        Box(modifier = Modifier.size(72.dp)) {
+                            Image(
+                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                                painter = rememberAsyncImagePainter(uri),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                            )
+                            // 右上 X 删除(黑 45% 圆,发布中拦)
+                            Box(
+                                modifier = Modifier.align(Alignment.TopEnd)
+                                    .padding(3.dp)
+                                    .size(18.dp)
+                                    .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(9.dp))
+                                    .clickable { if (!publishing) localUris.removeAt(index) },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                AppIcon(AppIconType.Close, Color.White, Modifier.size(10.dp))
+                            }
                         }
                     }
-                } else {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        LazyRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            itemsIndexed(localUris) { index, uri ->
-                                Box(modifier = Modifier.size(72.dp)) {
-                                    Image(
-                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
-                                        painter = rememberAsyncImagePainter(uri),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                    )
-                                    // 右上 X 删除(黑 45% 圆,发布中拦)
-                                    Box(
-                                        modifier = Modifier.align(Alignment.TopEnd)
-                                            .padding(3.dp)
-                                            .size(18.dp)
-                                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(9.dp))
-                                            .clickable { if (!publishing) localUris.removeAt(index) },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        AppIcon(AppIconType.Close, Color.White, Modifier.size(10.dp))
-                                    }
-                                }
-                            }
-                            if (localUris.size < MOMENT_IMAGE_MAX) {
-                                item {
-                                    // 条尾追加块(余量内才显;background+clickable 同节点铁律⑤)
-                                    Box(
-                                        modifier = Modifier.size(72.dp)
-                                            .background(Color(0xFFF5F6FA), RoundedCornerShape(10.dp))
-                                            .clickable { if (!publishing) pickImage() },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        AppIcon(AppIconType.Plus, Color(0xFFC8CCD8), Modifier.size(24.dp))
-                                    }
-                                }
+                    if (localUris.size < MOMENT_IMAGE_MAX) {
+                        item {
+                            // 条尾追加块(余量内才显;background+clickable 同节点铁律⑤)
+                            Box(
+                                modifier = Modifier.size(72.dp)
+                                    .background(AppTheme.InputBg, RoundedCornerShape(10.dp))
+                                    .clickable { if (!publishing) pickImage() },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                AppIcon(AppIconType.Plus, Color(0xFFC8CCD8), Modifier.size(24.dp))
                             }
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
-                // 配文输入行(AppInputField 单源:固定高挂行容器、TextField 居中,原生 gravity
-                // 恒 TOP|START 铁律);≤64 字服务端 @Length 兜底,端上 maxLength 渲染层拦
-                // (2026-10-22 take→maxLength:官方禁 onValueChange 截断,光标跳变/回吞字符)。
-                // maxLines 显式传 Int.MAX_VALUE 维持原件缺省(未限行,48dp 定高容器裁剪行为不变)
-                AppInputField(
-                    value = draft,
-                    onValueChange = { draft = it.filterNot { ch -> ch == '\n' } },
-                    placeholder = "说点什么…(可不填)",
-                    maxLength = MOMENT_TEXT_MAX,
-                    maxLines = Int.MAX_VALUE,
-                    keyboardHeightChange = onKeyboardHeightChange,
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        "${draft.length}/$MOMENT_TEXT_MAX",
-                        color = AppTheme.TextTertiary,
-                        fontSize = 11.sp,
-                    )
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-                // 发布钮收编 components.AppPrimaryButton(brandBrush 渐变主钮 + submitting
-                // 拦点;44dp/22dp 圆角/15sp 对齐原件,publishStep 非空 = submitting、进度文案
-                // 经 busyText 承载,守卫语义与原件逐字一致)
-                AppPrimaryButton(
-                    "发 布",
-                    submitting = publishStep.isNotEmpty(),
-                    busyText = publishStep,
-                    height = 44.dp,
-                    corner = 22.dp,
-                    fontSize = 15.sp,
-                ) { submit() }
             }
         }
+        Spacer(modifier = Modifier.height(10.dp))
+        // 配文输入行(AppInputField 单源:固定高挂行容器、TextField 居中,原生 gravity
+        // 恒 TOP|START 铁律);≤64 字服务端 @Length 兜底,端上 maxLength 渲染层拦
+        // (2026-10-22 take→maxLength:官方禁 onValueChange 截断,光标跳变/回吞字符)。
+        // maxLines 显式传 Int.MAX_VALUE 维持原件缺省(未限行,48dp 定高容器裁剪行为不变)
+        AppInputField(
+            value = draft,
+            onValueChange = { draft = it.filterNot { ch -> ch == '\n' } },
+            placeholder = "说点什么…(可不填)",
+            maxLength = MOMENT_TEXT_MAX,
+            maxLines = Int.MAX_VALUE,
+            keyboardHeightChange = onKeyboardHeightChange,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                "${draft.length}/$MOMENT_TEXT_MAX",
+                color = AppTheme.TextTertiary,
+                fontSize = 11.sp,
+            )
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        // 发布钮收编 components.AppPrimaryButton(brandBrush 渐变主钮 + submitting
+        // 拦点;44dp/22dp 圆角/15sp 对齐原件,publishStep 非空 = submitting、进度文案
+        // 经 busyText 承载,守卫语义与原件逐字一致)
+        AppPrimaryButton(
+            "发 布",
+            submitting = publishStep.isNotEmpty(),
+            busyText = publishStep,
+            height = 44.dp,
+            corner = 22.dp,
+            fontSize = 15.sp,
+        ) { submit() }
     }
 }
 

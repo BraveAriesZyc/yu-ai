@@ -28,16 +28,17 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.reactive.handler.observable
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.base.BatteryModule
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppFeedback
 import com.zyc.love_baby.components.AppPillChip
 import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppSwitch
+import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
@@ -145,7 +146,7 @@ internal fun BatteryPage(pager: BatteryPager) {
                     title = "情侣电量",
                     subtitle = "看看 TA 还剩多少电",
                     onBack = {
-                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                        pager.closeLovePage()
                     },
                 )
             }
@@ -316,15 +317,19 @@ private fun BatteryCard(
                         Spacer(modifier = Modifier.width(3.dp))
                         Text("%", color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.width(12.dp))
-                        // 充电状态胶囊(未充电不显胶囊,「电量数字」即语义)
+                        // 充电状态胶囊(AppTag 直替:R9/10·4 内距/12sp 逐参覆写照旧;
+                        // 未充电不显胶囊,「电量数字」即语义)
                         if (charging > 0) {
-                            Box(
-                                modifier = Modifier.padding(bottom = 8.dp)
-                                    .background(color.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                            ) {
-                                Text(chargingLabel(charging), color = color, fontSize = 12.sp)
-                            }
+                            AppTag(
+                                chargingLabel(charging),
+                                modifier = Modifier.padding(bottom = 8.dp),
+                                bgColor = color.copy(alpha = 0.12f),
+                                textColor = color,
+                                fontSize = 12.sp,
+                                corner = 9.dp,
+                                hPadding = 10.dp,
+                                vPadding = 4.dp,
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
@@ -332,7 +337,7 @@ private fun BatteryCard(
                     Box(
                         modifier = Modifier.fillMaxWidth()
                             .height(10.dp)
-                            .background(Color(0xFFF0F1F5), RoundedCornerShape(5.dp)),
+                            .background(AppTheme.Divider, RoundedCornerShape(5.dp)),
                     ) {
                         Box(
                             modifier = Modifier.fillMaxWidth(level / 100f)
@@ -357,9 +362,9 @@ private fun BatteryCard(
 
 /** 电量配色:充电中/已充满绿,<10 红,<20 橙,正常主题色(红分支必须排在橙前,0..9 ⊂ 0..19) */
 private fun batteryColor(level: Int, charging: Int): Color = when {
-    charging > 0 -> Color(0xFF34C77B)
+    charging > 0 -> AppTheme.Success
     level in 0..9 -> AppTheme.Danger
-    level in 0 until LOW_BATTERY_LEVEL -> Color(0xFFF5A623)
+    level in 0 until LOW_BATTERY_LEVEL -> AppTheme.Warning
     else -> ThemeStore.current.brandStart
 }
 

@@ -35,7 +35,6 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.nvi.serialization.json.JSONArray
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
@@ -43,6 +42,7 @@ import com.tencent.kuikly.core.reactive.handler.observable
 import com.zyc.love_baby.base.AMapNativeMap
 import com.zyc.love_baby.base.BasePager
 import com.zyc.love_baby.base.LocationModule
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppFeedback
 import com.zyc.love_baby.components.AppPillChip
@@ -268,7 +268,7 @@ internal fun LocationPage(pager: LocationPager) {
                 }
             }
             BackFloatingButton {
-                pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                pager.closeLovePage()
             }
         } else {
             // ---- 全屏原生动态地图(头像 marker+精度圈;Android key 未配时瓦片空白,功能不崩) ----
@@ -286,7 +286,7 @@ internal fun LocationPage(pager: LocationPager) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 BackFloatingButton {
-                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    pager.closeLovePage()
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 AddressCapsule(modifier = Modifier.weight(1f))

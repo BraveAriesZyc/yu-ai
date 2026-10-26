@@ -40,7 +40,7 @@ state/（AppState：TodoStore / MoodStore / ChatStore 全局快照单例）
   ↓
 features/<业务域>/（@Page 页面 + Compose UI）
   ↓
-components/（AppTheme / ThemeStore 主题系统、AppIcons、通用组件库）
+components/（AppTheme / ThemeStore 主题系统、AppIcons、通用组件库 32 件，2026-10-26 全源码盘点收口，清单见画廊）
 ```
 
 原生扩展：各端宿主壳（androidApp / iosApp / ohosApp）注册 Module，跨端接口声明放 `base/`。

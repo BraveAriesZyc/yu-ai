@@ -379,3 +379,13 @@ internal object HttpClient {
         return RawResult.Common(data)
     }
 }
+
+/**
+ * queryPath — GET 查询串拼接单源(各域 Api 原手拼 "$path?k=v&k2=v2" 收口,2026-10-26;5 文件 7 处)。
+ * 按给定序以 key=value 用 & 相连;值原样 toString、不做 URL 编码——调用方保证参数为 URL 安全字符
+ * (yyyy-MM/数字/服务端枚举串),与原手拼输出逐字符一致。不逐参数转义是刻意维持各域「显式拼接
+ * 五端一致」决策:core 各宿主对 GET param 转 query 的行为不一(仅 Android 有 createRequestUrl 拼
+ * query),故不走 core param 通道(原 MoodApi/CheckinApi/LocationApi 头注的决策与理由收口至此)
+ */
+internal fun queryPath(path: String, vararg params: Pair<String, Any>): String =
+    if (params.isEmpty()) path else path + "?" + params.joinToString("&") { (k, v) -> "$k=$v" }

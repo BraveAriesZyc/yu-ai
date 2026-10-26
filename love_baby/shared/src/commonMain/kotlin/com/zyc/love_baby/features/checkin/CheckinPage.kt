@@ -31,12 +31,13 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.components.AppLoadFailed
 import com.zyc.love_baby.components.AppLoading
 import com.zyc.love_baby.components.AppMonthNav
+import com.zyc.love_baby.components.AppRingDot
 import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
@@ -58,7 +59,7 @@ import kotlinx.coroutines.launch
  * 用法:首页「今日打卡」条 / 我的页「每日打卡」菜单 RouterModule.openPage 打开;返回键 closePage。
  *      独立二级页(AnniversaryPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:CheckinStore(当月缓存 + summary + 今日双布尔);AppState 月算术纯函数(monthShift/
- *      daysInMonthYear/firstWeekdayOfMondayFirst/currentDate);couple 组 toast;RouterModule(返回)
+ *      daysInMonthYear/firstWeekdayOfMondayFirst/currentDate);couple 组 toast;closeLovePage(返回)
  * 事件:返回钮 closePage;失败态「重试」重拉;打卡按钮发 CheckinStore.check;‹› 翻月 loadMonth
  * 功能:
  *  - 页头卡:今日打卡大按钮三态(未打=品牌渐变「今日打卡」/我打了 TA 没打=灰底「等 TA 打卡」
@@ -147,7 +148,7 @@ internal fun CheckinPage(pager: Pager) {
                 "每日打卡",
                 "一起坚持的小浪漫",
                 onBack = {
-                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    pager.closeLovePage()
                 },
             )
             when {
@@ -216,7 +217,7 @@ private fun CheckinHeaderCard(
                 both -> Brush.linearGradient(
                     listOf(theme.brandStart.copy(alpha = 0.12f), theme.brandEnd.copy(alpha = 0.12f)),
                 )
-                waiting -> Brush.linearGradient(listOf(Color(0xFFF3F4F8), Color(0xFFF3F4F8)))
+                waiting -> Brush.linearGradient(listOf(AppTheme.SecondaryBg, AppTheme.SecondaryBg))
                 else -> theme.brandBrush // 未打 = 品牌渐变可点
             }
         }
@@ -321,7 +322,7 @@ private fun CheckinCalendarCard(
             Spacer(modifier = Modifier.width(4.dp))
             Text("我", color = AppTheme.TextTertiary, fontSize = 11.sp)
             Spacer(modifier = Modifier.width(12.dp))
-            PartnerRingDot()
+            AppRingDot(Color(0xFFFF9A56))
             Spacer(modifier = Modifier.width(4.dp))
             Text("TA", color = AppTheme.TextTertiary, fontSize = 11.sp)
         }
@@ -408,25 +409,10 @@ private fun CheckinDayCell(day: Int, isToday: Boolean, mine: Boolean, partner: B
                     Spacer(modifier = Modifier.width(3.dp))
                 }
                 if (partner) {
-                    PartnerRingDot()
+                    AppRingDot(Color(0xFFFF9A56))
                 }
             }
         }
-    }
-}
-
-/** TA 空心环(9dp 外圈暖橙 + 5dp 同底色内芯的嵌套双圆,不依赖 border;MoodDayCell 同语义) */
-@Composable
-private fun PartnerRingDot() {
-    Box(
-        modifier = Modifier.size(9.dp)
-            .background(Color(0xFFFF9A56), RoundedCornerShape(5.dp)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier.size(5.dp)
-                .background(AppTheme.CardBg, RoundedCornerShape(3.dp)),
-        )
     }
 }
 

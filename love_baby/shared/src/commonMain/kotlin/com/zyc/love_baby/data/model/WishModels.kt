@@ -79,13 +79,7 @@ internal data class WishInfo(
          * 从 CommonResult.data 数组解析(数组形态经 HttpClient 的 Ok.dataArray 携带,§5.2 wish/list)。
          * 数组缺省/为空返回空列表;服务端序(create_time asc, id asc)原样保留,分层重排在页面层
          */
-        fun listFrom(dataArray: JSONArray?): List<WishInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<WishInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<WishInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }

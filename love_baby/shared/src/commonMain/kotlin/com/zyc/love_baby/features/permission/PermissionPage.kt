@@ -25,7 +25,6 @@ import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.log.KLog
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.reactive.handler.observable
@@ -34,6 +33,7 @@ import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.base.NotificationModule
 import com.zyc.love_baby.base.NotifyPermState
 import com.zyc.love_baby.base.LocationModule
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppMenuDivider
@@ -466,7 +466,7 @@ internal fun PermissionPage(pager: PermissionPager) {
                     title = "权限管理",
                     subtitle = "查看与开启应用权限",
                     onBack = {
-                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                        pager.closeLovePage()
                     },
                 )
             }
@@ -491,20 +491,20 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 ) {
                                     AppTag(
                                         "状态未知",
-                                        bgColor = Color(0xFFF0F1F5),
-                                        textColor = Color(0xFF9AA0AE),
+                                        bgColor = AppTheme.Divider,
+                                        textColor = AppTheme.TextDisabled,
                                     )
                                 }
                                 !pager.checked -> {}
                                 !pager.supported -> AppTag(
                                     "不支持",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 enabled -> AppTag(
                                     "已开启",
-                                    bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
-                                    textColor = Color(0xFF34C77B),
+                                    bgColor = AppTheme.Success.copy(alpha = 0.12f),
+                                    textColor = AppTheme.Success,
                                 )
                                 // 已关闭胶囊:带背景的原生视图吃 tap(命中测试铁律),不透传会
                                 // 在「已关闭」态把行点击最需要的热区堵死——包一层 clickable 转发行动作
@@ -533,21 +533,21 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 // 查询失败兜底(与通知行同一回包源,同落「状态未知」;点击仍是渠道设置)
                                 !pager.checked && pager.queryStuck -> AppTag(
                                     "状态未知",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 !pager.checked -> {}
                                 !pager.supported -> AppTag(
                                     "不支持",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 st == null -> {}
                                 !st.channelExists -> AppTag(
                                     // API<26 无渠道概念:横幅由通知 PRIORITY 决定,随系统总开关
                                     "跟随系统",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 st.channelBlocked -> channelTag(pager) {
                                     AppTag(
@@ -559,15 +559,15 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 !st.channelHigh -> channelTag(pager) {
                                     AppTag(
                                         "横幅受限",
-                                        bgColor = Color(0xFFF5A623).copy(alpha = 0.12f),
-                                        textColor = Color(0xFFF5A623),
+                                        bgColor = AppTheme.Warning.copy(alpha = 0.12f),
+                                        textColor = AppTheme.Warning,
                                     )
                                 }
                                 else -> channelTag(pager) {
                                     AppTag(
                                         "正常",
-                                        bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
-                                        textColor = Color(0xFF34C77B),
+                                        bgColor = AppTheme.Success.copy(alpha = 0.12f),
+                                        textColor = AppTheme.Success,
                                     )
                                 }
                             }
@@ -577,7 +577,7 @@ internal fun PermissionPage(pager: PermissionPager) {
                         // 国产 ROM 另有系统级「悬浮通知」开关且无标准查询 API,恒示「需手动确认」
                         AppMenuRow(
                             icon = AppIconType.Info,
-                            iconTint = Color(0xFFF5A623),
+                            iconTint = AppTheme.Warning,
                             iconBg = Color(0xFFFFF4E5),
                             title = "悬浮横幅提醒",
                             onClick = { pager.openChannelSettings() },
@@ -586,14 +586,14 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 // 查询失败兜底(与通知行同一回包源;点击仍是渠道设置人工核对)
                                 !pager.checked && pager.queryStuck -> AppTag(
                                     "状态未知",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 !pager.checked -> {}
                                 !pager.supported -> AppTag(
                                     "不支持",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 // 胶囊带背景吃 tap(命中测试铁律),包 clickable 转发行动作
                                 else -> Box(
@@ -601,8 +601,8 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 ) {
                                     AppTag(
                                         "需手动确认",
-                                        bgColor = Color(0xFFF0F1F5),
-                                        textColor = Color(0xFF9AA0AE),
+                                        bgColor = AppTheme.Divider,
+                                        textColor = AppTheme.TextDisabled,
                                     )
                                 }
                             }
@@ -631,8 +631,8 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 !pager.mediaChecked -> {}
                                 !pager.mediaSupported -> AppTag(
                                     "不支持",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 // 已开启/部分授权:点击进应用详情页(权限获取页,可查看/改授权;
                                 // 部分授权的「选择更多照片」升级入口也在那里)。胶囊带背景原生视图
@@ -642,8 +642,8 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 ) {
                                     AppTag(
                                         "已开启",
-                                        bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
-                                        textColor = Color(0xFF34C77B),
+                                        bgColor = AppTheme.Success.copy(alpha = 0.12f),
+                                        textColor = AppTheme.Success,
                                     )
                                 }
                                 pager.mediaPartial -> Box(
@@ -651,8 +651,8 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 ) {
                                     AppTag(
                                         "部分授权",
-                                        bgColor = Color(0xFFF5A623).copy(alpha = 0.12f),
-                                        textColor = Color(0xFFF5A623),
+                                        bgColor = AppTheme.Warning.copy(alpha = 0.12f),
+                                        textColor = AppTheme.Warning,
                                     )
                                 }
                                 else -> Box(
@@ -689,16 +689,16 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 !pager.micChecked -> {}
                                 !pager.micSupported -> AppTag(
                                     "不支持",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 pager.micGranted -> Box(
                                     modifier = Modifier.clickable { pager.openAppDetails() },
                                 ) {
                                     AppTag(
                                         "已开启",
-                                        bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
-                                        textColor = Color(0xFF34C77B),
+                                        bgColor = AppTheme.Success.copy(alpha = 0.12f),
+                                        textColor = AppTheme.Success,
                                     )
                                 }
                                 else -> Box(
@@ -738,8 +738,8 @@ internal fun PermissionPage(pager: PermissionPager) {
                                 !pager.locChecked -> {}
                                 !pager.locSupported -> AppTag(
                                     "不支持",
-                                    bgColor = Color(0xFFF0F1F5),
-                                    textColor = Color(0xFF9AA0AE),
+                                    bgColor = AppTheme.Divider,
+                                    textColor = AppTheme.TextDisabled,
                                 )
                                 // 已开启:行尾追加已获取的权限(FINE=精确定位,否则 COARSE=大致位置);
                                 // 两枚胶囊带背景原生视图吃 tap(命中测试铁律),各包 clickable 转发
@@ -749,8 +749,8 @@ internal fun PermissionPage(pager: PermissionPager) {
                                     ) {
                                         AppTag(
                                             "已开启",
-                                            bgColor = Color(0xFF34C77B).copy(alpha = 0.12f),
-                                            textColor = Color(0xFF34C77B),
+                                            bgColor = AppTheme.Success.copy(alpha = 0.12f),
+                                            textColor = AppTheme.Success,
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -759,8 +759,8 @@ internal fun PermissionPage(pager: PermissionPager) {
                                     ) {
                                         AppTag(
                                             if (pager.locFine) "精确定位" else "大致位置",
-                                            bgColor = Color(0xFFF0F1F5),
-                                            textColor = Color(0xFF9AA0AE),
+                                            bgColor = AppTheme.Divider,
+                                            textColor = AppTheme.TextDisabled,
                                         )
                                     }
                                 }
@@ -785,14 +785,16 @@ internal fun PermissionPage(pager: PermissionPager) {
                             .padding(16.dp),
                     ) {
                         Column {
+                            // 标题+正文同一条件梯子出对(statusCopy 单源,防两份 when 漂移)
+                            val (statusLine, statusDetail) = statusCopy(pager)
                             Text(
-                                statusTitle(pager),
+                                statusLine,
                                 color = AppTheme.TextPrimary,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(statusDesc(pager), color = AppTheme.TextSecondary, fontSize = 12.sp)
+                            Text(statusDetail, color = AppTheme.TextSecondary, fontSize = 12.sp)
                             // 勿扰/省电条件提示:两者都压制横幅,只在激活时显示
                             if (pager.supported && pager.checked && st?.dndOn == true) {
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -890,39 +892,36 @@ private fun channelTag(pager: PermissionPager, tag: @Composable () -> Unit) {
 private fun unknownTag() {
     AppTag(
         "状态未知",
-        bgColor = Color(0xFFF0F1F5),
-        textColor = Color(0xFF9AA0AE),
+        bgColor = AppTheme.Divider,
+        textColor = AppTheme.TextDisabled,
     )
 }
 
-/** 状态详情卡标题(与行内状态胶囊同一套判定,组合期纯函数;!checked 前置防首查回包前
- *  按缺省闪「已开启」——行内胶囊有同款守卫,卡片不能漏,3-skeptic minor) */
-private fun statusTitle(pager: PermissionPager): String {
+/** 状态详情卡「标题+正文」映射(单一条件梯子同出对文案,防标题/正文两份 when 漂移;组合期
+ *  纯函数;!checked 前置防首查回包前按缺省闪「已开启」——行内胶囊有同款守卫,卡片不能漏) */
+private fun statusCopy(pager: PermissionPager): Pair<String, String> {
     val st = pager.permState
     return when {
-        !pager.supported -> "当前平台暂不支持"
+        !pager.supported ->
+            "当前平台暂不支持" to "权限查询与授权仅 Android 端提供；其他端留意应用内红点提醒即可。"
         // 查询失败兜底(M29):「正在查询」永不超时是缺陷,4s 后改口「查询失败」
-        !pager.checked && pager.queryStuck -> "状态查询失败"
-        !pager.checked -> "正在查询通知状态…"
-        st == null -> "通知已开启" // 不可达兜底(checked 置真时 permState 必已落),防御式走乐观文案
-        !st.appGranted -> "通知已关闭"
-        st.channelBlocked -> "「悄悄话」渠道已关闭"
-        st.channelExists && !st.channelHigh -> "横幅可能不显示"
-        else -> "通知已开启"
-    }
-}
-
-/** 状态详情卡正文 */
-private fun statusDesc(pager: PermissionPager): String {
-    val st = pager.permState
-    return when {
-        !pager.supported -> "权限查询与授权仅 Android 端提供；其他端留意应用内红点提醒即可。"
-        !pager.checked && pager.queryStuck -> "权限状态没能取回（页面数据通道异常）。退出本页重新进入可重试；若反复出现请反馈开发者。"
-        !pager.checked -> " "
-        st == null -> "对方发来悄悄话时，会在通知栏与横幅提醒你。"
-        !st.appGranted -> "收不到对方消息的后台提醒。点「去开启」重新授权；若系统不再弹框，请到系统设置手动开启。"
-        st.channelBlocked -> "应用通知已开启，但「悄悄话」渠道在系统设置中被单独关闭，点上方「悄悄话」渠道行去重新打开。"
-        st.channelExists && !st.channelHigh -> "「悄悄话」渠道的重要性被调低，横幅（悬浮通知）不会弹出。点上方渠道行把重要性设为「高」。"
-        else -> "对方发来悄悄话时，会在通知栏与横幅提醒你。悬浮横幅还取决于手机系统的「悬浮通知」开关，若未弹横幅，点上方「悬浮横幅提醒」去确认。"
+        !pager.checked && pager.queryStuck ->
+            "状态查询失败" to
+                "权限状态没能取回（页面数据通道异常）。退出本页重新进入可重试；若反复出现请反馈开发者。"
+        !pager.checked -> "正在查询通知状态…" to " "
+        // 不可达兜底(checked 置真时 permState 必已落),防御式走乐观文案
+        st == null -> "通知已开启" to "对方发来悄悄话时，会在通知栏与横幅提醒你。"
+        !st.appGranted ->
+            "通知已关闭" to
+                "收不到对方消息的后台提醒。点「去开启」重新授权；若系统不再弹框，请到系统设置手动开启。"
+        st.channelBlocked ->
+            "「悄悄话」渠道已关闭" to
+                "应用通知已开启，但「悄悄话」渠道在系统设置中被单独关闭，点上方「悄悄话」渠道行去重新打开。"
+        st.channelExists && !st.channelHigh ->
+            "横幅可能不显示" to
+                "「悄悄话」渠道的重要性被调低，横幅（悬浮通知）不会弹出。点上方渠道行把重要性设为「高」。"
+        else ->
+            "通知已开启" to
+                "对方发来悄悄话时，会在通知栏与横幅提醒你。悬浮横幅还取决于手机系统的「悬浮通知」开关，若未弹横幅，点上方「悬浮横幅提醒」去确认。"
     }
 }

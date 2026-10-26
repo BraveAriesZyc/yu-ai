@@ -26,9 +26,9 @@ import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppLoadFailed
@@ -50,7 +50,7 @@ import kotlinx.coroutines.launch
  *      返回键 closePage;独立二级页(WishListPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:InspirationApi/InspirationQuote(页内自持不进 AppState,D-19g——页销毁即弃);
  *      components.AppLoading/AppLoadFailed(加载/失败态);couple.BindPrimaryButton(换一句钮);
- *      RouterModule(返回)
+ *      closeLovePage(返回)
  * 事件:返回钮 closePage;「换一句」→ quote-random(服务端排除今日句,池 >1 必换),单飞锁防双击
  * 功能:
  *  - today 进页拉取:data 单对象 InspirationQuote.from(content);池空服务端回兜底文案,
@@ -109,7 +109,7 @@ internal fun QuotePage(pager: Pager) {
                 "今日情话",
                 "每天一句小甜蜜",
                 onBack = {
-                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    pager.closeLovePage()
                 },
             )
             Box(

@@ -8,8 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
 import com.tencent.kuikly.core.pager.Pager
-import com.zyc.love_baby.base.setTimeout
 import com.zyc.love_baby.components.AppBrandIntroScreen
+import com.zyc.love_baby.components.runAfterBlur
 import com.zyc.love_baby.state.SessionStore
 
 /**
@@ -39,16 +39,13 @@ internal fun GatePanel(pager: Pager) {
     }
 
     var panel by remember { mutableStateOf(AuthPanel.LOGIN) }
-    // 面板切换即清焦(同 LoginPanel.submit 焦点转移问题):旧面板持焦输入框随切换被移除,
-    // Android 把焦点转给待办页输入框,Pager 在 Gate 底下滚走待办页——登录成功卸载 Gate 时
-    // 便直接亮在错误 Tab。切换统一走 switchPanel:清焦后目标面板迟一拍再上(机制详见
-    // ProfileEditOverlay.dismiss)——旧写法清焦与状态翻转同回合,旧面板卸载与 blur 竞速,
-    // 只是赌 blur 赢(2026-10-18 ProfileEditOverlay 真机复现证明会输);推迟一拍入同一
-    // MessageQueue 后落序钉死,blur 必然先行
+    // 面板切换即清焦(铁律 16):components.runAfterBlur 单源——旧面板持焦输入框随切换被移除,
+    // 不先清焦+迟一拍,Android 把焦点转给待办页输入框,Pager 在 Gate 底下滚走待办页——登录
+    // 成功卸载 Gate 时便直接亮在错误 Tab(2026-10-18 ProfileEditOverlay 真机复现同源;
+    // 机制详见该件 KDoc)。三面板切换统一走 switchPanel
     val focusManager = LocalFocusManager.current
     fun switchPanel(target: AuthPanel) {
-        focusManager.clearFocus()
-        pager.setTimeout(0) { panel = target }
+        pager.runAfterBlur(focusManager) { panel = target }
     }
 
     // 品牌引导壳(components/AppBrandIntroScreen 单源):brandBrush 全屏底 + hero 头

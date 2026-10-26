@@ -72,9 +72,9 @@ internal val taBubbleBrush = Brush.linearGradient(listOf(AppTheme.CardBg, AppThe
 /** 卡片气泡底(M23):CardBg 同色渐变归一(同 taBubbleBrush 理由;静态值防重载混用) */
 private val cardBubbleBrush = Brush.linearGradient(listOf(AppTheme.CardBg, AppTheme.CardBg))
 
-/** 视频占位底(M23):浅灰同色渐变(ImageBubble 0xFFF5F6FA 同值,brush 归一) */
+/** 视频占位底(M23):浅灰同色渐变(与 ImageBubble 同为 AppTheme.InputBg,brush 归一) */
 private val VIDEO_PLACEHOLDER_BRUSH =
-    Brush.linearGradient(listOf(Color(0xFFF5F6FA), Color(0xFFF5F6FA)))
+    Brush.linearGradient(listOf(AppTheme.InputBg, AppTheme.InputBg))
 
 /** 视频气泡定边(M23):180×120 横向画幅,高度恒定 → item 高度不随封面加载变化不跳 */
 private val VIDEO_BUBBLE_WIDTH = 180.dp

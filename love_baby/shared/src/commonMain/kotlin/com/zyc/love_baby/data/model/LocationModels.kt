@@ -80,14 +80,8 @@ internal data class LocationPointInfo(
         }
 
         /** trail 的 points 数组解析(服务端升序原样保留,端上不重排);空/缺省返回空列表 */
-        fun listFrom(dataArray: JSONArray?): List<LocationPointInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<LocationPointInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<LocationPointInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }
 
@@ -174,14 +168,8 @@ internal data class LocationPlaceInfo(
         }
 
         /** place/list 的 places 数组解析(服务端升序原样保留,端上不重排);空/缺省返回空列表 */
-        fun listFrom(dataArray: JSONArray?): List<LocationPlaceInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<LocationPlaceInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<LocationPlaceInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }
 

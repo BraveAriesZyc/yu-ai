@@ -7,8 +7,6 @@ import com.tencent.kuikly.core.module.SharedPreferencesModule
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.data.model.AuthSession
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 
 /**
  * SessionStore — 全局登录态与 token 持久化(INTEGRATION-DESIGN §7.2,ThemeStore 三件套范式)
@@ -16,7 +14,7 @@ import kotlin.time.ExperimentalTime
  *      退出/刷新失效 SessionStore.clear(pager);冷启动由 MainPager.willInit 调 initFromPageData(首帧判定,
  *      Gate 不进组合)+ GatePanel 的 restore(无参数端兜底)
  * 依赖:androidx.compose.runtime 快照状态;SharedPreferencesModule(可空 getModule 降级,禁 acquireModule);
- *      kotlin.time.Clock(commonMain 墙钟,ExperimentalTime)
+ *      TimeKit.nowEpochMs(state 同包单源,commonMain 墙钟)
  * 事件:update/clear 翻 isLoggedIn,MainPageImpl 的 Gate 整树条件渲染随之挂/卸
  * 功能:
  *  - 完整 session 五字段持久化(accessToken/refreshToken/userId/expiresTime/clientId,只存 accessToken 会导致
@@ -118,8 +116,4 @@ internal object SessionStore {
         } catch (_: Exception) {
         }
     }
-
-    /** commonMain 墙钟毫秒(kotlin.time.Clock,Kotlin 2.1.20+ 全端实现) */
-    @OptIn(ExperimentalTime::class)
-    private fun nowEpochMs(): Long = Clock.System.now().toEpochMilliseconds()
 }

@@ -41,8 +41,8 @@ android {
             // app-api 基地址,经 KuiklyRenderActivity.createPageData 第四路注入 shared ApiConfig
             // (§7.5 pageData 覆盖通道);真机联调改此处,模拟器直跑走 shared 默认 10.0.2.2
 //            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.4:48080\"")
-//            buildConfigField("String", "API_BASE_URL", "\"http://172.16.31.44:48080\"")
-            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.3:48080\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://172.16.31.44:48080\"")
+//            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.3:48080\"")
         }
         getByName("release") {
             isMinifyEnabled = false

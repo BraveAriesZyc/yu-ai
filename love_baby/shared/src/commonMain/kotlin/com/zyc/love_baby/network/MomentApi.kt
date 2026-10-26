@@ -20,8 +20,8 @@ import com.zyc.love_baby.data.model.MomentLikeReq
  *  - delete 仅上传者本人可删(1_003_008_001):传 {"id"};无 update 端点(删了重发,D-17 口径)
  *  - like 点赞/取消(M15,D-20c 不发消息无 WS,对端靠相册页 5s 静默轮询感知):幂等单口,
  *    重复操作服务端收敛不打错;不存在/跨 couple 统一 1_003_008_000(防探测,零新增错误码)
- *  - ⚠ 查询参数直接拼 URL 而非走 core param 通道(MoodApi 同款:core 各宿主对 GET param 转 query
- *    行为不一,beforeId/limit 为纯数字 URL 安全字符,显式拼接五端一致)
+ *  - ⚠ 查询参数经 network.queryPath 显式拼 URL(MoodApi 同款决策):beforeId/limit 为纯数字 URL
+ *    安全字符;不走 core param 通道,理由收口至 queryPath 注
  *  - 未绑定回 1_003_004_003 走普通 BizError 通道由调用方 toast;本层不做 successBizCodes 放行
  *    (1_003_004_003 的状态信号放行是 couple/get 专用,§5.2)
  */
@@ -38,7 +38,7 @@ internal object MomentApi {
      * @param limit 每页条数(服务端默认 30 上限 100,端上显式传 30)
      */
     suspend fun list(pager: Pager, beforeId: String, limit: Int): ApiResult =
-        HttpClient.request(pager, "$PATH_LIST?beforeId=$beforeId&limit=$limit", isPost = false)
+        HttpClient.request(pager, queryPath(PATH_LIST, "beforeId" to beforeId, "limit" to limit), isPost = false)
 
     /** 发布瞬间(M15 多图):回包 data 为瞬间 VO(含服务端 id/createTime);
      *  imageUrl 仍传首张充 @NotBlank 字段,imageUrls 为全列表(服务端归一恒非空);

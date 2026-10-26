@@ -34,8 +34,6 @@ import com.zyc.love_baby.network.MoodApi
 import com.zyc.love_baby.network.TodoApi
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 
 /**
  * AppState — 全局页面状态(TodoStore/MoodStore/ChatStore,M3 服务端同步版,§7.4 写穿透)
@@ -188,9 +186,6 @@ internal fun currentDate(pager: Pager): String {
     }
     return formatted ?: utcDate(now)
 }
-
-@OptIn(ExperimentalTime::class)
-internal fun nowEpochMs(): Long = Clock.System.now().toEpochMilliseconds()
 
 // ---------- 心情选项 UI 语义(M3.5 D-14:couple 私有字典服务端下发,端上只做 hex→Color 预解析) ----------
 

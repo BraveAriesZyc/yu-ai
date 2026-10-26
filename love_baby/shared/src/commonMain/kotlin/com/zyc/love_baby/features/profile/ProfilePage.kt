@@ -31,10 +31,11 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
+import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppDatePickerOverlay
 import com.zyc.love_baby.components.AppGradientHeader
@@ -73,15 +74,11 @@ internal const val PROFILE_WHO_MINE = "mine"
 internal const val PROFILE_WHO_PARTNER = "partner"
 
 /**
- * 路由打开用户资料详情页(who=mine|partner);事件回调里模块已就绪,try/catch 吞未桥接端
- * (base.Pager.openLovePage 统一包裹)。带参 openPage 先例 = RouterPage.jumpPage
+ * 路由打开用户资料详情页(who=mine|partner)——统一走 base.Pager.openLovePage(try/catch 吞
+ * 未桥接端已内置,铁律 8「勿再复制 openXxx 私有包裹」;本带参包裹系 2026-10-22 开页收口漏网)
  */
 internal fun openProfilePage(pager: Pager, who: String) {
-    try {
-        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME)
-            .openPage(PROFILE_PAGE_NAME, JSONObject().put("who", who))
-    } catch (_: Exception) {
-    }
+    pager.openLovePage(PROFILE_PAGE_NAME, JSONObject().put("who", who))
 }
 
 /**
@@ -469,8 +466,9 @@ internal fun ProfilePage(pager: Pager, isPartner: Boolean) {
             initialMonth = parts.getOrNull(1)?.toIntOrNull() ?: 1,
             initialDay = parts.getOrNull(2)?.toIntOrNull() ?: 1,
             onConfirm = { y, m, d ->
-                // commonMain 无 String.format,padStart 拼 yyyy-MM-dd;滚轮保证格式,
-                // isValidBirthday 仅内部状态异常兜底
+                // padStart 拼 yyyy-MM-dd(滚轮保证格式,isValidBirthday 仅内部状态异常兜底);
+                // 注:旧注「commonMain 无 String.format」已过时——kotlin stdlib "...".format()
+                // 在 commonMain 可用(CheckinPage 日历格 dateKey 同款在用),本处沿用 padStart 不动
                 val date = "$y".padStart(4, '0') + "-" + "$m".padStart(2, '0') + "-" + "$d".padStart(2, '0')
                 if (!isValidBirthday(date) || date == profileBirthday.trim()) {
                     showBirthdayPicker = false
@@ -525,7 +523,7 @@ private fun ProfileHeader(
                 // 返回钮(components/AppHeaderBackButton 单源:38dp 白 25% 圆 + ChevronLeft 20dp,
                 // 与原手写件逐值同构);仅换返回钮,本头部 SpaceBetween 自绘结构不动
                 AppHeaderBackButton {
-                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    pager.closeLovePage()
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))

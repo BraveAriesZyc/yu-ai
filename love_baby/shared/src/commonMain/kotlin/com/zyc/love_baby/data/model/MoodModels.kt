@@ -91,14 +91,8 @@ internal data class MoodRecordInfo(
          * 从 CommonResult.data 数组解析(数组形态经 HttpClient 的 Ok.dataArray 携带)。
          * 数组缺省/为空返回空列表;条目顺序原样保留(排序语义归服务端)
          */
-        fun listFrom(dataArray: JSONArray?): List<MoodRecordInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<MoodRecordInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<MoodRecordInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }
 
@@ -132,13 +126,7 @@ internal data class MoodOptionInfo(
          * 从 CommonResult.data 数组解析(mood/option/list);数组缺省/为空返回空列表(空字典=空态自愈路径);
          * create 回包为单对象,由 from 单独解析(Store.addOption 用回包落态拿服务端 id,防脏 key)
          */
-        fun listFrom(dataArray: JSONArray?): List<MoodOptionInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<MoodOptionInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<MoodOptionInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }

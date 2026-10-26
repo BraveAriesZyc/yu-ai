@@ -17,8 +17,8 @@ import com.zyc.love_baby.data.model.LocationReportReq
  *    共享关闭时拒收(1_003_015_000)
  *  - latest 位置页 60s 轮询用(双方最新点,partner 开关关回 shareEnabled=false)
  *  - trail 轨迹区间查询:target="self"|"partner",startTs/endTs epoch 毫秒闭区间;⚠ GET 查询参数
- *    直接拼进 path(已核 core KRNetworkModule.createRequestUrl 对带 query 的 path 原样直出,
- *    本域参数纯 ASCII 无需 encode)
+ *    经 network.queryPath 显式拼进 path(已核 core KRNetworkModule.createRequestUrl 对带 query
+ *    的 path 原样直出,本域参数纯 ASCII 无需 encode)
  *  - placeList 地点记录列表(M28,参数口径与 trail 一致,升序最近 100 条 + truncated)
  *  - pull 提醒对方更新位置(M28):WS 信号恒 success,对方前台+开共享才回点
  */
@@ -59,11 +59,17 @@ internal object LocationApi {
      * M28.1 起暂无调用方(半层纯列表化,服务端端点仍在);点级轨迹线二期复用
      */
     suspend fun trail(pager: Pager, target: String, startTs: Long, endTs: Long): ApiResult =
-        HttpClient.request(pager, "$PATH_TRAIL?target=$target&startTs=$startTs&endTs=$endTs", isPost = false)
+        HttpClient.request(
+            pager, queryPath(PATH_TRAIL, "target" to target, "startTs" to startTs, "endTs" to endTs),
+            isPost = false,
+        )
 
     /** 地点记录列表(M28):target="self"|"partner",升序最近 100 条 + truncated 标志 */
     suspend fun placeList(pager: Pager, target: String, startTs: Long, endTs: Long): ApiResult =
-        HttpClient.request(pager, "$PATH_PLACE_LIST?target=$target&startTs=$startTs&endTs=$endTs", isPost = false)
+        HttpClient.request(
+            pager, queryPath(PATH_PLACE_LIST, "target" to target, "startTs" to startTs, "endTs" to endTs),
+            isPost = false,
+        )
 
     /** 提醒对方更新位置(M28):WS 信号,恒 success(对方前台+开共享才实际回点) */
     suspend fun pull(pager: Pager): ApiResult =

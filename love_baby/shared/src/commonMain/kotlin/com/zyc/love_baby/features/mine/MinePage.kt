@@ -18,6 +18,7 @@ import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.offset
 import com.tencent.kuikly.compose.foundation.layout.padding
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
@@ -36,12 +37,14 @@ import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppOverlayCard
 import com.zyc.love_baby.components.AppIconTile
 import com.zyc.love_baby.components.AppMenuDivider
 import com.zyc.love_baby.components.AppMenuGroup
 import com.zyc.love_baby.components.AppMenuRow
 import com.zyc.love_baby.components.AppStatBar
 import com.zyc.love_baby.components.AppStatItem
+import com.zyc.love_baby.components.AppPillChip
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
@@ -316,44 +319,35 @@ private const val APP_VERSION_NAME = "1.0.0"
 internal fun MineAboutOverlay(onDismiss: () -> Unit) {
     // 返回键关闭浮层(2026-10-22 浮层返回键接线,同 ChatImagePreviewOverlay)
     BackHandler { onDismiss() }
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { onDismiss() },
-        contentAlignment = Alignment.Center,
+    AppOverlayCard(
+        onDismiss = onDismiss,
+        cardOuterPadding = PaddingValues(horizontal = 48.dp),
+        cardPadding = PaddingValues(horizontal = 24.dp, vertical = 28.dp),
+        contentHorizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 48.dp)
-                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
-                .clickable { } // 吞卡片内点击,不触发卡外 dismiss
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // 品牌图标:主题渐变圆角底 + 心(brandBrush 挂主题实例,随 ThemeStore.current 切换)
-            AppIconTile(AppIconType.Heart, size = 56.dp, bgBrush = ThemeStore.current.brandBrush, corner = 18.dp)
-            Spacer(modifier = Modifier.height(14.dp))
-            Text("LoveBaby 情侣互动", color = AppTheme.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("版本 $APP_VERSION_NAME", color = AppTheme.TextTertiary, fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "和另一半在这里记待办、写心情、说悄悄话、攒照片、点恋爱清单——把每一天的小日子都好好存起来。",
-                color = AppTheme.TextSecondary,
-                fontSize = 13.sp,
-            )
-            Spacer(modifier = Modifier.height(22.dp))
-            // 知道了(铁律 14/15 胶囊三层写法:外层 Box 容器 + 内层 Box 载 background/padding + Text 子节点)
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier
-                        .background(ThemeStore.current.brandBrush, RoundedCornerShape(22.dp))
-                        .clickable { onDismiss() }
-                        .padding(horizontal = 44.dp, vertical = 10.dp),
-                ) {
-                    Text("知道了", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                }
-            }
+        // 品牌图标:主题渐变圆角底 + 心(brandBrush 挂主题实例,随 ThemeStore.current 切换)
+        AppIconTile(AppIconType.Heart, size = 56.dp, bgBrush = ThemeStore.current.brandBrush, corner = 18.dp)
+        Spacer(modifier = Modifier.height(14.dp))
+        Text("LoveBaby 情侣互动", color = AppTheme.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("版本 $APP_VERSION_NAME", color = AppTheme.TextTertiary, fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "和另一半在这里记待办、写心情、说悄悄话、攒照片、点恋爱清单——把每一天的小日子都好好存起来。",
+            color = AppTheme.TextSecondary,
+            fontSize = 13.sp,
+        )
+        Spacer(modifier = Modifier.height(22.dp))
+        // 知道了(AppPillChip bgBrush 渐变形态;外层 Box 容器居中=铁律 15 胶囊三层写法保留)
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            AppPillChip(
+                "知道了",
+                bgBrush = ThemeStore.current.brandBrush,
+                corner = 22.dp,
+                contentPadding = PaddingValues(horizontal = 44.dp, vertical = 10.dp),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+            ) { onDismiss() }
         }
     }
 }

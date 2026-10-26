@@ -9,7 +9,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.tencent.kuikly.compose.foundation.background
-import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
@@ -32,12 +31,12 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.components.AppDateCapsule
 import com.zyc.love_baby.components.AppFeedback
-import com.zyc.love_baby.components.AppIcon
+import com.zyc.love_baby.components.AppGhostIconButton
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppLoadFailed
 import com.zyc.love_baby.components.AppLoading
@@ -66,7 +65,7 @@ import kotlinx.coroutines.launch
  *      独立二级页(GalleryPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:MoodApi.list(按月拉 couple 双方记录);MoodRecordInfo(快照三列+createTime);
  *      TimeKit(chatHHmm/daypartLabel);AppState(currentDate/moodRecordColor/monthParts/monthShift/
- *      civilDateKeyGmt8/todayDayIndexGmt8);Utils(toast);RouterModule(返回);ThemeStore
+ *      civilDateKeyGmt8/todayDayIndexGmt8);Utils(toast);closeLovePage(返回);ThemeStore
  * 事件:返回钮 closePage;月份钮切月重拉;失败态「重试」重拉当月
  * 功能:
  *  - 页内自持月份与记录(remember),不碰 MoodStore.moodRecords/displayMonth——心情页月历缓存
@@ -156,7 +155,7 @@ internal fun MoodTimelinePage(pager: Pager) {
                     "心情日签",
                     "每一天的心情都值得收藏",
                     onBack = {
-                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                        pager.closeLovePage()
                     },
                 )
             }
@@ -168,7 +167,7 @@ internal fun MoodTimelinePage(pager: Pager) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    TimelineMonthNavButton(AppIconType.ChevronLeft) { shiftMonth(-1) }
+                    AppGhostIconButton(AppIconType.ChevronLeft, { shiftMonth(-1) }, size = 30.dp, bg = AppTheme.CardBg, iconSize = 16.dp)
                     val (year, monthNum) = monthParts(month)
                     Text(
                         if (year == 0) "—" else "${year}年${monthNum}月",
@@ -176,7 +175,7 @@ internal fun MoodTimelinePage(pager: Pager) {
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                     )
-                    TimelineMonthNavButton(AppIconType.ChevronRight) { shiftMonth(1) }
+                    AppGhostIconButton(AppIconType.ChevronRight, { shiftMonth(1) }, size = 30.dp, bg = AppTheme.CardBg, iconSize = 16.dp)
                 }
             }
             when {
@@ -261,19 +260,6 @@ private fun MoodRecordRow(record: MoodRecordInfo) {
                 }
             }
         }
-    }
-}
-
-/** 月份切换圆钮:白底胶囊,clickable 与 background 同节点(铁律⑤) */
-@Composable
-private fun TimelineMonthNavButton(icon: AppIconType, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier.size(30.dp)
-            .background(AppTheme.CardBg, RoundedCornerShape(15.dp))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center,
-    ) {
-        AppIcon(icon, AppTheme.TextSecondary, Modifier.size(16.dp))
     }
 }
 

@@ -35,9 +35,9 @@ import com.tencent.kuikly.compose.ui.text.style.TextAlign
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.components.AppFilterChipRow
 import com.zyc.love_baby.components.AppLoadFailed
 import com.zyc.love_baby.components.AppLoading
@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
  * 依赖:InspirationApi/InspirationInfo(页内自持不进 AppState,D-19g——页销毁即弃);
  *      AppFilterChipRow(分类 chips,components 通用件,M17 本页需求同源抽离);
  *      AppPullRefreshItem(下拉刷新收口,components 三页单源);AppTag(卡片分类标签);
- *      components.AppLoading/AppLoadFailed;RouterModule
+ *      components.AppLoading/AppLoadFailed;closeLovePage(返回)
  * 事件:返回钮 closePage;chips onSelect 切分类(id 序);头部「换一换」本地随机打乱当前分类;
  *      下拉刷新重拉全量(官方 pullToRefreshItem 须为首个 item,MomentPage 先例)
  * 功能:
@@ -141,7 +141,7 @@ internal fun InspirationPage(pager: Pager) {
                 "约会灵感",
                 "周末去哪儿玩",
                 onBack = {
-                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    pager.closeLovePage()
                 },
             ) {
                 // 「换一换」(本地随机打乱当前分类,灵感页专属趣味;空表无意义隐藏)

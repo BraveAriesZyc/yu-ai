@@ -19,8 +19,8 @@ import com.tencent.kuikly.compose.ui.unit.sp
  * AppFilterChip / AppFilterChipRow — 横向滚动筛选胶囊(分类 chips 通用件,M17 抽离)
  * 用法:AppFilterChipRow(labels = listOf("全部") + categories, selectedIndex = selected,
  *      onSelect = { i -> selected = i }, modifier = Modifier.padding(horizontal = 16.dp))
- * 依赖:ThemeStore(选中色 brandStart);AppTheme(未选底色用 0xFFF5F6FA 硬编码——与 MoodOptionChip/
- *      BindInputField 输入行同源的「浅灰底」视觉令牌,AppTheme 无对应令牌故不引)
+ * 依赖:ThemeStore(选中色 brandStart);AppTheme(未选底色 AppTheme.InputBg——与 MoodOptionChip/
+ *      BindInputField 输入行同源的「浅灰底」,2026-10-26 令牌化后统一引用)
  * 事件:onSelect(下标);AppFilterChip 单枚可独立用 onClick
  * 功能:
  *  - 分类筛选行通用形态(灵感页分类/MoodPage 心情档/chips 需求同源):首枚惯例「全部」由调用方
@@ -59,7 +59,7 @@ fun AppFilterChip(
         Box(
             modifier = Modifier
                 .background(
-                    if (selected) (selectedColor ?: ThemeStore.current.brandStart) else Color(0xFFF5F6FA),
+                    if (selected) (selectedColor ?: ThemeStore.current.brandStart) else AppTheme.InputBg,
                     RoundedCornerShape(12.dp),
                 )
                 .padding(horizontal = 12.dp, vertical = 7.dp),

@@ -40,13 +40,7 @@ internal data class EmojiInfo(
         }
 
         /** 从 CommonResult.data 数组解析(Ok.dataArray 携带);空缺省返回空列表;服务端序原样保留 */
-        fun listFrom(dataArray: JSONArray?): List<EmojiInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<EmojiInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<EmojiInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }

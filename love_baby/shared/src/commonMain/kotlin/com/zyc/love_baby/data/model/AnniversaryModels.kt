@@ -81,13 +81,7 @@ internal data class AnniversaryInfo(
          * 数组缺省/为空返回空列表;服务端排序(anniv_date asc, id asc)原样保留,展示序由端上纯函数
          * sortedAnniversaries 重排(D-17),Store 不重排
          */
-        fun listFrom(dataArray: JSONArray?): List<AnniversaryInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<AnniversaryInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<AnniversaryInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }

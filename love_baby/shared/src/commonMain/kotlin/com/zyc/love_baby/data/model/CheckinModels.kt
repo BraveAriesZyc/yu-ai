@@ -53,14 +53,8 @@ internal data class CheckinInfo(
          * 从 CommonResult.data 数组解析(数组形态经 HttpClient 的 Ok.dataArray 携带,§5.2 checkin/list)。
          * 数组缺省/为空返回空列表;服务端排序(checkin_date asc, id asc)原样保留,Store 不重排
          */
-        fun listFrom(dataArray: JSONArray?): List<CheckinInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<CheckinInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<CheckinInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }
 

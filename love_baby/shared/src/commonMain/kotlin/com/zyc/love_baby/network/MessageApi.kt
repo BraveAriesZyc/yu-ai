@@ -24,8 +24,8 @@ import com.zyc.love_baby.data.model.MessageSendWishesReq
  *    limit 固定 50(服务端默认 50、上限 200)
  *  - send 文本悄悄话 / send-wishes 心愿消息(快照式四字段,服务端不校验 wish 归属,§5.2):
  *    回包 = 落库后的单个消息 VO,Store 用它替换本地临时消息并推进 lastId
- *  - ⚠ 查询参数直接拼 URL 而非走 core param 通道(同 MoodApi 注记):lastId 为纯数字字符串或空串
- *    (首屏须显式 lastId= 传参)、limit 数字,均 URL 安全,显式拼接五端行为一致
+ *  - ⚠ 查询参数经 network.queryPath 显式拼 URL(同 MoodApi 决策):lastId 为纯数字字符串或空串
+ *    (首屏须显式 lastId= 传参)、limit 数字,均 URL 安全;不走 core param 通道,理由收口至 queryPath 注
  *  - 未绑定回 1_003_004_003 走普通 BizError 通道由调用方 toast;本层不做 successBizCodes 放行
  *    (1_003_004_003 的状态信号放行是 couple/get 专用,§5.2)
  */
@@ -59,7 +59,7 @@ internal object MessageApi {
      * @param limit 每页条数,默认 [LIST_LIMIT]
      */
     suspend fun list(pager: Pager, lastId: String = "", limit: Int = LIST_LIMIT, beforeId: String = ""): ApiResult =
-        HttpClient.request(pager, "$PATH_LIST?lastId=$lastId&beforeId=$beforeId&limit=$limit", isPost = false)
+        HttpClient.request(pager, queryPath(PATH_LIST, "lastId" to lastId, "beforeId" to beforeId, "limit" to limit), isPost = false)
 
     /**
      * 心愿时间线:kind=2 只读视图,服务端按 id 倒序(最新在前)返回,快照四字段(content/wishKey/color/icon)
@@ -67,7 +67,7 @@ internal object MessageApi {
      * data 为数组走 ApiResult.Ok.dataArray;无游标,取最近 limit 条(升级路径=服务端补 beforeId 倒序游标)
      */
     suspend fun wishList(pager: Pager, limit: Int = WISH_LIST_LIMIT): ApiResult =
-        HttpClient.request(pager, "$PATH_WISH_LIST?limit=$limit", isPost = false)
+        HttpClient.request(pager, queryPath(PATH_WISH_LIST, "limit" to limit), isPost = false)
 
     /** 发文本悄悄话:回包为落库后的单个消息 VO(供乐观替换与 lastId 推进) */
     suspend fun send(pager: Pager, content: String): ApiResult =

@@ -1,9 +1,13 @@
 package com.zyc.love_baby.state
 
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+
 /**
  * TimeKit — 聊天时间格式化(GMT+8 固定偏移,产品为中国大陆场景)
  * 用法:跨天判定 chatDayIndex(a) != chatDayIndex(b);气泡下单行时刻用 chatHHmm;日期分隔条文案 chatDayLabel
- * 依赖:AppState 的 civilFromDays/nowEpochMs/pad2(放宽 internal 直接复用,不复制 Hinnant 算法);
+ * 依赖:AppState 的 civilFromDays/pad2(放宽 internal 直接复用,不复制 Hinnant 算法);nowEpochMs 本件
+ *      单源(2026-10-26 自 AppState 迁入,原 AppState/SessionStore/CoupleStore 三份同体收口);
  *      commonMain 禁 JVM-only(无 java.time/String.format,纯 Long 整除算术)
  * 事件:无(纯函数)
  * 功能:epochMs<=0 一律返回 -1/空串,调用侧据此整层隐藏时间元素(服务端未回传 createTime 不造假数据)
@@ -92,3 +96,11 @@ internal fun relativeTimeLabel(epochMs: Long): String {
         }
     }
 }
+
+/** commonMain 墙钟毫秒(kotlin.time.Clock,Kotlin 2.1.20+ 全端实现;state 包内调用零改动) */
+@OptIn(ExperimentalTime::class)
+internal fun nowEpochMs(): Long = Clock.System.now().toEpochMilliseconds()
+
+/** "m:ss"(分:秒,秒两位补零):语音/视频时长等 <1h 计时文案单源(commonMain 禁 String.format,
+ *  纯整除+pad2;原 MediaPickerSheet.formatDuration、ChatPage.recordTimeLabel 同体收编) */
+internal fun formatMmss(totalSeconds: Int): String = "${totalSeconds / 60}:${pad2(totalSeconds % 60)}"

@@ -96,13 +96,7 @@ internal data class TodoInfo(
          * 从 CommonResult.data 数组解析(数组形态经 HttpClient 的 Ok.dataArray 携带,§5.2 todo/list)。
          * 数组缺省/为空返回空列表;服务端排序(create_time asc, id asc)原样保留,端上整表覆盖不重排
          */
-        fun listFrom(dataArray: JSONArray?): List<TodoInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<TodoInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<TodoInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }

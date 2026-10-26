@@ -1603,9 +1603,13 @@ class KRFileModule : KuiklyRenderBaseModule() {
             }
         }
 
-        /** 相册读权限快照(宿主直注用;Map 形态与 check 回包 data 同构) */
+        /** 相册读权限快照(宿主直注用;键必须带 media 前缀——快照 JSON 四组合一张,定位组
+         *  也写 "granted",JSONObject.put 同名覆盖、媒体组后写会吞掉定位组同名键,M29 真机
+         *  实证:播种后定位行错读相册授权态、相册行读 mediaGranted 落空恒「已关闭」;
+         *  common 侧 PermissionPager.seedFromPageData 同名双源勿单改。模块 check 回包 data
+         *  不经此 map,仍是 granted/partial) */
         fun mediaPermSnapshot(context: Context): Map<String, Any> =
-            mediaPermState(context).let { mapOf("granted" to it.granted, "partial" to it.partial) }
+            mediaPermState(context).let { mapOf("mediaGranted" to it.granted, "mediaPartial" to it.partial) }
 
         /** 申请结果 → 状态(数组序与申请序一致;33+ 双全量=granted,仅第三位部分授权=partial) */
         private fun grantResultsToMediaState(grantResults: IntArray): MediaPermState {

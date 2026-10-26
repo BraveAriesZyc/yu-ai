@@ -6,13 +6,11 @@ import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
-import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
-import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
@@ -29,7 +27,8 @@ import com.tencent.kuikly.compose.ui.unit.sp
  * 用法:AppConfirmOverlay(title, message, onConfirm, onDismiss, confirmText=…, busy=…),
  *      挂调用方根 Box 最后(后组合者在上);⚠ Tab 页(待办/心情/聊天)必须状态提升挂 MainPager
  *      根级——页内挂 z 序低于浮岛底栏盖不住(铁律 14);独立 @Page 页页内挂即可(WishListPage 先例)
- * 依赖:AppTheme(CardBg/TextPrimary/TextSecondary/Danger);无动画(铁律④纯条件渲染)
+ * 依赖:AppTheme(CardBg/TextPrimary/TextSecondary);双钮行 AppDialogButtonRow(Danger 红底
+ *      经其 AppTheme.DangerButtonBrush);无动画(铁律④纯条件渲染)
  * 事件:遮罩/「取消」onDismiss;「确认」onConfirm;busy=true 在飞:确认钮显 busyText 并拦截
  *      全部出口(遮罩/取消/确认),防重复提交与提交中误关
  * 功能:危险操作(删除/解绑类)统一确认语言;文案由调用方给(应说明后果与影响范围,如
@@ -65,32 +64,14 @@ fun AppConfirmOverlay(
             Spacer(modifier = Modifier.height(8.dp))
             Text(message, color = AppTheme.TextSecondary, fontSize = 13.sp)
             Spacer(modifier = Modifier.height(20.dp))
-            Row {
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .height(42.dp)
-                        .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
-                        .clickable { if (!busy) onDismiss() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("取消", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .height(42.dp)
-                        .background(AppTheme.Danger, RoundedCornerShape(21.dp))
-                        .clickable { if (!busy) onConfirm() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        if (busy) busyText else confirmText,
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-            }
+            AppDialogButtonRow(
+                leftText = "取消",
+                rightText = if (busy) busyText else confirmText,
+                onLeft = { if (!busy) onDismiss() },
+                onRight = { if (!busy) onConfirm() },
+                rightBrush = AppTheme.DangerButtonBrush,
+                rightFontWeight = FontWeight.Medium,
+            )
         }
     }
 }

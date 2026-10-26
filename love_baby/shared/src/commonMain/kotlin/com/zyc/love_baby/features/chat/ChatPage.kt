@@ -29,6 +29,7 @@ import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
@@ -69,7 +70,6 @@ import com.zyc.love_baby.base.AudioModule
 import com.zyc.love_baby.base.BridgeModule
 import com.zyc.love_baby.base.FileModule
 import com.zyc.love_baby.base.openLovePage
-import com.zyc.love_baby.base.setTimeout
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppDateCapsule
 import com.zyc.love_baby.components.AppEmptyHint
@@ -79,11 +79,13 @@ import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppPillChip
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.KuiklyTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.dragDismissKeyboard
 import com.zyc.love_baby.components.inputBarBottomPaddingDp
+import com.zyc.love_baby.components.runAfterBlur
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
 import com.zyc.love_baby.features.profile.PROFILE_WHO_MINE
@@ -107,6 +109,7 @@ import com.zyc.love_baby.state.SessionStore
 import com.zyc.love_baby.state.appIconFromName
 import com.zyc.love_baby.state.chatDayIndex
 import com.zyc.love_baby.state.chatDayLabel
+import com.zyc.love_baby.state.formatMmss
 import com.zyc.love_baby.state.chatHHmm
 import com.zyc.love_baby.state.colorFromHex
 import com.zyc.love_baby.state.nowEpochMs
@@ -1493,16 +1496,15 @@ fun ChatPage(
                 // 很多选项」)——图片/拍照入口并入加号面板(mediaPanel==2,见下方动作面板)
 
                 // M24 声音开关(微信语义):切「按住 说话」胶囊/文本输入。铁律 16:voiceMode 翻转
-                // 会卸载持焦 TextField,clearFocus 后 setTimeout(0) 迟一拍再翻转(GatePanel.switchPanel
-                // 范式)让原生 blur 批处理先落;真机回归点:待办页输入框不抢焦不自滚。
+                // 会卸载持焦 TextField,先清焦再迟一拍翻转(components.runAfterBlur 单源,GatePanel
+                // .switchPanel 同范式)让原生 blur 批处理先落;真机回归点:待办页输入框不抢焦不自滚。
                 // M24 五轮(用户反馈「语音模式不显示聊天框,只有在输入的时候可以有」):图标随态换——
                 // 文本态 Mic(进语音),语音态 Keyboard(微信同款显式切回出口,聊天框仅在输入态在场)
                 AppGhostIconButton(
                     if (voiceMode) AppIconType.Keyboard else AppIconType.Mic,
                     onClick = {
                         if (recordMode) return@AppGhostIconButton
-                        focusManager.clearFocus()
-                        pager.setTimeout(0) {
+                        pager.runAfterBlur(focusManager) {
                             voiceMode = !voiceMode
                             mediaPanel = 0
                             if (voiceMode) recordCancelZone = false
@@ -1904,7 +1906,7 @@ private fun RecordHudOverlay(cancelZone: Boolean, seconds: Int, modifier: Modifi
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(recordTimeLabel(seconds), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(formatMmss(seconds), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     "松开发送 · 上滑取消 · ${VOICE_MAX_SECONDS}s 自动发送",
@@ -1915,9 +1917,6 @@ private fun RecordHudOverlay(cancelZone: Boolean, seconds: Int, modifier: Modifi
         }
     }
 }
-
-/** 录音计时标签(M23):秒 → m:ss(60s 上限,分钟位恒 0/1) */
-private fun recordTimeLabel(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)
 
 /**
  * 等列表对「包含目标条数」的那次 measure 真正落地再放行(聊天页所有程序化滚底的公共前置):
@@ -1963,14 +1962,14 @@ private fun ChatLoadError(onRetry: () -> Unit, modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(12.dp))
         Text("悄悄话加载失败", color = AppTheme.TextSecondary, fontSize = 13.sp)
         Spacer(modifier = Modifier.height(14.dp))
-        // 重试胶囊:背景与 clickable 同节点(铁律⑦)
-        Box(
-            modifier = Modifier.background(theme.brandBrush, RoundedCornerShape(16.dp))
-                .clickable { onRetry() }
-                .padding(horizontal = 16.dp, vertical = 7.dp),
-        ) {
-            Text("点击重试", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
+        // 重试胶囊(AppPillChip bgBrush 渐变形态:圆角 16/内距 16·7/12sp Bold 原语义常数覆写照旧)
+        AppPillChip(
+            "点击重试",
+            bgBrush = theme.brandBrush,
+            corner = 16.dp,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 7.dp),
+            fontWeight = FontWeight.Bold,
+        ) { onRetry() }
     }
 }
 
@@ -2144,7 +2143,7 @@ private fun ImageBubble(
 ) {
     Box(
         modifier = Modifier
-            .background(Color(0xFFF5F6FA), RoundedCornerShape(16.dp))
+            .background(AppTheme.InputBg, RoundedCornerShape(16.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .size(IMAGE_BUBBLE_SIZE),
     ) {

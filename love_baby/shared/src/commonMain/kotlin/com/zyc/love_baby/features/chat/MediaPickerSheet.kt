@@ -49,6 +49,7 @@ import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.state.formatMmss
 
 /**
  * MediaPickerSheet — 聊天相册弹层(M24 十三轮,微信式;十四轮打磨:单选默认/长按进多选/分类下拉/
@@ -282,7 +283,7 @@ internal fun MediaPickerSheet(
                                     }
                                     if (item.kind == "video") {
                                         Text(
-                                            "▶ ${formatDuration(item.duration)}",
+                                            "▶ ${formatMmss(item.duration)}",
                                             color = Color.White,
                                             fontSize = 10.sp,
                                             modifier = Modifier.align(Alignment.BottomEnd)
@@ -343,6 +344,3 @@ internal fun MediaPickerSheet(
         }
     }
 }
-
-/** 视频时长角标文案(m:ss) */
-private fun formatDuration(sec: Int): String = "%d:%02d".format(sec / 60, sec % 60)

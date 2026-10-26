@@ -18,6 +18,7 @@ import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
@@ -33,9 +34,9 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.components.AppAvatar
 import com.zyc.love_baby.components.AppBottomBar
 import com.zyc.love_baby.components.AppBrandIntroScreen
@@ -44,6 +45,7 @@ import com.zyc.love_baby.components.AppCheckBadge
 import com.zyc.love_baby.components.AppConfirmOverlay
 import com.zyc.love_baby.components.AppDateCapsule
 import com.zyc.love_baby.components.AppDatePickerOverlay
+import com.zyc.love_baby.components.AppDialogButtonRow
 import com.zyc.love_baby.components.AppEmptyHint
 import com.zyc.love_baby.components.AppFeatureCard
 import com.zyc.love_baby.components.AppFilterChip
@@ -58,6 +60,7 @@ import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconTile
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppInputField
+import com.zyc.love_baby.components.AppInputPill
 import com.zyc.love_baby.components.AppLoadFailed
 import com.zyc.love_baby.components.AppLoading
 import com.zyc.love_baby.components.AppMenuDivider
@@ -92,12 +95,13 @@ private fun demoToast(pager: Pager, message: String) = AppFeedback.toast(pager, 
 /**
  * GalleryPager — 组件列表页(@Page 注册名 "componentList"):项目通用组件 demo 画廊
  * 用法:MinePage「组件列表」入口路由打开;返回键/closePage 返回
- * 依赖:components/ 全部通用组件;GalleryMock 数据;RouterModule(返回)
+ * 依赖:components/ 全部通用组件;GalleryMock 数据;closeLovePage(返回)
  * 事件:复选框/分段/筛选/输入/统计项可交互;钮类点击弹 Toast;浮层三件套弹真实浮层
  * 功能:
  *  - 头部即 AppSubPageHeader 活 demo(AppGradientHeader + AppHeaderBackButton + AppHeaderTitle)
- *  - 大类分区(六类,AppSectionTitle 作分区头):基础 / 选择与勾选 / 输入与表单 / 卡片与导航 /
- *    列表与状态 / 浮层与反馈;每类下若干 GallerySection demo 卡(白卡 + 卡内小标题)
+ *  - 大类分区(六类 24 组,AppSectionTitle 作分区头):基础 / 选择与勾选 / 输入与表单 / 卡片与导航 /
+ *    列表与状态 / 浮层与反馈;每类下若干 GallerySection demo 卡(白卡 + 卡内小标题);
+ *    分区 note 列出该类组清单与组数,页头副标题标总件数——「全部组件已展示」自证
  *  - 全屏浮层 demo(AppOverlayCard/AppConfirmOverlay/AppDatePickerOverlay)挂本页根 Box:
  *    独立 @Page 无浮岛底栏,页内根级挂载即可;Tab 页才须提升 MainPager(铁律 14)
  */
@@ -127,6 +131,8 @@ internal fun GalleryPage(pager: Pager) {
     var showDemoOverlayCard by remember { mutableStateOf(false) }
     var showDemoConfirm by remember { mutableStateOf(false) }
     var showDemoDatePicker by remember { mutableStateOf(false) }
+    var showDemoOverlayBottom by remember { mutableStateOf(false) }
+    var showDemoOverlayCenter by remember { mutableStateOf(false) }
     var pickedDateText by remember { mutableStateOf("还没选过") }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
@@ -135,35 +141,36 @@ internal fun GalleryPage(pager: Pager) {
                 // 头部 = AppSubPageHeader 活 demo(返回钮 + 标题列一键拼装,原手写骨架直替)
                 AppSubPageHeader(
                     title = "组件列表",
-                    subtitle = "项目通用组件 · 按类分区 · 可点击交互",
+                    subtitle = "32 件通用组件 · 六类 24 组 · 可点击交互",
                     onBack = {
-                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                        pager.closeLovePage()
                     },
                 )
             }
 
             // ---------- 基础 ----------
-            item { GalleryCategory("基础组件", "图标 · 标签 · 日期胶囊") }
+            item { GalleryCategory("基础组件", "图标 · 标签 · 日期胶囊 · 胶囊钮 — 4 组") }
             item { IconSection() }
             item { TagSection() }
             item { DateCapsuleSection() }
             item { PillChipSection(pager) }
 
             // ---------- 选择与勾选 ----------
-            item { GalleryCategory("选择与勾选", "勾选框 · 开关 · 筛选 · 分段") }
+            item { GalleryCategory("选择与勾选", "勾选框 · 开关 · 筛选 · 分段 — 4 组") }
             item { CheckSection() }
             item { SwitchSection() }
             item { FilterChipSection() }
             item { SegmentedChipsSection() }
 
             // ---------- 输入与表单 ----------
-            item { GalleryCategory("输入与表单", "输入行 · 主钮 · 圆钮") }
+            item { GalleryCategory("输入与表单", "输入行 · 输入胶囊 · 主钮 · 圆钮 — 4 组") }
             item { InputSection() }
+            item { InputPillSection() }
             item { PrimaryButtonSection() }
             item { IconButtonsSection(pager) }
 
             // ---------- 卡片与导航 ----------
-            item { GalleryCategory("卡片与导航", "卡片 · 菜单 · 子页头 · 月导航 · 底栏") }
+            item { GalleryCategory("卡片与导航", "卡片 · 菜单 · 子页头 · 月导航 · 底栏 — 5 组") }
             item { CardSection() }
             item { MenuSection(pager) }
             item { SubHeaderSection(pager) }
@@ -171,20 +178,23 @@ internal fun GalleryPage(pager: Pager) {
             item { BottomBarSection() }
 
             // ---------- 列表与状态 ----------
-            item { GalleryCategory("列表与状态", "统计条 · 加载 · 失败 · 空态") }
+            item { GalleryCategory("列表与状态", "统计条 · 加载 · 失败 · 空态 — 2 组") }
             item { StatSection(pager) }
             item { StatusSection() }
 
             // ---------- 浮层与反馈 ----------
-            item { GalleryCategory("浮层与反馈", "全屏浮层 · 引导屏 · 下拉刷新") }
+            item { GalleryCategory("浮层与反馈", "全屏浮层 · 双钮行 · 引导屏 · 下拉刷新 · 基建 — 5 组") }
             item {
                 OverlaySection(
                     pickedDateText = pickedDateText,
                     onOpenOverlayCard = { showDemoOverlayCard = true },
+                    onOpenOverlayBottom = { showDemoOverlayBottom = true },
+                    onOpenOverlayCenter = { showDemoOverlayCenter = true },
                     onOpenConfirm = { showDemoConfirm = true },
                     onOpenDatePicker = { showDemoDatePicker = true },
                 )
             }
+            item { DialogButtonRowSection(pager) }
             item { BrandIntroSection() }
             item { PullRefreshNoteSection() }
             item { InfrastructureSection(pager) }
@@ -207,6 +217,52 @@ internal fun GalleryPage(pager: Pager) {
                     AppPillChip("关闭浮层", bg = ThemeStore.current.brandStart) {
                         showDemoOverlayCard = false
                     }
+                }
+            }
+        }
+        if (showDemoOverlayBottom) {
+            // 底部形态(SexPicker/FieldInput 生产同款):BottomCenter + 通宽 + 仅顶部圆角
+            AppOverlayCard(
+                onDismiss = { showDemoOverlayBottom = false },
+                contentAlignment = Alignment.BottomCenter,
+                cardOuterPadding = PaddingValues(),
+                cardShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 0.dp, bottomStart = 0.dp),
+            ) {
+                Text("底部浮层形态", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "contentAlignment = BottomCenter + cardOuterPadding 全 0 + cardShape 仅顶部圆角:贴屏底弹出的选择器/输入卡形态。",
+                    color = AppTheme.TextSecondary,
+                    fontSize = 13.sp,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    AppPillChip("关闭浮层", bg = ThemeStore.current.brandStart) {
+                        showDemoOverlayBottom = false
+                    }
+                }
+            }
+        }
+        if (showDemoOverlayCenter) {
+            // 居中内容卡(MineAboutOverlay 生产同款):收窄卡体 + 内容水平居中
+            AppOverlayCard(
+                onDismiss = { showDemoOverlayCenter = false },
+                cardOuterPadding = PaddingValues(horizontal = 48.dp),
+                cardPadding = PaddingValues(horizontal = 24.dp, vertical = 28.dp),
+                contentHorizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                AppIconTile(AppIconType.Heart, size = 48.dp, bgBrush = ThemeStore.current.brandBrush)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("居中内容卡", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "cardOuterPadding 收窄 + contentHorizontalAlignment 居中:信息卡形态(「关于我们」)。",
+                    color = AppTheme.TextSecondary,
+                    fontSize = 13.sp,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                AppPillChip("知道了", bgBrush = ThemeStore.current.brandBrush, corner = 22.dp) {
+                    showDemoOverlayCenter = false
                 }
             }
         }
@@ -373,12 +429,12 @@ private fun DateCapsuleSection() {
     }
 }
 
-/** AppPillChip — 轻量文字小钮:浅灰底 / 品牌浅底 / 品牌实底三形态,点击弹 Toast */
+/** AppPillChip — 轻量文字小钮:浅灰底 / 品牌浅底 / 品牌实底 / 品牌渐变底四形态,点击弹 Toast */
 @Composable
 private fun PillChipSection(pager: Pager) {
     GallerySection(title = "AppPillChip", note = "点击弹 Toast") {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AppPillChip("浅灰底", bg = Color(0xFFF3F4F8), textColor = AppTheme.TextSecondary) {
+            AppPillChip("浅灰底", bg = AppTheme.SecondaryBg, textColor = AppTheme.TextSecondary) {
                 demoToast(pager, "点了浅灰胶囊")
             }
             AppPillChip(
@@ -392,6 +448,11 @@ private fun PillChipSection(pager: Pager) {
             AppPillChip("品牌实底", bg = ThemeStore.current.brandStart) {
                 demoToast(pager, "点了品牌实底胶囊")
             }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        // 渐变底形态(bgBrush 传 brandBrush;bg/bgBrush 双参 remember 归一,同调用点禁互切类型——铁律⑦)
+        AppPillChip("品牌渐变底", bgBrush = ThemeStore.current.brandBrush, fontWeight = FontWeight.Medium) {
+            demoToast(pager, "点了品牌渐变底胶囊")
         }
     }
 }
@@ -519,10 +580,31 @@ private fun InputSection() {
             onValueChange = { demoInput = it },
             placeholder = "带尾部小钮的输入行",
             trailing = {
-                AppPillChip("清空", bg = Color(0xFFF3F4F8), textColor = AppTheme.TextSecondary) {
+                AppPillChip("清空", bg = AppTheme.SecondaryBg, textColor = AppTheme.TextSecondary) {
                     demoInput = ""
                 }
             },
+        )
+    }
+}
+
+/** AppInputPill — 白底 R22 输入胶囊:待办/心愿输入条同款(铁律 15 胶囊 + 12 maxLength) */
+@Composable
+private fun InputPillSection() {
+    var pillInput by remember { mutableStateOf("") }
+    GallerySection(title = "AppInputPill", note = "输入胶囊 · 待办/心愿条") {
+        AppInputPill(
+            value = pillInput,
+            onValueChange = { pillInput = it },
+            placeholder = "想做点什么?",
+            maxLength = 20,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "胶囊内置 TextField(13sp/3 行/autoFocus=false);长度双保险 take+maxLength;发送钮与业务派发(含滚动跟随)留在调用方。",
+            color = AppTheme.TextTertiary,
+            fontSize = 10.sp,
         )
     }
 }
@@ -563,7 +645,7 @@ private fun IconButtonsSection(pager: Pager) {
             Spacer(modifier = Modifier.width(12.dp))
             AppGhostIconButton(
                 AppIconType.Search,
-                bg = Color(0xFFF3F4F8),
+                bg = AppTheme.SecondaryBg,
                 onClick = { demoToast(pager, "幽灵钮(浅灰底)") },
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -789,12 +871,14 @@ private fun StatusSection() {
 private fun OverlaySection(
     pickedDateText: String,
     onOpenOverlayCard: () -> Unit,
+    onOpenOverlayBottom: () -> Unit,
+    onOpenOverlayCenter: () -> Unit,
     onOpenConfirm: () -> Unit,
     onOpenDatePicker: () -> Unit,
 ) {
     GallerySection(title = "AppOverlayCard / AppConfirmOverlay / AppDatePickerOverlay", note = "点钮弹真实浮层") {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AppPillChip("通用浮层壳", bg = Color(0xFFF3F4F8), textColor = AppTheme.TextSecondary, onClick = onOpenOverlayCard)
+            AppPillChip("通用浮层壳", bg = AppTheme.SecondaryBg, textColor = AppTheme.TextSecondary, onClick = onOpenOverlayCard)
             AppPillChip("确认框", bg = AppTheme.Danger.copy(alpha = 0.12f), textColor = AppTheme.Danger, onClick = onOpenConfirm)
             AppPillChip(
                 "日期滚轮",
@@ -803,11 +887,60 @@ private fun OverlaySection(
                 onClick = onOpenDatePicker,
             )
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        // 扩参后的两个生产形态变体(2026-10-26 收编七处手写浮层壳)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppPillChip("底部形态", bg = AppTheme.SecondaryBg, textColor = AppTheme.TextSecondary, onClick = onOpenOverlayBottom)
+            AppPillChip("居中内容卡", bg = AppTheme.SecondaryBg, textColor = AppTheme.TextSecondary, onClick = onOpenOverlayCenter)
+        }
         Spacer(modifier = Modifier.height(10.dp))
         Text("日期滚轮回吐:$pickedDateText", color = AppTheme.TextSecondary, fontSize = 11.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             "确认框 busy=true 拦全部出口(遮罩/取消/确认);两浮层挂本页根 Box——独立 @Page 页内挂即可,Tab 页须提升 MainPager(铁律 14)",
+            color = AppTheme.TextTertiary,
+            fontSize = 10.sp,
+        )
+    }
+}
+
+/**
+ * AppDialogButtonRow — 对话框双钮行(左灰右彩 42dp 定高):右钮三种底色形态;
+ * busy 置灰与「提交中…」文案切换由调用方自理(组件不含业务语义),右钮字重无默认值逐点显式传
+ */
+@Composable
+private fun DialogButtonRowSection(pager: Pager) {
+    GallerySection(title = "AppDialogButtonRow", note = "左灰右彩 · 点击弹 Toast") {
+        AppDialogButtonRow(
+            leftText = "取消",
+            rightText = "确认删除",
+            onLeft = { demoToast(pager, "点了左钮(取消)") },
+            onRight = { demoToast(pager, "点了右钮(Danger)") },
+            rightBrush = AppTheme.DangerButtonBrush,
+            rightFontWeight = FontWeight.Medium,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        AppDialogButtonRow(
+            leftText = "取消",
+            rightText = "保存",
+            onLeft = { demoToast(pager, "点了左钮(取消)") },
+            onRight = { demoToast(pager, "点了右钮(品牌渐变)") },
+            rightBrush = ThemeStore.current.brandBrush,
+            rightFontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        AppDialogButtonRow(
+            leftText = "取消完成",
+            rightText = "关闭",
+            onLeft = { demoToast(pager, "点了左钮(取消完成)") },
+            onRight = { demoToast(pager, "点了右钮(灰底)") },
+            rightBrush = AppTheme.GrayButtonBrush,
+            rightTextColor = AppTheme.TextPrimary,
+            rightFontWeight = FontWeight.Medium,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "42dp/R21 定高,左钮灰底固定;右钮底经 Brush 传入(实色统一同色渐变单例,铁律⑦);提交中置灰+文案切换留调用方。",
             color = AppTheme.TextTertiary,
             fontSize = 10.sp,
         )
@@ -853,14 +986,14 @@ private fun BrandIntroSection() {
 }
 
 /**
- * AppPullRefreshItem — LazyListScope 扩展件(非独立 Composable,不可在卡内展示):
+ * AppPullRefreshItem / AppStaggeredPullRefresh — LazyListScope 扩展件(非独立 Composable,不可在卡内展示):
  * 不在画廊真开下拉(会劫持本页列表下拉手势),文字说明 + 指路真实调用方
  */
 @Composable
 private fun PullRefreshNoteSection() {
-    GallerySection(title = "AppPullRefreshItem", note = "LazyListScope 件") {
+    GallerySection(title = "AppPullRefreshItem / AppStaggeredPullRefresh", note = "LazyListScope 件 ×2") {
         Text(
-            "下拉刷新通用件:挂 LazyListScope(官方 pullToRefreshItem 封装),最短驻留 600ms 让「刷新中…」完整显示一拍 + 失败 toast 收口。本页不真开(避免劫持画廊列表手势),真实刷新见相册页 / 恋爱清单页 / 灵感页。",
+            "下拉刷新通用件 ×2:AppPullRefreshItem 挂 LazyListScope(官方 pullToRefreshItem 封装),最短驻留 600ms 让「刷新中…」完整显示一拍 + 失败 toast 收口;AppStaggeredPullRefresh 为瀑布流变体(自绘被动观察器 + 悬浮胶囊指示器),见相册页。本页不真开(避免劫持画廊列表手势),真实刷新见恋爱清单页 / 灵感页 / 相册页。",
             color = AppTheme.TextSecondary,
             fontSize = 12.sp,
         )
@@ -904,7 +1037,7 @@ private fun InfrastructureSection(pager: Pager) {
             }
             AppPillChip(
                 "复制到剪贴板",
-                bg = Color(0xFFF3F4F8),
+                bg = AppTheme.SecondaryBg,
                 textColor = AppTheme.TextSecondary,
                 onClick = {
                     AppFeedback.copyToPasteboard(pager, "来自组件列表的复制 demo") {

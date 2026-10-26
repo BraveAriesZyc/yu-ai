@@ -18,6 +18,7 @@ import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
@@ -27,7 +28,6 @@ import com.tencent.kuikly.compose.foundation.lazy.LazyListState
 import com.tencent.kuikly.compose.foundation.lazy.items
 import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
-import com.tencent.kuikly.compose.foundation.text.maxLength
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.material3.rememberPullToRefreshState
 import com.tencent.kuikly.compose.setContent
@@ -35,20 +35,20 @@ import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
-import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.views.KeyboardParams
-import com.zyc.love_baby.TextField
 import com.zyc.love_baby.onSizeChangedDp
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.components.AppCheckbox
 import com.zyc.love_baby.components.AppConfirmOverlay
+import com.zyc.love_baby.components.AppDialogButtonRow
 import com.zyc.love_baby.components.AppEmptyHint
+import com.zyc.love_baby.components.AppOverlayCard
 import com.zyc.love_baby.components.AppLoading
 import com.zyc.love_baby.components.AppLoadFailed
 import com.zyc.love_baby.components.AppPullRefreshItem
@@ -56,6 +56,7 @@ import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppInputPill
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
@@ -88,7 +89,7 @@ private const val WISH_DONE_PREVIEW_COUNT = 3
  * 依赖:WishApi/WishInfo(页内自持不进 AppState,D-19g——页销毁即弃,登出/解绑零 reset 接线);
  *      AppCheckbox(勾选);chat.chatDayLabelFriendly(完成时间文案);components.AppLoading/AppLoadFailed
  *      (原 mood.Timeline 同款,收编单源);
- *      couple 组 toast;RouterModule(返回)
+ *      couple 组 toast;closeLovePage(返回)
  * 事件:返回钮 closePage;点行卡片/勾选框 → 详情弹框(创建/完成时间 + 操作;2026-10-17 交互修订:
  *      完成与取消完成一律经弹框确认,防误点亮——完成会自动发庆祝消息);弹框 [已完成]/[取消完成]
  *      仅对方的行显示(发布者不能点亮自己许的心愿,2026-10-17 权限修订 D-19)→ done(单口双向,
@@ -358,7 +359,7 @@ internal fun WishListPage(pager: Pager) {
                 "恋爱清单",
                 "把想一起做的事,一个个点亮",
                 onBack = {
-                    pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                    pager.closeLovePage()
                 },
             ) {
                 // 空表不显「0/0 已完成」(2026-10-18 重构:空态显计数是无意义噪音)
@@ -532,25 +533,16 @@ internal fun WishListPage(pager: Pager) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier.weight(1f)
-                    .background(AppTheme.CardBg, RoundedCornerShape(22.dp)),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                TextField(
-                    value = inputText,
-                    onValueChange = { inputText = it.take(WISH_INPUT_MAX_LENGTH) },
-                    placeholder = "许一个想一起完成的心愿",
-                    autoFocus = false,
-                    placeholderColor = AppTheme.TextTertiary,
-                    textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 13.sp),
-                    maxLines = 3, // 长文本限 3 行竖向生长,不在 22dp 胶囊里无限撑高(TodoPage F15)
-                    keyboardHeightChange = onKeyboardHeightChange,
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 13.dp)
-                        .maxLength(WISH_INPUT_MAX_LENGTH), // 原生层拒绝超限输入,与 take 兜底双保险
-                )
-            }
+            // 输入域(AppInputPill 单源,同 TodoPage:白 R22 胶囊/13sp/3 行竖向生长/14·13 内距/
+            // maxLength 原生拒超限与 take 双保险;键盘高度回调透传驱动浮岛避让)
+            AppInputPill(
+                value = inputText,
+                onValueChange = { inputText = it.take(WISH_INPUT_MAX_LENGTH) },
+                placeholder = "许一个想一起完成的心愿",
+                maxLength = WISH_INPUT_MAX_LENGTH,
+                modifier = Modifier.weight(1f),
+                onKeyboardHeightChange = onKeyboardHeightChange,
+            )
             Spacer(modifier = Modifier.width(10.dp))
             // 添加按钮(POST 成功才清输入:失败保留文案可重试,TodoPage 先例)。新心愿落活跃区尾
             // = 列表最后内容位(D-19f 定稿),滚动走「滚到底」:顶对齐末项(Spacer)请求超出滚动
@@ -729,99 +721,61 @@ private fun WishDetailOverlay(
     onClose: () -> Unit,
 ) {
     val canToggle = wish.userId != myId
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { if (!submitting) onClose() },
-        contentAlignment = Alignment.Center,
+    AppOverlayCard(
+        onDismiss = { if (!submitting) onClose() },
+        busy = submitting, // 提交在飞拦灰幕(语义保真;双钮各自的 !submitting 闸仍在回调侧)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 36.dp)
-                .fillMaxWidth()
-                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
-                .clickable { }
-                .padding(horizontal = 20.dp, vertical = 22.dp),
-        ) {
-            Text(wish.title, color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(10.dp))
-            // 时间线:创建恒显;完成行加完成人与完成时间(均服务端真值,<=0 兜底不造假)
-            val creator = if (wish.userId == myId) "我" else "TA"
+        Text(wish.title, color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(10.dp))
+        // 时间线:创建恒显;完成行加完成人与完成时间(均服务端真值,<=0 兜底不造假)
+        val creator = if (wish.userId == myId) "我" else "TA"
+        Text(
+            if (wish.createTime > 0) "$creator 创建于 ${wishTimeLabel(wish.createTime)}" else "$creator 创建的心愿",
+            color = AppTheme.TextSecondary,
+            fontSize = 13.sp,
+        )
+        if (wish.done) {
+            Spacer(modifier = Modifier.height(4.dp))
+            val who = if (wish.doneBy == myId) "我" else "TA"
             Text(
-                if (wish.createTime > 0) "$creator 创建于 ${wishTimeLabel(wish.createTime)}" else "$creator 创建的心愿",
+                if (wish.doneTime > 0) "$who 完成于 ${wishTimeLabel(wish.doneTime)}" else "$who 已完成",
                 color = AppTheme.TextSecondary,
                 fontSize = 13.sp,
             )
-            if (wish.done) {
-                Spacer(modifier = Modifier.height(4.dp))
-                val who = if (wish.doneBy == myId) "我" else "TA"
-                Text(
-                    if (wish.doneTime > 0) "$who 完成于 ${wishTimeLabel(wish.doneTime)}" else "$who 已完成",
-                    color = AppTheme.TextSecondary,
-                    fontSize = 13.sp,
-                )
-            } else if (!canToggle) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("等TA点亮", color = AppTheme.TextSecondary, fontSize = 13.sp)
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-            when {
-                // 对方的未完成心愿:[取消] + [已完成](品牌色主操作)
-                canToggle && !wish.done -> Row {
-                    Box(
-                        modifier = Modifier.weight(1f)
-                            .height(42.dp)
-                            .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
-                            .clickable { if (!submitting) onClose() },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("取消", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Box(
-                        // 主操作钮用品牌渐变(2026-10-18 真机反馈「颜色不对」:原单色 brandEnd 是
-                        // 渐变浅端,默认蜜桃主题 FFB199 极浅,白字发白像禁用态;全仓主按钮惯例
-                        // =brandBrush 渐变——AppCards 登录钮/CheckinPage 打卡钮同款)
-                        modifier = Modifier.weight(1f)
-                            .height(42.dp)
-                            .background(ThemeStore.current.brandBrush, RoundedCornerShape(21.dp))
-                            .clickable { if (!submitting) onToggle() },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("已完成", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                // 对方的已完成心愿:[取消完成](不发消息) + [关闭]
-                canToggle && wish.done -> Row {
-                    Box(
-                        modifier = Modifier.weight(1f)
-                            .height(42.dp)
-                            .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
-                            .clickable { if (!submitting) onToggle() },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("取消完成", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Box(
-                        modifier = Modifier.weight(1f)
-                            .height(42.dp)
-                            .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
-                            .clickable { if (!submitting) onClose() },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("关闭", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    }
-                }
-                // 自己的心愿/其余:只读详情,仅[关闭]
-                else -> Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .height(42.dp)
-                        .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
-                        .clickable { if (!submitting) onClose() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("关闭", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                }
+        } else if (!canToggle) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("等TA点亮", color = AppTheme.TextSecondary, fontSize = 13.sp)
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        when {
+            // 对方的未完成心愿:[取消] + [已完成](品牌渐变主操作)
+            canToggle && !wish.done -> AppDialogButtonRow(
+                leftText = "取消",
+                rightText = "已完成",
+                onLeft = { if (!submitting) onClose() },
+                onRight = { if (!submitting) onToggle() },
+                rightBrush = ThemeStore.current.brandBrush,
+                rightFontWeight = FontWeight.Bold,
+            )
+            // 对方的已完成心愿:[取消完成](不发消息) + [关闭](灰底右钮深字)
+            canToggle && wish.done -> AppDialogButtonRow(
+                leftText = "取消完成",
+                rightText = "关闭",
+                onLeft = { if (!submitting) onToggle() },
+                onRight = { if (!submitting) onClose() },
+                rightBrush = AppTheme.GrayButtonBrush,
+                rightFontWeight = FontWeight.Medium,
+                rightTextColor = AppTheme.TextPrimary,
+            )
+            // 自己的心愿/其余:只读详情,仅[关闭]
+            else -> Box(
+                modifier = Modifier.fillMaxWidth()
+                    .height(42.dp)
+                    .background(AppTheme.SecondaryBg, RoundedCornerShape(21.dp))
+                    .clickable { if (!submitting) onClose() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("关闭", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             }
         }
     }

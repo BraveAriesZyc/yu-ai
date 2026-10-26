@@ -18,6 +18,7 @@ import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
@@ -32,9 +33,10 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
-import com.zyc.love_baby.base.setTimeout
+import com.zyc.love_baby.components.AppOverlayCard
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
+import com.zyc.love_baby.components.runAfterBlur
 import com.zyc.love_baby.features.couple.BindInputField
 import com.zyc.love_baby.features.couple.BindPrimaryButton
 import com.zyc.love_baby.features.couple.toastCouple
@@ -83,17 +85,12 @@ internal fun MoodOptionManageOverlay(
     var colorHex by remember { mutableStateOf(colorPresets.first()) }
     var adding by remember { mutableStateOf(false) }
     var deletingId by remember { mutableStateOf("") }
-    // 关浮层先清焦(同 LoginPanel.submit 焦点转移问题):浮层卸载时持焦输入框被移除,Android
-    // 把窗口焦点转给待办页输入框(五页全驻留),Pager 滚去露出它 → 主界面乱滚
+    // 关浮层收口(铁律 16):components.runAfterBlur 单源——浮层卸载时持焦输入框被移除,不先
+    // 清焦+迟一拍,Android 会把窗口焦点转给待办页输入框(五页全驻留),Pager 滚去露出它
+    // → 主界面乱滚(2026-10-18 ProfileEditOverlay 真机复现同源;机制详见该件 KDoc)
     val focusManager = LocalFocusManager.current
     fun dismiss() {
-        focusManager.clearFocus()
-        // 卸载迟一拍(机制详见 features.profile.FieldInputOverlay.dismiss):clearFocus 的原生 blur 走 setTimeout
-        // 批处理异步落地,onDismiss 同回合执行会让浮层卸载与 blur 竞速——持焦输入框带焦点被移除
-        // 时焦点转给待办页输入框,Pager 滚去露出它=主界面乱滚(2026-10-18 ProfileEditOverlay
-        // 真机复现同源)。onDismiss 推迟一拍入同一 MessageQueue,按入队序必然排在 blur 之后,
-        // 卸载时树中已无持焦视图
-        pager.setTimeout(0) { onDismiss() }
+        pager.runAfterBlur(focusManager) { onDismiss() }
     }
 
     // 返回键关闭浮层(2026-10-22 浮层返回键接线):走灰幕同款 dismiss(清焦+迟一拍卸载,铁律 16)
@@ -142,145 +139,136 @@ internal fun MoodOptionManageOverlay(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { dismiss() },
-        contentAlignment = Alignment.Center,
+    AppOverlayCard(
+        onDismiss = { dismiss() },
+        // busy 不传(原灰幕无在飞闸:添加/删除失败 toast 即回,关闭恒可用,语义保真)
+        cardOuterPadding = PaddingValues(horizontal = 32.dp),
+        cardPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
     ) {
-        Column(
-            // 吞点击防透传(铁律⑤):卡片 background+clickable 同节点,点卡片不落灰幕
-            modifier = Modifier.padding(horizontal = 32.dp)
-                .fillMaxWidth()
-                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
-                .clickable { }
-                .padding(horizontal = 18.dp, vertical = 18.dp),
-        ) {
-            // 标题行 + 完成(透明底 clickable 同节点,铁律⑤命中测试)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("管理心情", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.weight(1f))
-                Box(
-                    modifier = Modifier
-                        .background(Color.Transparent, RoundedCornerShape(12.dp))
-                        .clickable { dismiss() }
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                ) {
-                    Text("完成", color = ThemeStore.current.brandStart, fontSize = 13.sp)
-                }
+        // 标题行 + 完成(透明底 clickable 同节点,铁律⑤命中测试)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("管理心情", color = AppTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .background(Color.Transparent, RoundedCornerShape(12.dp))
+                    .clickable { dismiss() }
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            ) {
+                Text("完成", color = ThemeStore.current.brandStart, fontSize = 13.sp)
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "心情选项两人共享;删除不影响已记录的历史",
-                color = AppTheme.TextTertiary,
-                fontSize = 10.sp,
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            // 已有选项:固定高 LazyColumn(行高 ~40 + 间距 6,4 行封顶滚动;
-            // 卡片 Column 非滚动容器,单层纵向滚动无同向嵌套,铁律⑦)
-            if (MoodStore.moodOptions.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp))
-                        .padding(vertical = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("还没有心情选项,下面添加一个吧", color = AppTheme.TextTertiary, fontSize = 11.sp)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth()
-                        .height((MoodStore.moodOptions.size * 46 + 6).coerceAtMost(190).dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    // key 按 id(官方 L2):删中间项时其余行按身份复用,不再位置错位/状态串行
-                    items(MoodStore.moodOptions.size, key = { MoodStore.moodOptions[it].id }) { index ->
-                        val option = MoodStore.moodOptions[index]
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "心情选项两人共享;删除不影响已记录的历史",
+            color = AppTheme.TextTertiary,
+            fontSize = 10.sp,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        // 已有选项:固定高 LazyColumn(行高 ~40 + 间距 6,4 行封顶滚动;
+        // 卡片 Column 非滚动容器,单层纵向滚动无同向嵌套,铁律⑦)
+        if (MoodStore.moodOptions.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .background(AppTheme.InputBg, RoundedCornerShape(12.dp))
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("还没有心情选项,下面添加一个吧", color = AppTheme.TextTertiary, fontSize = 11.sp)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth()
+                    .height((MoodStore.moodOptions.size * 46 + 6).coerceAtMost(190).dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                // key 按 id(官方 L2):删中间项时其余行按身份复用,不再位置错位/状态串行
+                items(MoodStore.moodOptions.size, key = { MoodStore.moodOptions[it].id }) { index ->
+                    val option = MoodStore.moodOptions[index]
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .background(AppTheme.InputBg, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(option.emoji, fontSize = 15.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            option.label,
+                            color = AppTheme.TextPrimary,
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // 删除钮(透明底 clickable 同节点;在飞行该行换文案「…」不改结构)
+                        Box(
+                            modifier = Modifier.size(26.dp)
+                                .background(Color.Transparent, RoundedCornerShape(13.dp))
+                                .clickable { delete(option.id) },
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text(option.emoji, fontSize = 15.sp)
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                option.label,
-                                color = AppTheme.TextPrimary,
-                                fontSize = 13.sp,
-                                modifier = Modifier.weight(1f),
+                                if (deletingId == option.id) "…" else "✕",
+                                color = AppTheme.TextTertiary,
+                                fontSize = 12.sp,
                             )
-                            // 删除钮(透明底 clickable 同节点;在飞行该行换文案「…」不改结构)
-                            Box(
-                                modifier = Modifier.size(26.dp)
-                                    .background(Color.Transparent, RoundedCornerShape(13.dp))
-                                    .clickable { delete(option.id) },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    if (deletingId == option.id) "…" else "✕",
-                                    color = AppTheme.TextTertiary,
-                                    fontSize = 12.sp,
-                                )
-                            }
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("添加心情", color = AppTheme.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            BindInputField(
-                value = label,
-                onValueChange = { label = it },
-                placeholder = "心情名(最多 $MOOD_LABEL_MAX_LENGTH 字)",
-                maxLength = MOOD_LABEL_MAX_LENGTH, // 渲染层拒超限(官方禁 onValueChange take 截断,光标 bug)
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            // emoji 预设(横向单层滚动,跨轴于卡片纵向,铁律⑦;选中换底色不改结构,铁律③)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(emojiPresets.size) { index ->
-                    val selected = emojiPresets[index] == emoji
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                if (selected) ThemeStore.current.brandStart else Color(0xFFF5F6FA),
-                                RoundedCornerShape(10.dp),
-                            )
-                            .clickable { emoji = emojiPresets[index] }
-                            .padding(horizontal = 7.dp, vertical = 5.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(emojiPresets[index], fontSize = 16.sp)
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            // 色板预设(同上单层横向;选中=同色淡光晕底,常驻双层结构只换外层色,铁律③)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(colorPresets.size) { index ->
-                    val hex = colorPresets[index]
-                    val swatch = colorFromHex(hex)
-                    val selected = hex == colorHex
-                    Box(
-                        modifier = Modifier.size(34.dp)
-                            .background(
-                                if (selected) swatch.copy(alpha = 0.30f) else Color(0xFFF5F6FA),
-                                RoundedCornerShape(17.dp),
-                            )
-                            .clickable { colorHex = hex }
-                            .padding(6.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            modifier = Modifier.size(22.dp)
-                                .background(swatch, RoundedCornerShape(11.dp)),
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            BindPrimaryButton(text = "添 加", submitting = adding) { add() }
         }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("添加心情", color = AppTheme.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        BindInputField(
+            value = label,
+            onValueChange = { label = it },
+            placeholder = "心情名(最多 $MOOD_LABEL_MAX_LENGTH 字)",
+            maxLength = MOOD_LABEL_MAX_LENGTH, // 渲染层拒超限(官方禁 onValueChange take 截断,光标 bug)
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        // emoji 预设(横向单层滚动,跨轴于卡片纵向,铁律⑦;选中换底色不改结构,铁律③)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(emojiPresets.size) { index ->
+                val selected = emojiPresets[index] == emoji
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (selected) ThemeStore.current.brandStart else AppTheme.InputBg,
+                            RoundedCornerShape(10.dp),
+                        )
+                        .clickable { emoji = emojiPresets[index] }
+                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(emojiPresets[index], fontSize = 16.sp)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        // 色板预设(同上单层横向;选中=同色淡光晕底,常驻双层结构只换外层色,铁律③)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(colorPresets.size) { index ->
+                val hex = colorPresets[index]
+                val swatch = colorFromHex(hex)
+                val selected = hex == colorHex
+                Box(
+                    modifier = Modifier.size(34.dp)
+                        .background(
+                            if (selected) swatch.copy(alpha = 0.30f) else AppTheme.InputBg,
+                            RoundedCornerShape(17.dp),
+                        )
+                        .clickable { colorHex = hex }
+                        .padding(6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier.size(22.dp)
+                            .background(swatch, RoundedCornerShape(11.dp)),
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        BindPrimaryButton(text = "添 加", submitting = adding) { add() }
     }
 }

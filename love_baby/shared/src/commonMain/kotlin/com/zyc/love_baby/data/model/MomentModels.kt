@@ -114,13 +114,7 @@ internal data class MomentInfo(
          * 从 CommonResult.data 数组解析(数组形态经 HttpClient 的 Ok.dataArray 携带,§5.2 moment/list)。
          * 数组缺省/为空返回空列表;服务端排序(id desc 新→旧)原样保留,调用方不重排
          */
-        fun listFrom(dataArray: JSONArray?): List<MomentInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<MomentInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<MomentInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }

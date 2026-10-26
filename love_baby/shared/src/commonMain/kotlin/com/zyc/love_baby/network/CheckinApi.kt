@@ -15,8 +15,8 @@ import com.tencent.kuikly.core.pager.Pager
  *  - list 按月拉 couple 双方记录(month=yyyy-MM;某日无记录 = 回包无该日条目,端上按空缺渲染);
  *    CheckinPage 进入/切月由调用方换 month 重拉(§7.4 拉取触发点)
  *  - summary 打卡汇总(共同连续/我/TA 全量累计,服务端聚合):首页「今日打卡」条与打卡页页头共用
- *  - ⚠ 查询参数直接拼 URL 而非走 core param 通道(MoodApi 同款:core 各宿主对 GET param 转 query
- *    行为不一,month 为 yyyy-MM 纯 URL 安全字符,显式拼接五端一致)
+ *  - ⚠ 查询参数经 network.queryPath 显式拼 URL(MoodApi 同款决策;不走 core param 通道,
+ *    理由收口至 queryPath 注,month 为 yyyy-MM 纯 URL 安全字符)
  *  - 未绑定回 1_003_004_003 走普通 BizError 通道由调用方 toast;本层不做 successBizCodes 放行
  *    (1_003_004_003 的状态信号放行是 couple/get 专用,§5.2)
  */
@@ -35,7 +35,7 @@ internal object CheckinApi {
      * @param month yyyy-MM(如 2026-10),由调用方按当前展示月传入
      */
     suspend fun list(pager: Pager, month: String): ApiResult =
-        HttpClient.request(pager, "$PATH_LIST?month=$month", isPost = false)
+        HttpClient.request(pager, queryPath(PATH_LIST, "month" to month), isPost = false)
 
     /** 打卡汇总:data 为单对象(commonStreak/myTotal/partnerTotal) */
     suspend fun summary(pager: Pager): ApiResult =

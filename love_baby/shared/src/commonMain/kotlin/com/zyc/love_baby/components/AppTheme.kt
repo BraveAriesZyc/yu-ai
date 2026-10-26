@@ -41,13 +41,22 @@ data class KuiklyTheme(
  */
 object AppTheme {
     val CardBg = Color(0xFFFFFFFF)        // 卡片背景
+    val InputBg = Color(0xFFF5F6FA)       // 输入框浅底(输入框/选中槽/占位气泡等次级浅底)
+    val SecondaryBg = Color(0xFFF3F4F8)   // 次级灰底(取消钮/灰胶囊/分段控件槽)
     val TextPrimary = Color(0xFF2B2E3F)   // 主文字
     val TextSecondary = Color(0xFF8A90A0) // 次文字
     val TextTertiary = Color(0xFFB4B9C6)  // 弱文字/占位
+    val TextDisabled = Color(0xFF9AA0AE)  // 禁用态文字(权限未开启等灰字)
     val AccentOrange = Color(0xFFFF7A45)  // 强调
     val Success = Color(0xFF34C77B)       // 成功
+    val Warning = Color(0xFFF5A623)       // 警告(低电量/部分授权)
     val Danger = Color(0xFFFF5A6E)        // 危险/角标
     val Divider = Color(0xFFF0F1F5)       // 分割线
+
+    // 实色钮背景的同色渐变单例(铁律⑦:同节点 color/brush 重载不混用,纯色钮底一律归一 brush;
+    // 静态色用 object 单例免 remember,与 KuiklyTheme.brandBrush 的 lazy 缓存同思想)
+    val GrayButtonBrush = Brush.linearGradient(listOf(SecondaryBg, SecondaryBg))
+    val DangerButtonBrush = Brush.linearGradient(listOf(Danger, Danger))
 
     val PageHPadding = 16.dp
 

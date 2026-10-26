@@ -175,13 +175,7 @@ internal data class MessageInfo(
          * 从 CommonResult.data 数组解析(数组形态经 HttpClient 的 Ok.dataArray 携带,§5.2 message/list)。
          * 数组缺省/为空返回空列表;条目顺序原样保留(服务端恒升序:首屏倒序取后已正序,增量按 id > lastId 升序)
          */
-        fun listFrom(dataArray: JSONArray?): List<MessageInfo> {
-            if (dataArray == null) return emptyList()
-            val result = ArrayList<MessageInfo>(dataArray.length())
-            for (i in 0 until dataArray.length()) {
-                from(dataArray.optJSONObject(i))?.let { result.add(it) }
-            }
-            return result
-        }
+        fun listFrom(dataArray: JSONArray?): List<MessageInfo> =
+            jsonArrayToList(dataArray, ::from)
     }
 }

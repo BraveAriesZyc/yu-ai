@@ -21,9 +21,8 @@ import com.zyc.love_baby.data.model.MoodRecordReq
  *  - optionList 查 couple 私有心情选项字典(进入心情页/切回 Tab 整表覆盖 MoodStore.moodOptions);
  *  - optionCreate/optionDelete 字典增删(写恒 POST,core 仅 GET/POST);上限 20/重名等服务端
  *    校验失败走 1_003_002_xxx 普通 BizError 通道由调用方 toast
- *  - ⚠ 查询参数直接拼 URL 而非走 core param 通道:core 各宿主对 GET param 转 query 的行为不一
- *    (仅 Android 有 createRequestUrl 拼 query),month 为 yyyy-MM 纯 URL 安全字符(数字+连字符),
- *    显式拼接五端行为一致
+ *  - ⚠ 查询参数经 network.queryPath 显式拼 URL(不走 core param 通道;「core 各宿主对 GET param
+ *    转 query 行为不一」的决策与理由收口至 queryPath 注,month 为 yyyy-MM 纯 URL 安全字符)
  *  - 未绑定回 1_003_004_003 走普通 BizError 通道由调用方 toast;本层不做 successBizCodes 放行
  *    (1_003_004_003 的状态信号放行是 couple/get 专用,§5.2)
  */
@@ -47,7 +46,7 @@ internal object MoodApi {
      * @param month yyyy-MM(如 2026-10),由调用方按当前展示月传入
      */
     suspend fun list(pager: Pager, month: String): ApiResult =
-        HttpClient.request(pager, "$PATH_RECORD_LIST?month=$month", isPost = false)
+        HttpClient.request(pager, queryPath(PATH_RECORD_LIST, "month" to month), isPost = false)
 
     /** 字典列表:data 为数组(sort asc, id asc 归服务端;空数组 = 空字典,端上走空态自愈) */
     suspend fun optionList(pager: Pager): ApiResult =

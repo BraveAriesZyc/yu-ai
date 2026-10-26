@@ -4,10 +4,13 @@ import androidx.compose.runtime.Composable
 import com.tencent.kuikly.compose.foundation.gestures.awaitEachGesture
 import com.tencent.kuikly.compose.foundation.gestures.awaitFirstDown
 import com.tencent.kuikly.compose.ui.Modifier
+import com.tencent.kuikly.compose.ui.focus.FocusManager
 import com.tencent.kuikly.compose.ui.input.pointer.PointerEventPass
 import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
 import com.tencent.kuikly.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import com.tencent.kuikly.compose.ui.platform.LocalFocusManager
+import com.tencent.kuikly.core.pager.Pager
+import com.zyc.love_baby.base.setTimeout
 import kotlin.math.abs
 
 /**
@@ -53,4 +56,21 @@ internal fun Modifier.dragDismissKeyboard(): Modifier {
             }
         }
     }
+}
+
+/**
+ * runAfterBlur — 铁律 16 单源:先清焦,action 迟一拍执行(原 ProfileEditFields/GatePanel/
+ * MoodOptionManageOverlay/ChatPage 四份同体,2026-10-26 收口)。
+ * 机制:compose clearFocus 只同步清 compose 焦点,原生 blur 经 setTimeout(0) 批处理异步落地;
+ * action 与 blur 同回合执行会竞速——持焦输入框带焦点被移除时,Android 把窗口焦点转给待办页
+ * 输入框(五页全驻留),Pager 滚去露出它 = 主界面乱滚(2026-10-18 ProfileEditOverlay 真机复现,
+ * 1570d07 根因)。action 推迟一拍入同一 MessageQueue,按入队序必然排在 blur 之后,卸载/切换时
+ * 树中已无持焦视图。
+ * 命名中性勿叫 dismiss:关浮层之外,ChatPage 语音/文本模式切换、GatePanel 登录面板切换同用。
+ * ⚠ 仅限 MainPager 横向 Pager 域内的浮层/面板(@Page 独立子页无待办页驻留问题,勿滥用);
+ * ⚠ 输入框祖先链不得加 focusProperties exit 拦截(ProfileEditFields 原注)
+ */
+internal fun Pager.runAfterBlur(focusManager: FocusManager, action: () -> Unit) {
+    focusManager.clearFocus()
+    setTimeout(0, action)
 }

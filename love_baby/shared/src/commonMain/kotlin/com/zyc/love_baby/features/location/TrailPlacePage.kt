@@ -22,12 +22,12 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.nvi.serialization.json.JSONArray
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.AMapNativeMap
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
@@ -135,7 +135,7 @@ internal fun TrailPlacePage(pager: TrailPlacePager) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BackFloatingButton {
-                pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                pager.closeLovePage()
             }
             if (pager.title.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(8.dp))

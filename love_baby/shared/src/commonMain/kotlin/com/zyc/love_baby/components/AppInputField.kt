@@ -47,7 +47,7 @@ internal fun AppInputField(
     placeholder: String,
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
-    containerColor: Color = Color(0xFFF5F6FA),
+    containerColor: Color = AppTheme.InputBg,
     trailing: (@Composable () -> Unit)? = null,
     keyboardHeightChange: (KeyboardParams) -> Unit = {},
     maxLines: Int = 1,

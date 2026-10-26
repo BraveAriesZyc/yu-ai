@@ -30,9 +30,9 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.components.AppDateCapsule
 import com.zyc.love_baby.components.AppEmptyHint
 import com.zyc.love_baby.components.AppIcon
@@ -61,7 +61,7 @@ import kotlinx.coroutines.launch
  *      返回键/closePage 返回。独立二级页(GalleryPager 同款壳,不走 MainPager 五 Tab)
  * 依赖:MessageApi.wishList(kind=2 只读视图,服务端按 id 倒序、快照四字段全量);
  *      TimeKit(chatDayIndex/chatDayLabelFriendly/chatHHmm);AppState(colorFromHex/appIconFromName);
- *      RouterModule(返回);ThemeStore(独立页主题自持)
+ *      closeLovePage(返回);ThemeStore(独立页主题自持)
  * 事件:返回钮 closePage;失败态「重试」重拉
  * 功能:
  *  - 数据页内自持(remember + LaunchedEffect 拉一次),不进 AppState——单页局部数据无跨页共享,
@@ -123,7 +123,7 @@ internal fun WishTimelinePage(pager: Pager) {
                     "心愿单",
                     "我们许过的每一个小心愿",
                     onBack = {
-                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                        pager.closeLovePage()
                     },
                 )
             }

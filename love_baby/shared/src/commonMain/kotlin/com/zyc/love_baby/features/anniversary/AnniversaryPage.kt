@@ -18,6 +18,7 @@ import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.foundation.layout.size
 import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
@@ -34,22 +35,25 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.module.RouterModule
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BasePager
+import com.zyc.love_baby.base.closeLovePage
 import com.zyc.love_baby.components.AppConfirmOverlay
 import com.zyc.love_baby.components.AppDatePickerOverlay
 import com.zyc.love_baby.components.AppEmptyHint
+import com.zyc.love_baby.components.AppOverlayCard
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppInputField
 import com.zyc.love_baby.components.AppLoadFailed
 import com.zyc.love_baby.components.AppLoading
+import com.zyc.love_baby.components.AppSegmentedChips
 import com.zyc.love_baby.components.AppSubPageHeader
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
+import com.zyc.love_baby.components.keyboardLiftBottomDp
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.components.rememberKeyboardHeight
 import com.zyc.love_baby.state.todayDayIndexGmt8
@@ -75,7 +79,7 @@ private val annivEmojiPresets = listOf("❤️", "🎂", "💍", "💌", "🌸",
  *      返回键/closePage 返回。独立二级页(WishTimelinePager 同款壳,不走 MainPager 五 Tab)
  * 依赖:AnniversaryStore(全局清单,首页第 4 列共消费,此处增删即时反映回首页);
  *      AppState 倒数纯函数(anniversaryCountdownLabel/sortedAnniversaries,跨天只重算不重拉);
- *      TimeKit.todayDayIndexGmt8;couple 组 toast 与 BindPrimaryButton;RouterModule(返回)
+ *      TimeKit.todayDayIndexGmt8;couple 组 toast 与 BindPrimaryButton;closeLovePage(返回)
  * 事件:返回钮 closePage;失败态「重试」重拉;行删除乐观移除(失败回滚+toast);FAB 开新增浮层
  * 功能:
  *  - 四态:加载中 / 失败重试 / 空态「还没有纪念日」/ 正常列表(展示序 = sortedAnniversaries:
@@ -152,7 +156,7 @@ internal fun AnniversaryPage(pager: Pager) {
                     "纪念日",
                     "重要的日子,都值得记住",
                     onBack = {
-                        pager.acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+                        pager.closeLovePage()
                     },
                 )
             }
@@ -264,7 +268,7 @@ private fun AnniversaryRow(item: AnniversaryInfo, todayIndex: Long, onDelete: ()
             val isToday = countdown == "就是今天"
             AppTag(
                 countdown,
-                bgColor = if (isToday) theme.brandStart.copy(alpha = 0.14f) else Color(0xFFF3F4F8),
+                bgColor = if (isToday) theme.brandStart.copy(alpha = 0.14f) else AppTheme.SecondaryBg,
                 textColor = if (isToday) theme.brandStart else AppTheme.TextSecondary,
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -328,34 +332,23 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-                // 键盘起时整体顶到键盘上方(原生 KeyboardParams.height 不含导航栏区域,TodoPage 输入条
-                // 同款几何),收起归零回正中;卡片紧凑,小屏 + 全键盘也放得下
-                .padding(
-                    bottom = if (keyboardHeight.value > 0f) {
-                        keyboardHeight.value.dp + navBarSafePaddingDp() + 12.dp
-                    } else {
-                        0.dp
-                    },
-                ),
+        // 键盘起时整体顶到键盘上方(补偿收口 components.keyboardLiftBottomDp = 键盘高+navBar+12,
+        // 与原件逐字一致),收起归零回正中;卡片紧凑,小屏 + 全键盘也放得下。灰幕由 AppOverlayCard
+        // 自带(原键盘补偿条区域无灰幕裸透,迁后全屏覆盖=净改善,记真机回归点);关闭动作
+        // clearFocus 前置逐字保真(键盘由输入行触发,TodoPage 浮层无灰幕是输入条场景)
+        AppOverlayCard(
+            onDismiss = {
+                focusManager.clearFocus()
+                onDismiss()
+            },
             contentAlignment = if (keyboardHeight.value > 0f) Alignment.BottomCenter else Alignment.Center,
-        ) {
-        // 灰幕:收键盘 + 关浮层一体(TodoPage 浮层无灰幕是输入条场景,本浮层键盘由输入行触发)
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
-                .clickable {
-                    focusManager.clearFocus()
-                    onDismiss()
-                },
-        )
-        Column(
-            modifier = Modifier.padding(horizontal = 28.dp)
-                .fillMaxWidth()
-                .background(AppTheme.CardBg, RoundedCornerShape(20.dp))
-                .clickable { } // 吞点击防透传(铁律⑤:background 与 clickable 同节点)
-                .padding(horizontal = 18.dp, vertical = 18.dp),
+            cardOuterPadding = PaddingValues(
+                start = 28.dp,
+                top = 0.dp,
+                end = 28.dp,
+                bottom = if (keyboardHeight.value > 0f) keyboardLiftBottomDp(keyboardHeight.value) else 0.dp,
+            ),
+            cardPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
         ) {
             Text(
                 "新增纪念日",
@@ -380,7 +373,7 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
                     Box(
                         modifier = Modifier.size(34.dp)
                             .background(
-                                if (selected) theme.brandStart.copy(alpha = 0.14f) else Color(0xFFF5F6FA),
+                                if (selected) theme.brandStart.copy(alpha = 0.14f) else AppTheme.InputBg,
                                 RoundedCornerShape(17.dp),
                             )
                             .clickable { emoji = annivEmojiPresets[index] },
@@ -396,7 +389,7 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .height(48.dp)
-                    .background(Color(0xFFF5F6FA), RoundedCornerShape(14.dp))
+                    .background(AppTheme.InputBg, RoundedCornerShape(14.dp))
                     .clickable {
                         focusManager.clearFocus()
                         showDatePicker = true
@@ -415,18 +408,15 @@ private fun AnniversaryAddOverlay(pager: Pager, todayIndex: Long, onDismiss: () 
                 AppIcon(AppIconType.ChevronRight, Color(0xFFC8CCD8), Modifier.size(16.dp))
             }
             Spacer(modifier = Modifier.height(10.dp))
-            // 重复类型胶囊(BindModeChips 同视觉,本域私有不复用 couple 组件)
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    .background(Color(0xFFF3F4F8), RoundedCornerShape(18.dp))
-                    .padding(3.dp),
-            ) {
-                AnnivChip("每年", repeatYearly, Modifier.weight(1f)) { repeatYearly = true }
-                AnnivChip("一次性", !repeatYearly, Modifier.weight(1f)) { repeatYearly = false }
-            }
+            // 重复类型选择(AppSegmentedChips 直替:R18+3dp 灰槽/chip R15 竖 9 内距/14sp
+            // 选中白底品牌加粗字,与原 AnnivChip 逐参一致;私有件退役,铁律③注释随组件单源)
+            AppSegmentedChips(
+                listOf("每年", "一次性"),
+                selectedIndex = if (repeatYearly) 0 else 1,
+                onSelect = { repeatYearly = it == 0 },
+            )
             Spacer(modifier = Modifier.height(16.dp))
             BindPrimaryButton(text = "添 加", submitting = adding) { submit() }
-        }
         }
 
         // 日期滚轮选择器(挂根 Box 直下,在键盘避让容器之外:面板 BottomCenter 贴屏幕底,
@@ -454,26 +444,4 @@ private fun annivDateLabel(key: String): String {
     val month = parts.getOrNull(1)?.toIntOrNull() ?: return key
     val day = parts.getOrNull(2)?.toIntOrNull() ?: return key
     return "${year}年${month}月${day}日"
-}
-
-/** 重复类型选中胶囊(BindModeChip 同视觉;选中换底色不改结构,铁律③) */
-@Composable
-private fun AnnivChip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(
-        modifier = modifier
-            .background(
-                if (selected) AppTheme.CardBg else Color.Transparent,
-                RoundedCornerShape(15.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(vertical = 9.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text,
-            color = if (selected) ThemeStore.current.brandStart else AppTheme.TextSecondary,
-            fontSize = 14.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-        )
-    }
 }

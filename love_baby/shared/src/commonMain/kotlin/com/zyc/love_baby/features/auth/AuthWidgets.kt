@@ -152,7 +152,7 @@ internal fun AuthCard(content: @Composable ColumnScope.() -> Unit) {
  * 输入行:白底圆角行内嵌输入行;薄壳委托 components/AppInputField(「容器定高 48dp +
  * 内容居中」铁律与原生 gravity workaround 注释随本体单源化;autoFocus 一律 false——
  * Gate 出现即自动弹键盘会顶起整屏,§7.3 反馈走 toast 不依赖自动聚焦,该约定由本体保证)。
- * containerColor 对齐原白卡视觉:AppInputField 默认浅灰底(0xFFF5F6FA,BindInputField 形态),
+ * containerColor 对齐原白卡视觉:AppInputField 默认浅灰底(AppTheme.InputBg,BindInputField 形态),
  * 本件覆写 CardBg(白)——Gate 品牌渐变上的白卡(AuthCard)内输入行沿用原白底
  */
 @Composable

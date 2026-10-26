@@ -30,17 +30,14 @@ import com.tencent.kuikly.compose.foundation.lazy.LazyRow
 import com.tencent.kuikly.compose.foundation.lazy.items
 import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
-import com.tencent.kuikly.compose.foundation.text.maxLength
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.graphics.Color
-import com.tencent.kuikly.compose.ui.text.TextStyle
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
-import com.zyc.love_baby.TextField
 import com.zyc.love_baby.components.AppCheckbox
 import com.zyc.love_baby.components.AppEmptyHint
 import com.zyc.love_baby.components.AppFilterChip
@@ -49,6 +46,7 @@ import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconButton
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppInputPill
 import com.zyc.love_baby.components.AppTag
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
@@ -94,7 +92,7 @@ private val TODO_TAG_COLORS = mapOf(
  * 用法:TodoPage(pager, deleteTargetId, onSetDeleteTarget),数据与过滤状态在 TodoStore(全局,
  *      切 Tab 不丢);写操作经 pager 走 app-api;删除确认状态提升 MainPager(M18:本页是 Tab 页,
  *      页内浮层盖不住浮岛底栏,铁律 14——ChatRecallConfirmOverlay 同款双通道接线)
- * 依赖:TodoStore/ThemeStore/AppIcons/BasicWidget.TextField(String placeholder, keyboardHeightChange)
+ * 依赖:TodoStore/ThemeStore/AppIcons/components.AppInputPill(内置 BasicWidget.TextField 输入胶囊)
  * 事件:勾选完成/添加 → TodoStore 写穿透(乐观更新失败回滚,失败 toastCoupleResult);删除 →
  *      onSetDeleteTarget 置 id 弹 MainPager 根级确认浮层,确认后 MainPager 调 TodoStore.delete;
  *      进入首组合 loadAll 全量拉取,再进本页由 MainPager 切 Tab 触发补拉(§7.4 拉取触发点);
@@ -285,27 +283,17 @@ fun TodoPage(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .background(AppTheme.CardBg, RoundedCornerShape(22.dp)),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    TextField(
-                        value = inputText,
-                        onValueChange = { inputText = it.take(TODO_INPUT_MAX_LENGTH) },
-                        placeholder = "想做点什么?",
-                        autoFocus = false,
-                        placeholderColor = AppTheme.TextTertiary,
-                        textStyle = TextStyle(color = AppTheme.TextPrimary, fontSize = 13.sp),
-                        maxLines = 3, // 长文本限 3 行竖向生长,不在 22dp 胶囊里无限撑高(2026-10-16 F15 对齐聊天页)
-                        keyboardHeightChange = onKeyboardHeightChange, // 写键盘高度:输入条顶起 + 尾 Spacer 长高
-                        modifier = Modifier.fillMaxWidth()
-                            // 单行≈44dp 与添加钮等高(22dp 胶囊圆角恰为高之半,原 6dp 压成 ~30dp
-                            // 矮墩圆角被钳制)+ 触达舒适;3 行时自然长高,底部锚定向上生长
-                            .padding(horizontal = 14.dp, vertical = 13.dp)
-                            .maxLength(TODO_INPUT_MAX_LENGTH), // 原生层拒绝超限输入,与 take 兜底双保险
-                    )
-                }
+                // 输入域(AppInputPill 单源:白 R22 胶囊 + 13sp/maxLines 3 竖向生长/内距 14·13
+                // 单行≈44dp 与添加钮等高/maxLength 原生拒超限与 take 双保险);
+                // 键盘高度回调透传驱动输入条顶起 + 列表尾 Spacer 长高(F15 几何细节随组件)
+                AppInputPill(
+                    value = inputText,
+                    onValueChange = { inputText = it.take(TODO_INPUT_MAX_LENGTH) },
+                    placeholder = "想做点什么?",
+                    maxLength = TODO_INPUT_MAX_LENGTH,
+                    modifier = Modifier.weight(1f),
+                    onKeyboardHeightChange = onKeyboardHeightChange,
+                )
                 Spacer(modifier = Modifier.width(10.dp))
                 // 添加按钮(POST 成功才清输入:失败保留文案可重试,无脏数据 §7.4)
                 AppIconButton(

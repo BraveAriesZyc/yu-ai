@@ -40,12 +40,14 @@ import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.openLovePage
 import com.zyc.love_baby.components.AppCheckbox
 import com.zyc.love_baby.components.AppCheckBadge
+import com.zyc.love_baby.components.AppGhostIconButton
 import com.zyc.love_baby.components.AppGradientHeader
 import com.zyc.love_baby.components.AppHeaderTitle
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconTile
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.components.AppPrimaryButton
+import com.zyc.love_baby.components.AppRingDot
 import com.zyc.love_baby.components.AppSectionTitle
 import com.zyc.love_baby.components.AppSelectableCard
 import com.zyc.love_baby.components.AppTag
@@ -384,14 +386,14 @@ private fun MoodCalendarCard(
             Spacer(modifier = Modifier.width(6.dp))
             Text("每日心情", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.weight(1f))
-            MonthNavButton(AppIconType.ChevronLeft) { switchMonth(-1) }
+            AppGhostIconButton(AppIconType.ChevronLeft, { switchMonth(-1) }, size = 26.dp, iconSize = 14.dp)
             Text(
                 if (year == 0) "—" else "${year}年${month}月",
                 color = AppTheme.TextPrimary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
             )
-            MonthNavButton(AppIconType.ChevronRight) { switchMonth(1) }
+            AppGhostIconButton(AppIconType.ChevronRight, { switchMonth(1) }, size = 26.dp, iconSize = 14.dp)
         }
         Spacer(modifier = Modifier.height(10.dp))
         // 星期表头(周一..周日,与日历格首列对齐)
@@ -436,7 +438,7 @@ private fun MoodCalendarCard(
             Spacer(modifier = Modifier.width(4.dp))
             Text("我", color = AppTheme.TextTertiary, fontSize = 10.sp)
             Spacer(modifier = Modifier.width(12.dp))
-            MoodRingDot(theme.brandStart)
+            AppRingDot(theme.brandStart)
             Spacer(modifier = Modifier.width(4.dp))
             Text("TA", color = AppTheme.TextTertiary, fontSize = 10.sp)
             Spacer(modifier = Modifier.weight(1f))
@@ -459,7 +461,7 @@ private fun MoodCalendarCard(
             // 空字典空态(模板空/全被删):整行提示,点按即开管理浮层(空态自愈入口)
             Box(
                 modifier = Modifier.fillMaxWidth()
-                    .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp))
+                    .background(AppTheme.InputBg, RoundedCornerShape(12.dp))
                     .clickable { onOpenManage() }
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
@@ -493,19 +495,6 @@ private fun MoodCalendarCard(
         ) {
             onRecord()
         }
-    }
-}
-
-/** 月份切换圆钮:clickable 与透明背景同节点(铁律⑤,命中测试以背景视图为准) */
-@Composable
-private fun MonthNavButton(icon: AppIconType, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier.size(26.dp)
-            .background(Color.Transparent, RoundedCornerShape(13.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        AppIcon(icon, AppTheme.TextSecondary, Modifier.size(14.dp))
     }
 }
 
@@ -549,26 +538,10 @@ private fun MoodDayCell(day: Int?, dateKey: String, today: String, modifier: Mod
             Box(modifier = Modifier.size(11.dp), contentAlignment = Alignment.Center) {
                 if (partner != null) {
                     val color = moodRecordColor(partner, AppTheme.TextTertiary)
-                    MoodRingDot(color)
+                    AppRingDot(color)
                 }
             }
         }
-    }
-}
-
-/** 空心环圆点(TA 标识):嵌套容器画环(原生 border 描边不跟随圆角,环/填充分属两个原生视图) */
-@Composable
-private fun MoodRingDot(color: Color, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.size(9.dp)
-            .background(color, RoundedCornerShape(4.5.dp)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .padding(2.dp)
-                .background(AppTheme.CardBg, RoundedCornerShape(2.5.dp)),
-        )
     }
 }
 
@@ -587,7 +560,7 @@ private fun MoodOptionChip(
     Column(
         modifier = modifier
             .background(
-                if (selected) ThemeStore.current.brandStart else Color(0xFFF5F6FA),
+                if (selected) ThemeStore.current.brandStart else AppTheme.InputBg,
                 RoundedCornerShape(12.dp),
             )
             .clickable(onClick = onSelect)
@@ -613,7 +586,7 @@ private fun MoodOptionChip(
 private fun ManageMoodChip(onClick: () -> Unit) {
     Column(
         modifier = Modifier
-            .background(Color(0xFFF5F6FA), RoundedCornerShape(12.dp))
+            .background(AppTheme.InputBg, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

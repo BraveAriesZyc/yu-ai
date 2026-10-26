@@ -17,8 +17,8 @@ import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.foundation.layout.size
-import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
+import com.tencent.kuikly.compose.foundation.layout.PaddingValues
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
@@ -30,13 +30,15 @@ import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.FileModule
-import com.zyc.love_baby.base.setTimeout
+import com.zyc.love_baby.components.AppDialogButtonRow
 import com.zyc.love_baby.components.AppIcon
 import com.zyc.love_baby.components.AppIconType
+import com.zyc.love_baby.components.AppOverlayCard
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.components.rememberKeyboardHeight
+import com.zyc.love_baby.components.runAfterBlur
 import com.zyc.love_baby.features.couple.BindInputField
 import com.zyc.love_baby.features.couple.toastCouple
 import com.zyc.love_baby.features.couple.toastCoupleResult
@@ -57,8 +59,8 @@ import kotlin.coroutines.suspendCoroutine
  *    居中偏上放置——Kuikly 窗口不 resize 键盘纯遮挡(轮16 锤实模型),贴底会被键盘盖住)
  *  - uploadAvatarAndUpdate/isValidBirthday:自 ProfileEditOverlay.kt 原样迁入(文件随大
  *    浮层废除删除,同包零 import 变化)
- * 共同约定:dismiss 收口照铁律 16(先 clearFocus 再 setTimeout(0) 卸载——blur 批处理与
- * onDismiss 同队列按入队序执行,持焦输入框不会带焦被移除);保存语义与 UserUpdateReq
+ * 共同约定:dismiss 收口照铁律 16(components.runAfterBlur 单源——先清焦再迟一拍卸载,blur
+ * 批处理与 action 同队列按入队序执行,持焦输入框不会带焦被移除);保存语义与 UserUpdateReq
  * 守卫对齐(昵称空串拦截/签名 trim 含空串=清空/全等不打请求);sex 选中≠现值才传,
  * 选中后不可取消
  */
@@ -79,24 +81,22 @@ internal fun SexPickerOverlay(
     onPick: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { if (!saving) onDismiss() },
+    AppOverlayCard(
+        onDismiss = { if (!saving) onDismiss() },
+        busy = saving, // 保存中拦灰幕(语义保真;行点击的 enabled=!saving 闸仍在行内)
         contentAlignment = Alignment.BottomCenter,
+        cardOuterPadding = PaddingValues(horizontal = 0.dp),
+        // top-only 四参圆角(AppDatePickerOverlay 生产先例,Kuikly 不裁屏幕边缘——
+        // 单参全圆角底部缺口会透灰幕)
+        cardShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 0.dp, bottomStart = 0.dp),
+        // navBarSafe 底垫防手势区压行(原两段 padding 合一)
+        cardPadding = PaddingValues(
+            start = 20.dp,
+            top = 14.dp,
+            end = 20.dp,
+            bottom = navBarSafePaddingDp() + 12.dp,
+        ),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-                // top-only 四参圆角(AppDatePickerOverlay 生产先例,Kuikly 不裁屏幕边缘——
-                // 单参全圆角底部缺口会透灰幕)+ navBarSafe 底垫防手势区压行
-                .background(
-                    AppTheme.CardBg,
-                    RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 0.dp, bottomStart = 0.dp),
-                )
-                .clickable { } // 空 clickable 吞点击防透传
-                .padding(horizontal = 20.dp)
-                .padding(top = 14.dp, bottom = navBarSafePaddingDp() + 12.dp),
-        ) {
             Text(
                 "选择性别",
                 color = AppTheme.TextPrimary,
@@ -113,7 +113,6 @@ internal fun SexPickerOverlay(
                     .background(AppTheme.Divider),
             )
             SexPickerRow("男", selected = current == 1, enabled = !saving) { onPick(1) }
-        }
     }
 }
 
@@ -138,7 +137,7 @@ private fun SexPickerRow(label: String, selected: Boolean, enabled: Boolean, onC
  * FieldInputOverlay — 单字段输入卡(昵称/个性签名共用)
  * 用法:挂 ProfilePage 根;onSave 回调 trim 后草稿,调用方校验+updateUser+回填+关浮层
  * 依赖:features.couple.BindInputField(48dp 容器定高+内容居中,全仓输入框统一模式);
- *      base.setTimeout(dismiss 收口)
+ *      components.runAfterBlur(dismiss 收口)
  * 事件:灰幕/取消 → dismiss(saving 拦);确认 → onSave(draft.trim())
  * 功能:预填现值+右下字数计数 x/maxLength;垂直居中略偏上(Center:键盘收 bottom=140 静态
  *      补偿,键盘起 bottom=键盘高+navBar+12 动态顶升躲键盘遮挡——纯居中/静态 140 在矮屏
@@ -159,91 +158,61 @@ internal fun FieldInputOverlay(
     val (keyboardHeight, onKeyboardHeightChange) = rememberKeyboardHeight()
     val focusManager = LocalFocusManager.current
 
-    // dismiss 收口(铁律 16,ProfileEditOverlay 同款简化):先清焦再推后一拍卸载——compose
-    // clearFocus 只同步清 compose 焦点,原生 blur 经 setTimeout(0) 批处理异步落地;同队列
-    // 按入队序执行,blur 必然先于浮层卸载,持焦输入框不会带焦被移除(Android 焦点自动
-    // 转移致 Pager 自滚的 1570d07 根因)。⚠ 输入框祖先链不得加 focusProperties exit 拦截
+    // dismiss 收口(铁律 16):components.runAfterBlur 单源(先清焦再推后一拍卸载,机制详见
+    // 该件 KDoc——blur 批处理必然先于卸载,持焦输入框不会带焦被移除,1570d07 根因)。
+    // ⚠ 输入框祖先链不得加 focusProperties exit 拦截
     fun dismiss() {
-        focusManager.clearFocus()
-        pager.setTimeout(0) { onDismiss() }
+        pager.runAfterBlur(focusManager) { onDismiss() }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { if (!saving) dismiss() },
-        // 垂直居中略偏上:键盘收时 bottom=140 静态补偿(视觉中心比屏中心高 70dp,半强换算
-        // bottom/2);键盘纯遮挡模型窗口不 resize,top 92dp 顶置被真机否决「没有居中」,
-        // 静态 140 在 ≤720dp 矮屏上键盘弹起会盖住按钮行(对抗验证 major)——键盘起切动态
-        // bottom=键盘高+navBar+12,卡片整体居中于键盘上方可见区(800dp 屏净空+149/640dp +69)
-        contentAlignment = Alignment.Center,
+    // 垂直居中略偏上:键盘收时 bottom=140 静态补偿(视觉中心比屏中心高 70dp,半强换算
+    // bottom/2);键盘纯遮挡模型窗口不 resize,top 92dp 顶置被真机否决「没有居中」,
+    // 静态 140 在 ≤720dp 矮屏上键盘弹起会盖住按钮行(对抗验证 major)——键盘起切动态
+    // bottom=键盘高+navBar+12,卡片整体居中于键盘上方可见区(800dp 屏净空+149/640dp +69)
+    val bottomPad = if (keyboardHeight.value > 0f) {
+        keyboardHeight.value.dp + navBarSafePaddingDp() + 12.dp
+    } else {
+        140.dp
+    }
+    AppOverlayCard(
+        onDismiss = { if (!saving) dismiss() },
+        busy = saving, // 保存中拦灰幕(语义保真;取消/确认的 !saving 闸仍在回调侧)
+        cardOuterPadding = PaddingValues(start = 28.dp, top = 0.dp, end = 28.dp, bottom = bottomPad),
+        cardCorner = 24.dp,
     ) {
-        // Kuikly padding 无 top+horizontal 混合 named 重载,链两个已知重载等价
-        val bottomPad = if (keyboardHeight.value > 0f) {
-            keyboardHeight.value.dp + navBarSafePaddingDp() + 12.dp
-        } else {
-            140.dp
-        }
-        Column(
-            modifier = Modifier.padding(bottom = bottomPad)
-                .padding(horizontal = 28.dp)
-                .fillMaxWidth()
-                .background(AppTheme.CardBg, RoundedCornerShape(24.dp))
-                .clickable { } // 空 clickable 吞点击防透传
-                .padding(horizontal = 20.dp, vertical = 22.dp),
-        ) {
-            Text(title, color = AppTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(14.dp))
-            BindInputField(
-                value = draft,
-                onValueChange = { draft = it.take(maxLength) },
-                placeholder = placeholder,
-                keyboardHeightChange = onKeyboardHeightChange,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                "${draft.length}/$maxLength",
-                color = AppTheme.TextTertiary,
-                fontSize = 11.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.End,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Row {
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .height(42.dp)
-                        .background(Color(0xFFF3F4F8), RoundedCornerShape(21.dp))
-                        .clickable { if (!saving) dismiss() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("取消", color = AppTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = AppTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(14.dp))
+        BindInputField(
+            value = draft,
+            onValueChange = { draft = it.take(maxLength) },
+            placeholder = placeholder,
+            keyboardHeightChange = onKeyboardHeightChange,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "${draft.length}/$maxLength",
+            color = AppTheme.TextTertiary,
+            fontSize = 11.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.End,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        AppDialogButtonRow(
+            leftText = "取消",
+            rightText = if (saving) "保存中…" else "确认",
+            onLeft = { if (!saving) dismiss() },
+            onRight = {
+                if (!saving) {
+                    // 确认即清焦(覆盖 onSave 三路:保存成功卸载/全等直关/失败保留浮层)——
+                    // 输入框不带焦被移除,本控件复用到 MainPager 域(多输入框+横向 Pager)
+                    // 不复现 1570d07 关浮层自滚
+                    focusManager.clearFocus()
+                    onSave(draft.trim())
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(
-                    modifier = Modifier.weight(1f)
-                        .height(42.dp)
-                        .background(ThemeStore.current.brandBrush, RoundedCornerShape(21.dp))
-                        // 确认即清焦(覆盖 onSave 三路:保存成功卸载/全等直关/失败保留浮层)——
-                        // 输入框不带焦被移除,本控件复用到 MainPager 域(多输入框+横向 Pager)
-                        // 不复现 1570d07 关浮层自滚
-                        .clickable {
-                            if (!saving) {
-                                focusManager.clearFocus()
-                                onSave(draft.trim())
-                            }
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        if (saving) "保存中…" else "确认",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-        }
+            },
+            rightBrush = ThemeStore.current.brandBrush,
+            rightFontWeight = FontWeight.Bold,
+        )
     }
 }
 

@@ -45,3 +45,15 @@ internal fun Pager.openLovePage(name: String, params: JSONObject = JSONObject())
     } catch (_: Exception) {
     }
 }
+
+/**
+ * 路由关闭当前二级页(退栈回上级):与 openLovePage 同款 try/catch(铁律 9,acquireModule 失败
+ * 双抛接不住)。原各二级页「返回键 pager.acquireModule<RouterModule>(...).closePage()」15 处同体
+ * 2026-10-26 收口单源;模板基准件 ImageAdapterBenchmarks 按保留政策不直替
+ */
+internal fun Pager.closeLovePage() {
+    try {
+        acquireModule<RouterModule>(RouterModule.MODULE_NAME).closePage()
+    } catch (_: Exception) {
+    }
+}

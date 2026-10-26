@@ -37,7 +37,7 @@ internal fun AppSegmentedChips(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    containerBg: Color = Color(0xFFF3F4F8),
+    containerBg: Color = AppTheme.SecondaryBg,
     unselectedTextColor: Color = AppTheme.TextSecondary,
 ) {
     Row(

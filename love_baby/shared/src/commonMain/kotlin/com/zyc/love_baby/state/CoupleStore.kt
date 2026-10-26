@@ -11,8 +11,6 @@ import com.zyc.love_baby.data.model.CoupleOnlineInfo
 import com.zyc.love_baby.data.model.InviteInfo
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.CoupleApi
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 
 /**
  * CoupleStore — 全局情侣绑定状态(SessionStore/ThemeStore 三件套范式,INTEGRATION-DESIGN §7.3 三态状态机)
@@ -246,8 +244,4 @@ internal object CoupleStore {
         partnerOnline = null
         refreshFailed = false
     }
-
-    /** commonMain 墙钟毫秒(kotlin.time.Clock,SessionStore 同款) */
-    @OptIn(ExperimentalTime::class)
-    private fun nowEpochMs(): Long = Clock.System.now().toEpochMilliseconds()
 }
