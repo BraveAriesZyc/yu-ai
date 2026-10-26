@@ -44,6 +44,7 @@ import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.DailyQuestionStore
 import com.zyc.love_baby.state.EmojiStore
 import com.zyc.love_baby.state.LocationStore
 import com.zyc.love_baby.state.LoveConfigStore
@@ -492,6 +493,8 @@ internal fun MainPageImpl(pager: BasePager) {
                 // 电量/位置共享清场(M26):快照/开关/轨迹地址缓存全复位,防换号残留
                 BatteryStore.reset()
                 LocationStore.reset()
+                // 每日一问今日题态清场(M32):题目页与首页条共用,防换号残留
+                DailyQuestionStore.reset()
             }
         }
 
@@ -512,6 +515,8 @@ internal fun MainPageImpl(pager: BasePager) {
                 // 电量/位置共享清场(M26):上一段关系的快照/开关/轨迹缓存不得带给新伴侣
                 BatteryStore.reset()
                 LocationStore.reset()
+                // 每日一问今日题态清场(M32):旧关系的作答态不得带给新伴侣
+                DailyQuestionStore.reset()
             }
         }
 

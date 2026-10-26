@@ -41,6 +41,7 @@ import com.zyc.love_baby.components.AppStatItem
 import com.zyc.love_baby.components.AppTheme
 import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
+import com.zyc.love_baby.features.dailyquestion.openDailyQuestion
 import com.zyc.love_baby.state.todayDayIndexGmt8
 import com.zyc.love_baby.features.location.openLocationPage
 import com.zyc.love_baby.features.report.openMonthlyReport
@@ -51,6 +52,7 @@ import com.zyc.love_baby.state.ChatStore
 import com.zyc.love_baby.state.CheckinStore
 import com.zyc.love_baby.state.CoupleBindState
 import com.zyc.love_baby.state.CoupleStore
+import com.zyc.love_baby.state.DailyQuestionStore
 import com.zyc.love_baby.state.StatsStore
 import com.zyc.love_baby.state.TodoStore
 import com.zyc.love_baby.state.nextAnniversaryCountdownDays
@@ -83,6 +85,8 @@ fun HomePage(
         // 校准,冷启动长时陈旧(M18 修复)——syncToday 拉当月只校准 flags,不动打卡页月缓存
         CheckinStore.loadSummary(pager)
         CheckinStore.syncToday(pager)
+        // 每日一问条(M32):today 供条上状态文案,题目页与条共用同一事实源
+        DailyQuestionStore.loadToday(pager)
     }
     LazyColumn(modifier = Modifier.fillMaxSize().background(theme.bg)) {
         item {
@@ -93,6 +97,13 @@ fun HomePage(
             Column(modifier = Modifier.padding(horizontal = AppTheme.PageHPadding)) {
                 Spacer(modifier = Modifier.height(36.dp)) // 避让悬浮统计卡(offset y=20dp 伸出)
                 TodayCheckinEntry(
+                    pager = pager,
+                    bound = CoupleStore.bindState == CoupleBindState.BOUND,
+                )
+                // 每日一问条(M32):与打卡条同形态横条;today 状态吃 DailyQuestionStore(答题
+                // 回首页即时翻转),未绑定显引导不设守卫
+                Spacer(modifier = Modifier.height(12.dp))
+                DailyQuestionEntry(
                     pager = pager,
                     bound = CoupleStore.bindState == CoupleBindState.BOUND,
                 )
@@ -327,6 +338,58 @@ private fun TodayCheckinEntry(pager: Pager, bound: Boolean) {
                 fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.width(6.dp))
+        }
+        if (bound) {
+            AppIcon(AppIconType.ChevronRight, Color(0xFFC8CCD8), Modifier.size(16.dp))
+        }
+    }
+}
+
+/**
+ * 每日一问条(M32):与今日打卡条同形态(emoji 方块 + 状态文案横条),onClick 开每日一问独立页。
+ * 状态文案吃 DailyQuestionStore.today(today == null 含「未拉到」与「今日无题」两态,统一显
+ * 引导文案不挡入口);答题后回首页随 Store 即时翻转
+ */
+@Composable
+private fun DailyQuestionEntry(pager: Pager, bound: Boolean) {
+    val theme = ThemeStore.current
+    val today = DailyQuestionStore.today
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .background(AppTheme.CardBg, RoundedCornerShape(16.dp))
+            .clickable { if (bound) openDailyQuestion(pager) }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // 💬 方块(TodayCheckinEntry 🔥 方块同视觉)
+        Box(
+            modifier = Modifier.size(38.dp)
+                .background(theme.brandStart.copy(alpha = 0.10f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("💬", fontSize = 18.sp)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "每日一问",
+                color = AppTheme.TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                when {
+                    !bound -> "绑定后和 TA 一天一题"
+                    today == null -> "今天也来聊聊吧"
+                    today.revealed -> "已揭晓,看看 TA 写了什么"
+                    today.myAnswer.isNotEmpty() -> "我已答,等 TA 中"
+                    today.partnerAnswered -> "TA 已答,就差你啦"
+                    else -> "还没人回答,写下你的想法"
+                },
+                color = AppTheme.TextTertiary,
+                fontSize = 11.sp,
+            )
         }
         if (bound) {
             AppIcon(AppIconType.ChevronRight, Color(0xFFC8CCD8), Modifier.size(16.dp))
