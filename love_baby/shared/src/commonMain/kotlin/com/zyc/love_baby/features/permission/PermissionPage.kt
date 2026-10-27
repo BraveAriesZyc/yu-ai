@@ -24,6 +24,7 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
+import com.tencent.kuikly.core.pager.IPagerEventObserver
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.reactive.handler.observable
@@ -54,6 +55,12 @@ internal const val PERMISSION_PAGE_NAME = "permissionPage"
  *  KEY_PERM_SNAPSHOT 同串双源,勿单改一边) */
 private const val PERM_SNAPSHOT_KEY = "permSnapshot"
 
+/** 宿主回前台重推快照事件名(M36;androidApp PermissionSnapshot EVENT_PERM_SNAPSHOT
+ *  同串双源,勿单改一边):从系统设置/应用详情返回本页,宿主 onResume 重采快照经
+ *  delegator.sendEvent 直推,本页观察者收包落态——模块回调在本页静默丢失[M29 实证],
+ *  pageDidAppear 的逐组模块重查在 Android 到不了包,推送是本端唯一可靠刷新通道 */
+private const val PERM_PUSH_EVENT = "permSnapshotPush"
+
 /**
  * 路由打开权限管理页(base.openLovePage 收口,try/catch 吞未桥接端在 helper 内统一处理)
  */
@@ -76,7 +83,8 @@ internal fun openPermissionPage(pager: Pager) {
  *      提醒」行 openChannelSettings(渠道重要性/横幅开关所在页);「前往系统设置」直跳 App 级
  *      通知设置;定位行恒有响应——未开启 requestLocThenGuide(运行时申请,被拒带去应用详情
  *      页),已开启 openLocationSettings(应用详情页「权限 → 位置权限」= 权限获取页);从系统
- *      设置返回经 pageDidAppear 重查状态即时刷新
+ *      设置返回即时刷新——Android 走宿主 onResume 快照推送(M36,见 PERM_PUSH_EVENT 注),
+ *      其余端经 pageDidAppear 逐组模块重查(回调可达时同值幂等)
  * 功能:
  *  - 六行结构(2026-10-19 悬浮通知真机反馈轮定稿;M29 权限全面状态化):
  *    ① 消息通知:App 级总开关断言行(已开启/已关闭),已关闭可点=「去开启」全路径;
@@ -168,17 +176,26 @@ internal class PermissionPager : BasePager() {
         // 注快照,四组查询与模块 check 回包同一原生 companion 单源;模块 refresh 仍在(回调
         // 若通,到包同值幂等刷),无快照端(iOS/ohos/H5)保持逐组查询+超时兜底链
         seedFromPageData()
+        // 回前台重推(M36):Android 宿主 onResume 重采快照 sendEvent 直推(见 PERM_PUSH_EVENT
+        // 注),同一单源同一解析,从系统设置/应用详情改完权限返回即见真值;观察者在 willInit
+        // 挂上,推送早于挂载只会发生在冷启动首现(pageData 播种已覆盖,丢包无感)
+        addPagerEventObserver(object : IPagerEventObserver {
+            override fun onPagerEvent(pagerEvent: String, eventData: JSONObject) {
+                if (pagerEvent == PERM_PUSH_EVENT) {
+                    applyPermSnapshot(eventData.optString(PERM_SNAPSHOT_KEY))
+                }
+            }
+        })
         setContent {
             PermissionPage(this)
         }
     }
 
-    /** 解析宿主直注快照并播种四组状态(各 checked 即置真,首帧不闪「查询中」也不吃超时
-     *  兜底;解析失败/无快照静默留空,走常规查询链) */
-    private fun seedFromPageData() {
+    /** 解析宿主快照并播种四组状态(pageData 首帧播种/回前台推送共用;各 checked 即置真,
+     *  首帧不闪「查询中」也不吃超时兜底;解析失败/空串静默,走常规查询链) */
+    private fun applyPermSnapshot(raw: String) {
+        if (raw.isEmpty()) return
         try {
-            val raw = pageData.params.optString(PERM_SNAPSHOT_KEY)
-            if (raw.isEmpty()) return
             val snapshot = JSONObject(raw)
             permState = NotifyPermState(
                 appGranted = snapshot.optBoolean("appGranted", false),
@@ -203,13 +220,22 @@ internal class PermissionPager : BasePager() {
         }
     }
 
+    private fun seedFromPageData() {
+        try {
+            applyPermSnapshot(pageData.params.optString(PERM_SNAPSHOT_KEY))
+        } catch (_: Exception) {
+        }
+    }
+
     override fun didInit() {
         super.didInit()
         // 无参数端(iOS/鸿蒙/H5)兜底
         ThemeStore.restore(this)
     }
 
-    /** 从系统设置返回即重触发(一页一 Activity:设置页压顶,返回本页 onResume→didAppear) */
+    /** 从系统设置返回即重触发(一页一 Activity:设置页压顶,返回本页 onResume→didAppear)。
+     *  Android 真值由宿主快照推送承载(M36:本页模块回调静默丢失[M29 实证],这四次逐组
+     *  重查的回调到不了包),此处保留为回调可达端(iOS/ohos/H5)的重查通道+同值幂等兜底 */
     override fun pageDidAppear() {
         super.pageDidAppear()
         refresh()
@@ -412,7 +438,8 @@ internal class PermissionPager : BasePager() {
 @Composable
 internal fun PermissionPage(pager: PermissionPager) {
     val theme = ThemeStore.current
-    // 进页首查(独立 @Page 组合在即活动在;从设置返回由 pageDidAppear 兜);通知/定位/麦克风/
+    // 进页首查(独立 @Page 组合在即活动在;从设置返回 Android 由宿主推送兜、余端 pageDidAppear
+    // 模块重查兜);通知/定位/麦克风/
     // 相册读四组并行
     LaunchedEffect(Unit) {
         pager.refresh()

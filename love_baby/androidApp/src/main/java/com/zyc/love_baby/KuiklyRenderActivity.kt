@@ -175,6 +175,17 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
     override fun onResume() {
         super.onResume()
         kuiklyRenderViewDelegator.onResume()
+        // 权限页状态回前台重推(M36):pageData 快照只在创建时读一次,从系统设置/应用详情
+        // 改完权限返回时已是旧值,而模块回调在本页静默丢失[M29 实证]——pageDidAppear 的
+        // 逐组模块重查到不了包。改由宿主重采快照经 delegator.sendEvent 直推(与首帧播种
+        // 同一 PermissionSnapshot 单源,common 侧事件观察者落态),回页即真值;
+        // renderView 未就绪时事件由 delegator 排队,core 未初始化时由渲染层 lazy 队列兜住
+        if (pageName == PAGE_PERMISSION) {
+            kuiklyRenderViewDelegator.sendEvent(
+                PermissionSnapshot.EVENT_PERM_SNAPSHOT,
+                mapOf(PermissionSnapshot.KEY_PERM_SNAPSHOT to PermissionSnapshot.build(this))
+            )
+        }
     }
 
     override fun registerExternalModule(kuiklyRenderExport: IKuiklyRenderExport) {

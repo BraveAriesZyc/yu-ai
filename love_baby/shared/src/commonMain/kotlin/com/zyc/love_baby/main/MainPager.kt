@@ -564,6 +564,14 @@ internal fun MainPageImpl(pager: BasePager) {
         // foregroundTick 初始 0 不触发(冷启动校准由上面的 isLoggedIn effect 负责)
         LaunchedEffect(CoupleStore.foregroundTick) {
             if (CoupleStore.foregroundTick > 0 && SessionStore.isLoggedIn) {
+                // 资料同步新(M36):从资料页改头像/昵称返回即见——一页一 Activity 模型下返回=
+                // 本 Activity onResume→viewDidAppear→pageDidAppear→foregroundTick,恰好覆盖
+                // 该时点;此前 foreground 链刷了六个 Store 唯独漏掉 MainPager 自持的 profile
+                // (组合态不进 Store 体系,加链时被遗忘),MinePage/首页头像昵称不吃这条链
+                // 只能等重进 App。失败静默保留现值(与上方首拉同口径)
+                UserApi.getUser(pager).let { result ->
+                    if (result is ApiResult.Ok) profile = UserProfile.from(result.data)
+                }
                 CoupleStore.refresh(pager)
                 // 统计同步新(发消息/待办/心情后回前台即可见最新计数)
                 StatsStore.refresh(pager)
