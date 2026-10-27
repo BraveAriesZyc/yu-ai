@@ -148,6 +148,8 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
 
     /** 权限申请结果统一转发:页面主动申请(METHOD_REQUEST)经 KRNotificationModule 静态
      *  桥回传 common;自动请求(本类 onCreate)无 pending 静默丢弃。
+     *  M36.1 追加:结果落地(权限页时)——运行时弹框不走生命周期往返,模块回调链在本页
+     *  又真机不可达[M29 实证],这里写 prefs 快照+时间戳是权限页轮询唯一的推进信号。
      *  M23 录音(RECORD_AUDIO)转发 KRFileModule 静态桥(request code 错开,双静态槽互不误收);
      *  M24 十三轮相册弹层读库权限同款第三槽(2003);
      *  M26 定位双权限(FINE/COARSE any-granted)同款第四槽(2004);
@@ -160,6 +162,7 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
         KRLocationModule.onPermissionResult(requestCode, grantResults)
         KRFileModule.onMicPermissionResult(requestCode, grantResults)
         KRFileModule.onMediaRequestPermissionResult(requestCode, grantResults)
+        persistPermSnapshot()
     }
 
     override fun onDestroy() {
@@ -175,16 +178,31 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
     override fun onResume() {
         super.onResume()
         kuiklyRenderViewDelegator.onResume()
-        // 权限页状态回前台重推(M36):pageData 快照只在创建时读一次,从系统设置/应用详情
-        // 改完权限返回时已是旧值,而模块回调在本页静默丢失[M29 实证]——pageDidAppear 的
-        // 逐组模块重查到不了包。改由宿主重采快照经 delegator.sendEvent 直推(与首帧播种
-        // 同一 PermissionSnapshot 单源,common 侧事件观察者落态),回页即真值;
-        // renderView 未就绪时事件由 delegator 排队,core 未初始化时由渲染层 lazy 队列兜住
+        // 权限页状态回前台刷新(M36.1):pageData 快照只在创建时读一次,从系统设置/应用详情
+        // 改完权限返回时已是旧值,而宿主→core 的桥调用在本页真机不可达[M29 回调同死实证;
+        // M36.0 曾走 delegator.sendEvent 事件推送,静态链路逐环可证仍无效,已废]——改落
+        // prefs:重采快照+时间戳写进 KRSharedPreferencesModule 文件(纯 Android API,与
+        // core 挂载状态无关),页面每秒经同步 KV 桥轮询落态(见 PermissionSnapshot 注)
         if (pageName == PAGE_PERMISSION) {
-            kuiklyRenderViewDelegator.sendEvent(
-                PermissionSnapshot.EVENT_PERM_SNAPSHOT,
-                mapOf(PermissionSnapshot.KEY_PERM_SNAPSHOT to PermissionSnapshot.build(this))
-            )
+            persistPermSnapshot()
+        }
+    }
+
+    /**
+     * 权限快照落地(M36.1):新鲜快照+时间戳写 bootPrefs(=KRSharedPreferencesModule 文件,
+     * common 各 Store 持久化同源,SharedPreferencesModule 同步桥可读)。onResume(从设置/
+     * 应用详情返回)与 onRequestPermissionsResult(应用内弹框出结果——弹框不走生命周期
+     * 往返,此其一的写入是轮询唯一推进信号)两处调用;时间戳哪怕快照内容不变(点了拒绝)
+     * 也要前进,页面靠它区分「有新结果需落态+解在飞申请锁」
+     */
+    private fun persistPermSnapshot() {
+        try {
+            bootPrefs.edit()
+                .putString(PermissionSnapshot.KEY_PERM_SNAPSHOT_LIVE, PermissionSnapshot.build(this))
+                .putString(PermissionSnapshot.KEY_PERM_SNAPSHOT_LIVE_TS, System.currentTimeMillis().toString())
+                .apply()
+        } catch (_: Exception) {
+            // 落地失败不崩:页面维持 pageData 播种值+10s 在飞保险兜底
         }
     }
 

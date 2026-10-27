@@ -24,7 +24,7 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.pager.IPagerEventObserver
+import com.tencent.kuikly.core.module.SharedPreferencesModule
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.reactive.handler.observable
@@ -47,6 +47,7 @@ import com.zyc.love_baby.components.ThemeStore
 import com.zyc.love_baby.components.navBarSafePaddingDp
 import com.zyc.love_baby.features.couple.toastCouple
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /** permissionPage 路由名(openPermissionPage 与 @Page 注册名共用,勿散落字面量) */
 internal const val PERMISSION_PAGE_NAME = "permissionPage"
@@ -55,11 +56,18 @@ internal const val PERMISSION_PAGE_NAME = "permissionPage"
  *  KEY_PERM_SNAPSHOT 同串双源,勿单改一边) */
 private const val PERM_SNAPSHOT_KEY = "permSnapshot"
 
-/** 宿主回前台重推快照事件名(M36;androidApp PermissionSnapshot EVENT_PERM_SNAPSHOT
- *  同串双源,勿单改一边):从系统设置/应用详情返回本页,宿主 onResume 重采快照经
- *  delegator.sendEvent 直推,本页观察者收包落态——模块回调在本页静默丢失[M29 实证],
- *  pageDidAppear 的逐组模块重查在 Android 到不了包,推送是本端唯一可靠刷新通道 */
-private const val PERM_PUSH_EVENT = "permSnapshotPush"
+/** 宿主落地快照 prefs 键(M36.1;androidApp PermissionSnapshot KEY_PERM_SNAPSHOT_LIVE
+ *  同串双源,勿单改一边):从设置/应用详情返回或应用内弹框出结果时,宿主把新鲜快照写进
+ *  KRSharedPreferencesModule 文件,本页轮询经 SharedPreferencesModule.getString 同步桥
+ *  读取落态。M36.0 首版走宿主 sendEvent 事件推送,静态链路逐环可证却真机无效——与本页
+ *  模块回调同死(初始化后宿主→core 的桥调用在真机上不可达,FIRE_VIEW_EVENT/CREATE 与
+ *  同步模块调用不受累),改骑 core→host 同步 KV 这条已证通道 */
+private const val PERM_SNAPSHOT_LIVE_KEY = "permSnapshotLive"
+
+/** 宿主落地快照时间戳 prefs 键(M36.1;androidApp PermissionSnapshot
+ *  KEY_PERM_SNAPSHOT_LIVE_TS 同串双源,勿单改一边):轮询以时间戳前进为「弹框已出结果/
+ *  刚从设置返回」信号——快照内容不变(如弹框点了拒绝)也要落态并复位在飞申请标记 */
+private const val PERM_SNAPSHOT_LIVE_TS_KEY = "permSnapshotLiveTs"
 
 /**
  * 路由打开权限管理页(base.openLovePage 收口,try/catch 吞未桥接端在 helper 内统一处理)
@@ -83,8 +91,8 @@ internal fun openPermissionPage(pager: Pager) {
  *      提醒」行 openChannelSettings(渠道重要性/横幅开关所在页);「前往系统设置」直跳 App 级
  *      通知设置;定位行恒有响应——未开启 requestLocThenGuide(运行时申请,被拒带去应用详情
  *      页),已开启 openLocationSettings(应用详情页「权限 → 位置权限」= 权限获取页);从系统
- *      设置返回即时刷新——Android 走宿主 onResume 快照推送(M36,见 PERM_PUSH_EVENT 注),
- *      其余端经 pageDidAppear 逐组模块重查(回调可达时同值幂等)
+ *      设置返回/应用内弹框出结果即时刷新——Android 走宿主落地 prefs+本页轮询(M36.1,见
+ *      PERM_SNAPSHOT_LIVE_KEY 注),其余端经 pageDidAppear 逐组模块重查(回调可达时同值幂等)
  * 功能:
  *  - 六行结构(2026-10-19 悬浮通知真机反馈轮定稿;M29 权限全面状态化):
  *    ① 消息通知:App 级总开关断言行(已开启/已关闭),已关闭可点=「去开启」全路径;
@@ -176,16 +184,8 @@ internal class PermissionPager : BasePager() {
         // 注快照,四组查询与模块 check 回包同一原生 companion 单源;模块 refresh 仍在(回调
         // 若通,到包同值幂等刷),无快照端(iOS/ohos/H5)保持逐组查询+超时兜底链
         seedFromPageData()
-        // 回前台重推(M36):Android 宿主 onResume 重采快照 sendEvent 直推(见 PERM_PUSH_EVENT
-        // 注),同一单源同一解析,从系统设置/应用详情改完权限返回即见真值;观察者在 willInit
-        // 挂上,推送早于挂载只会发生在冷启动首现(pageData 播种已覆盖,丢包无感)
-        addPagerEventObserver(object : IPagerEventObserver {
-            override fun onPagerEvent(pagerEvent: String, eventData: JSONObject) {
-                if (pagerEvent == PERM_PUSH_EVENT) {
-                    applyPermSnapshot(eventData.optString(PERM_SNAPSHOT_KEY))
-                }
-            }
-        })
+        // 回前台刷新(M36.1):见 PERM_SNAPSHOT_LIVE_KEY 注——宿主落 prefs,本页组合内每秒
+        // 轮询同步读(观察 LaunchedEffect 轮询块);M36.0 的 sendEvent 事件推送通道已废
         setContent {
             PermissionPage(this)
         }
@@ -227,6 +227,31 @@ internal class PermissionPager : BasePager() {
         }
     }
 
+    /** 已落态的宿主快照时间戳(轮询去重:时间戳只在宿主 onResume/弹框结果两处前进,
+     *  与之相等=无新快照,跳过;冷启动首读即宿主 onCreate 后 onResume 所写,与 pageData
+     *  播种同源同值,幂等落态无感) */
+    private var lastAppliedLiveTs = 0L
+
+    /** 轮询宿主落地快照(M36.1,每秒由组合内 LaunchedEffect 驱动):SharedPreferencesModule
+     *  同步桥读取(真机已证方向——主题持久化同走此桥;同步返回不经过本页已死的回调通道),
+     *  时间戳前进即落态+复位四组在飞申请标记(回调丢失场景 requesting 永真焊死按钮,10s
+     *  保险仍在,这里提前到 ≤1s;快照内容不变如弹框点了拒绝,靠时间戳也能推进)。
+     *  宿主只在权限页 onResume/弹框结果时写键,无键端(iOS/ohos/H5)空串早退零成本 */
+    internal fun pollHostSnapshot() {
+        val sp = getModule<SharedPreferencesModule>(SharedPreferencesModule.MODULE_NAME) ?: return
+        val ts = sp.getString(PERM_SNAPSHOT_LIVE_TS_KEY)
+        val raw = sp.getString(PERM_SNAPSHOT_LIVE_KEY)
+        val tsVal = if (ts.isEmpty() || ts == "null") 0L else ts.toLongOrNull() ?: return
+        if (raw.isEmpty() || raw == "null") return
+        if (tsVal == lastAppliedLiveTs) return
+        lastAppliedLiveTs = tsVal
+        applyPermSnapshot(raw)
+        requesting = false
+        locRequesting = false
+        micRequesting = false
+        mediaRequesting = false
+    }
+
     override fun didInit() {
         super.didInit()
         // 无参数端(iOS/鸿蒙/H5)兜底
@@ -234,8 +259,8 @@ internal class PermissionPager : BasePager() {
     }
 
     /** 从系统设置返回即重触发(一页一 Activity:设置页压顶,返回本页 onResume→didAppear)。
-     *  Android 真值由宿主快照推送承载(M36:本页模块回调静默丢失[M29 实证],这四次逐组
-     *  重查的回调到不了包),此处保留为回调可达端(iOS/ohos/H5)的重查通道+同值幂等兜底 */
+     *  Android 真值由宿主落 prefs+本页轮询承载(M36.1:本页模块回调静默丢失[M29 实证],
+     *  这四次逐组重查的回调到不了包),此处保留为回调可达端(iOS/ohos/H5)的重查通道 */
     override fun pageDidAppear() {
         super.pageDidAppear()
         refresh()
@@ -438,14 +463,20 @@ internal class PermissionPager : BasePager() {
 @Composable
 internal fun PermissionPage(pager: PermissionPager) {
     val theme = ThemeStore.current
-    // 进页首查(独立 @Page 组合在即活动在;从设置返回 Android 由宿主推送兜、余端 pageDidAppear
-    // 模块重查兜);通知/定位/麦克风/
-    // 相册读四组并行
+    // 进页首查(独立 @Page 组合在即活动在;从设置返回/弹框结果 Android 由宿主 prefs+轮询兜、
+    // 余端 pageDidAppear 模块重查兜);通知/定位/麦克风/相册读四组并行,随后常驻轮询宿主
+    // 落地快照(M36.1):每秒同步读一次 prefs,时间戳前进即落态——设置返回 onResume 与弹框
+    // 出结果 onRequestPermissionsResult 宿主都会推进时间戳,两条路径统一覆盖(≤1s 延迟);
+    // 组合即页面在(一页一 Activity),无需挂起条件,页销组合撤轮询随亡
     LaunchedEffect(Unit) {
         pager.refresh()
         pager.refreshLocation()
         pager.refreshMic()
         pager.refreshMedia()
+        while (isActive) {
+            delay(1_000)
+            pager.pollHostSnapshot()
+        }
     }
     // 查询失败兜底(M29):模块回调静默丢失真机实证(通知/定位首查双双不回=页面永挂「查询中」),
     // 4s 后仍有任一组未回包 → 全部行落「状态未知」诚实降级,绝不挂死;回包先到则置真无效果
