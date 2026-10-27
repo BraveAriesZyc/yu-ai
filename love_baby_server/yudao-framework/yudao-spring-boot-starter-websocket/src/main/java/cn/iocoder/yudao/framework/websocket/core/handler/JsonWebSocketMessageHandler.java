@@ -47,9 +47,14 @@ public class JsonWebSocketMessageHandler extends TextWebSocketHandler {
         if (message.getPayloadLength() == 0) {
             return;
         }
-        // 1.2 ping 心跳消息，直接返回 pong 消息。
+        // 1.2 ping 心跳消息，直接回显原消息。
+        // M34(2026-10-27)：原版固定回 "pong" 是 yudao 自带 web demo 的约定；App 端 WS 已换官方
+        // 社区组件 KuiklyWebsocket（vendored），其心跳为 echo 模式——收到与 pingPayload 相同的
+        // 文本帧才判 Pong（isHeartbeatPong: data == pingPayload），固定回 "pong" 恒不匹配，
+        // 端上每 ~75s 误判心跳超时重连循环。改为回显 payload，端上 pingPayload="ping" 闭环。
+        // 影响面：web demo 的 pong 判等（apps/web-antd views/im/home）仅演示页且非主力变体，不受部署影响
         if (message.getPayloadLength() == 4 && Objects.equals(message.getPayload(), "ping")) {
-            session.sendMessage(new TextMessage("pong"));
+            session.sendMessage(new TextMessage(message.getPayload()));
             return;
         }
 
