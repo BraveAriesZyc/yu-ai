@@ -895,13 +895,13 @@ M27 实时地图之上的轨迹语义化（用户诉求：轨迹按「哪个省�
 
 ### 12.6 社区组件对照表（2026-10-27 盘点，多端开工/二期照单取件）
 
-> 组件总表 = 官方「组件市场」`https://kuikly.tds.qq.com/third-party?tab=component`（contribute-guide 页内入口），数据源 = GitHub `Tencent-TDS/KuiklyUI-third-party` 仓库 `KuiklyUI-Libraries.json`（111 项，含 Android/iOS/Ohos/Js 四端支持矩阵 + githubUrl；github 直连被墙用 jsdelivr 镜像）。**接入前三核实：① 坐标真实可拉（search.maven.org / repo1 探测——市场收录≠已发布）② 与 core 2.29 兼容（不少组件版本锚 2.0.21 KBA 线）③ 维护活跃度**。反面教材即 KuiklyWebsocket：README 写了坐标，Central/JitPack 均 404，仓库 1 star 半年无推送。
+> 组件总表 = 官方「组件市场」`https://kuikly.tds.qq.com/third-party?tab=component`（contribute-guide 页内入口），数据源 = GitHub `Tencent-TDS/KuiklyUI-third-party` 仓库 `KuiklyUI-Libraries.json`（111 项，含 Android/iOS/Ohos/Js 四端支持矩阵 + githubUrl；github 直连被墙用 jsdelivr 镜像）。**接入前三核实：① 坐标真实可拉（search.maven.org / repo1 探测——市场收录≠已发布）② 与 core 2.29 兼容（不少组件版本锚 2.0.21 KBA 线）③ 维护活跃度**。实证案例即 KuiklyWebsocket（M34 已 vendor 落地）：Central/JitPack 无发布；腾讯镜像有 maven-metadata/POM 但**所有平台变体产物文件 404**——「元数据在≠产物在」，探测必须 HEAD 到文件实体一级，不能只看 metadata 壳；仓库 1 star 半年无推送，最终走源码内嵌 vendor 锚 commit。
 
-**结论先行：当前 Android 单端不换任何件**——自研桥全链路真机打磨过，提审在即引入社区件=无谓回归。下表是 **iOS/鸿蒙开工时的现成件对照**（彼时下列自研桥全是 Android-only，社区件多数 A/I/O 三端）：
+**结论先行（2026-10-27 M34 后盘面）**：WS 一域已换 KuiklyWebsocket（vendored，见首行 ✅）；**其余自研桥维持 Android 自研不换**——全链路真机打磨过，提审在即引入社区件=无谓回归。下表是 **iOS/鸿蒙开工时的现成件对照**（彼时下列自研桥全是 Android-only，社区件多数 A/I/O 三端）：
 
 | 自研桥/自绘件 | 现状 | 社区候选（支持端） | 采建议 |
 | --- | --- | --- | --- |
-| WebSocketModule + KRWebSocketModule（okhttp，30s RFC ping 帧） | 仅 Android；iOS/ohos/H5 轮询降级；**无自动重连**（聊天页 5s 轮询循环体顺手 connect 自愈，不在场靠切 Tab/回前台触发点；D-16 信号通道+轮询兜底保证不丢数据） | KuiklyWebsocket（心跳丢失判定/指数退避+jitter/前后台与网络切换感知/强制 WSS）（A/I/O，**无 H5**） | **已拍板（2026-10-27）：iOS/ohos 开工时接入**——多端场景社区件优先于维护 N 套自研桥；Android 当前不换（提审在即，收益仅自动重连+生命周期感知，D-16 下断线代价=红点延迟，换=红点/正在输入/位置实时帧/提醒TA 全链回归）。⚠ 开工前先核坐标可拉性（2026-10-27 实测 Central/JitPack 双 404，仓库 1 star 半年无推送），仍不可拉则源码内嵌 vendor 并锁 commit；事件模型不同（多回调注册 vs 现单回调四事件），需适配层 |
+| ~~WebSocketModule 自研桥~~ → **KuiklyWebsocket 组件（vendored，M34）** | Android 已 100% 切组件（2026-10-27）：心跳 echo 闭环（pingPayload="ping"/30s/maxMissedPongs 3，服务端 JsonWebSocketMessageHandler 同步改回显）+ 指数退避重连 2s→60s+jitter + 网络切换感知；聊天页 5s 轮询循环体仍保留（D-16 信号通道+轮询兜底不变）；iOS/ohos/H5 仍不注册模块 → getModule=null 轮询降级 | KuiklyWebsocket（心跳丢失判定/指数退避+jitter/前后台与网络切换感知/强制 WSS）（A/I/O，**无 H5**） | **✅ 已落地 M34（2026-10-27，用户拍板全端一致性优先，Android 同步替换）**：坐标三处全不可拉（Central/JitPack 404；腾讯镜像仅 metadata/POM 壳、平台变体产物文件全 404——元数据在≠产物在）→ 源码内嵌 vendor 锚 commit `0bcf9786c9`，包名 `com.tencent.kuiklybase.websocket` 原样保留便于 upstream diff，溯源/取舍见 `shared/.../com/tencent/kuiklybase/websocket/_VENDORED.md`；业务五信号与降级零变化。坑：① connect 每次重配 URL 带最新 token（组件自动重连固定复用 config.url，token 401 轮换后不重配则握手恒拒）；② **勿调 manager.destroy()**（上游 bridgeInitialized 不回退=死桥）；③ addEventListener 无去重，按 manager 实例判别重挂。iOS/ohos 开工直接复用 vendored common 源码、补各自原生 Module 即可 |
 | KRAMapView（高德 3dmap 原生视图桥） | 仅 Android；余端整页降级 | KuiklyMap（A/I/O） | 多端开工先查其地图引擎是否高德系，是则优先试 |
 | AudioModule（语音播放单飞） | 仅 Android | KuiklyAudio（A/I/O） | iOS/ohos 语音播放候选 |
 | recordAudio 原生桥（录音/60s 上限） | 仅 Android | KuiklyRecorder（start/pause/resume/stop/实时音量）（A/I/O） | 同上 |

@@ -21,7 +21,7 @@
 8. **IDOR/防探测**:跨 couple 访问统一按「不存在」拒绝(不暴露他 couple 资源的存在性,MESSAGE_NOT_EXISTS 口径);删除权限冻结决策:moment/wish **仅创建者本人可删**(用户维度防误删),admin 兜底可删任何(不校验该码)。
 9. **快照哲学**:端上渲染只吃记录时点快照列(mood 的 moodLabel/emoji/color 三列、心愿消息 kind=2),删字典历史不变灰、不回查实体表;冗余列恒同步(`love_moment.image_url` 恒 = imageUrls JSON 首元素,读侧 `parseImageUrls` 对损坏 JSON 兜底)。
 10. **DO 字段名与列名 snake_case 严格驼峰对应**(moodDate→mood_date),拿不准就数一遍——历史教训写进 DO 注释。
-11. **WebSocket 只传信号不传数据**(D-16):消息落库后向对方在线连接推纯打点,数据完整性由端上 lastId 增量拉保证;端点 `/infra.ws`。**多实例部署前须先落 redis sender 扩展**(部署红线)。
+11. **WebSocket 只传信号不传数据**(D-16):消息落库后向对方在线连接推纯打点,数据完整性由端上 lastId 增量拉保证;端点 `/infra.ws`。**多实例部署前须先落 redis sender 扩展**(部署红线)。**M34(2026-10-27) ping 帧改回显**:`JsonWebSocketMessageHandler`(starter-websocket)原版收到 "ping" 固定回 "pong" 是 yudao web demo 约定;App 端 WS 已换官方组件 KuiklyWebsocket(vendored),其心跳为 echo 判等(`data == pingPayload`),固定回 pong 恒不匹配 → 端上每 ~75s 误判超时重连循环,故改为**回显 payload**(端上 pingPayload="ping" 闭环)。⚠️ 改动在框架 starter 内,**生效需重启本地服务 + 远程重部署 jar**。
 12. **复用 system 侧能力,绝不自造**:OAuth2 令牌走 OAuth2TokenCommonApi、短信验证码走 SmsCodeApi(经 yudao-module-system 依赖引入);登录/发码限流 `@RateLimiter`(starter-protection)。密码校验用 love 自有 `framework/validation/Password`(6-16 位含字母数字)。
 13. **mood_type 列废弃**(M3.5/D-14):新记录恒写 NULL,值域改 optionId + 快照三列;`MoodTypeEnum` 零引用保留。存量行端上按旧 1-5 映射兜底渲染。
 14. **上传体量**:multipart max-file-size 16MB / max-request-size 32MB(聊天视频上限在此,客户端压缩链对齐)。
