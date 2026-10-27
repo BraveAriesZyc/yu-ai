@@ -24,7 +24,6 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 import com.tencent.kuikly.compose.ui.unit.sp
 import com.tencent.kuikly.core.annotations.Page
-import com.tencent.kuikly.core.log.KLog
 import com.tencent.kuikly.core.pager.Pager
 import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.reactive.handler.observable
@@ -50,9 +49,6 @@ import kotlinx.coroutines.delay
 
 /** permissionPage 路由名(openPermissionPage 与 @Page 注册名共用,勿散落字面量) */
 internal const val PERMISSION_PAGE_NAME = "permissionPage"
-
-/** logcat 面包屑 tag(KLog 经 KRLogModule 落 logcat;M29 回调静默丢失根因排查留痕) */
-private const val TAG = "PermissionPage"
 
 /** 宿主直注快照 pageData 键(M29;androidApp KuiklyRenderActivity/PermissionSnapshot
  *  KEY_PERM_SNAPSHOT 同串双源,勿单改一边) */
@@ -97,8 +93,7 @@ internal fun openPermissionPage(pager: Pager) {
  *    ⑥ 定位权限(M26):行点击恒有响应,见下方定位权限行条目
  *  - 全行状态化+查询失败兜底(M29):六行状态胶囊恒有形态,进页 4s 仍有任一组未回包 →
  *    queryStuck 置真,全部行落「状态未知」、详情卡改「查询失败」——模块回调静默丢失
- *    (卡「查询中」真机实证)绝不挂死;KLog 面包屑(发送/回包两侧,tag=PermissionPage)
- *    留排查痕,一次真机运行即可二分定位死亡点
+ *    (卡「查询中」真机实证)绝不挂死
  *  - 卡死根因修复(同轮):旧版原生回包经 call() 内同步 invoke 不送达=页面卡「查询中」,
  *    原生侧已统一 mainHandler 异步投递+采集异常兜底必达;common 侧六值化(checkPermission
  *    回 NotifyPermState,data class 相等跳重组)
@@ -223,9 +218,7 @@ internal class PermissionPager : BasePager() {
         refreshMedia()
     }
 
-    /** 重查通知权限状态(进页首查 + pageDidAppear + 授权回调后刷)。KLog 面包屑(发送/回包
-     *  两侧,logcat tag=PermissionPage):M29 卡「查询中」根因排查留痕——发送有、回包无=
-     *  死在原生或回程桥,一次真机运行即可二分定位 */
+    /** 重查通知权限状态(进页首查 + pageDidAppear + 授权回调后刷) */
     internal fun refresh() {
         val module = getModule<NotificationModule>(NotificationModule.MODULE_NAME)
         if (module == null) {
@@ -234,9 +227,7 @@ internal class PermissionPager : BasePager() {
             return
         }
         supported = true
-        KLog.d(TAG, "notify check send")
         module.checkPermission { state ->
-            KLog.d(TAG, "notify check arrived: appGranted=${state.appGranted} channelBlocked=${state.channelBlocked}")
             permState = state
             checked = true
         }
@@ -291,7 +282,7 @@ internal class PermissionPager : BasePager() {
         getModule<NotificationModule>(NotificationModule.MODULE_NAME)?.openSettings()
     }
 
-    /** 重查定位权限(M26:进页首查 + pageDidAppear + 授权回调后刷;结构照 refresh,KLog 同款) */
+    /** 重查定位权限(M26:进页首查 + pageDidAppear + 授权回调后刷;结构照 refresh) */
     internal fun refreshLocation() {
         val module = getModule<LocationModule>(LocationModule.MODULE_NAME)
         if (module == null) {
@@ -300,9 +291,7 @@ internal class PermissionPager : BasePager() {
             return
         }
         locSupported = true
-        KLog.d(TAG, "loc check send")
         module.checkLocationPermission { granted, fine, coarse ->
-            KLog.d(TAG, "loc check arrived: granted=$granted fine=$fine coarse=$coarse")
             locGranted = granted
             locFine = fine
             locCoarse = coarse
@@ -320,9 +309,7 @@ internal class PermissionPager : BasePager() {
             return
         }
         micSupported = true
-        KLog.d(TAG, "mic check send")
         module.checkMicPermission { granted ->
-            KLog.d(TAG, "mic check arrived: granted=$granted")
             micGranted = granted
             micChecked = true
         }
@@ -337,9 +324,7 @@ internal class PermissionPager : BasePager() {
             return
         }
         mediaSupported = true
-        KLog.d(TAG, "media check send")
         module.checkMediaPermission { granted, partial ->
-            KLog.d(TAG, "media check arrived: granted=$granted partial=$partial")
             mediaGranted = granted
             mediaPartial = partial
             mediaChecked = true
@@ -440,8 +425,6 @@ internal fun PermissionPage(pager: PermissionPager) {
     LaunchedEffect(Unit) {
         delay(4000)
         if (!pager.checked || !pager.locChecked || !pager.micChecked || !pager.mediaChecked) {
-            KLog.d(TAG, "query stuck fallback fired: notify=${pager.checked} loc=${pager.locChecked} " +
-                "mic=${pager.micChecked} media=${pager.mediaChecked}")
             pager.queryStuck = true
         }
     }

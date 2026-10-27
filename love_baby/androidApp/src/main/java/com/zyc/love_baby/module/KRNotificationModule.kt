@@ -112,17 +112,13 @@ class KRNotificationModule : KuiklyRenderBaseModule() {
      *    引导去确认,不能断言)
      *  - dndOn:勿扰模式(getCurrentInterruptionFilter!=ALL,横幅与声音被系统压制)
      *  - powerSaveOn:省电模式(部分 ROM 省电下临时关横幅)
-     *  采集异常也回兜底形态,必达(见类头铁律)。⚠ Log 面包屑(M29):M22 mainHandler 投递修复后
-     *  权限页仍卡「查询中」真机复现,与 common 侧 KLog(tag=PermissionPage)配对二分——本侧两条
-     *  都在而 common 回包不在=死在回程桥;本侧一条都没有=死在 common→native 派发。根因定位后移除 */
+     *  采集异常也回兜底形态,必达(见类头铁律) */
     private fun checkPermission(callback: KuiklyRenderCallback?) {
-        android.util.Log.d("KRNotifChk", "check dispatched, callback=${callback != null}")
         val payload = try {
             queryPermStateSnapshot()
         } catch (_: Exception) {
             FALLBACK_STATE_PAYLOAD
         }
-        android.util.Log.d("KRNotifChk", "check posting: $payload")
         dispatchCallback(callback, payload)
     }
 
