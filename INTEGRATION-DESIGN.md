@@ -892,3 +892,27 @@ M27 实时地图之上的轨迹语义化（用户诉求：轨迹按「哪个省�
 4. **love.sql 只追加**：历史段不改不删；表演进走「末尾 ALTER 追加段」，脚本保持可重放。
 5. **敏感数据最小化**：位置/设备指纹默认不采、显式开关；服务端把客户端上报一律当 advisory 数据，风控只认服务端可验证信息。
 6. **复用优先**：IP=biz-ip、登录日志=system_login_log、限流/幂等/签名=protection、请求审计=infra_api_access_log、文件=infra 文件服务——动 system/framework 前先确认是否已有现成件。
+
+### 12.6 社区组件对照表（2026-10-27 盘点，多端开工/二期照单取件）
+
+> 组件总表 = 官方「组件市场」`https://kuikly.tds.qq.com/third-party?tab=component`（contribute-guide 页内入口），数据源 = GitHub `Tencent-TDS/KuiklyUI-third-party` 仓库 `KuiklyUI-Libraries.json`（111 项，含 Android/iOS/Ohos/Js 四端支持矩阵 + githubUrl；github 直连被墙用 jsdelivr 镜像）。**接入前三核实：① 坐标真实可拉（search.maven.org / repo1 探测——市场收录≠已发布）② 与 core 2.29 兼容（不少组件版本锚 2.0.21 KBA 线）③ 维护活跃度**。反面教材即 KuiklyWebsocket：README 写了坐标，Central/JitPack 均 404，仓库 1 star 半年无推送。
+
+**结论先行：当前 Android 单端不换任何件**——自研桥全链路真机打磨过，提审在即引入社区件=无谓回归。下表是 **iOS/鸿蒙开工时的现成件对照**（彼时下列自研桥全是 Android-only，社区件多数 A/I/O 三端）：
+
+| 自研桥/自绘件 | 现状 | 社区候选（支持端） | 采建议 |
+| --- | --- | --- | --- |
+| WebSocketModule + KRWebSocketModule（okhttp，30s RFC ping 帧） | 仅 Android；iOS/ohos/H5 轮询降级；**无自动重连**（聊天页 5s 轮询循环体顺手 connect 自愈，不在场靠切 Tab/回前台触发点；D-16 信号通道+轮询兜底保证不丢数据） | KuiklyWebsocket（心跳丢失判定/指数退避+jitter/前后台与网络切换感知/强制 WSS）（A/I/O，**无 H5**） | **已拍板（2026-10-27）：iOS/ohos 开工时接入**——多端场景社区件优先于维护 N 套自研桥；Android 当前不换（提审在即，收益仅自动重连+生命周期感知，D-16 下断线代价=红点延迟，换=红点/正在输入/位置实时帧/提醒TA 全链回归）。⚠ 开工前先核坐标可拉性（2026-10-27 实测 Central/JitPack 双 404，仓库 1 star 半年无推送），仍不可拉则源码内嵌 vendor 并锁 commit；事件模型不同（多回调注册 vs 现单回调四事件），需适配层 |
+| KRAMapView（高德 3dmap 原生视图桥） | 仅 Android；余端整页降级 | KuiklyMap（A/I/O） | 多端开工先查其地图引擎是否高德系，是则优先试 |
+| AudioModule（语音播放单飞） | 仅 Android | KuiklyAudio（A/I/O） | iOS/ohos 语音播放候选 |
+| recordAudio 原生桥（录音/60s 上限） | 仅 Android | KuiklyRecorder（start/pause/resume/stop/实时音量）（A/I/O） | 同上 |
+| KRNotificationModule（通知权限/渠道状态） | 仅 Android（权限页走 pageData 宿主直注绕桥） | KuiklyNotification（权限申请/状态/发送）（A/I/O） | iOS/ohos 权限页候选 |
+| LocationModule（单次定位桥 × 5s 会话循环） | 仅 Android | gycrosskit-location（前台持续定位，超时/时效/精度过滤）（A/I/O） | 换持续定位可省轮询循环；iOS/ohos 首选 |
+| MediaPickerSheet 相册弹层 + copyMedia（十六轮真机打磨） | 仅 Android | KuiklyAlbum / gycrosskit-media（A/I/O） | **不换**（自有件深度定制：部分授权横幅/降级三链/乐观排队）；iOS/ohos 缺件时作参考或直接试 KuiklyAlbum |
+| PrivacyWebActivity（WebView 协议全文） | 仅 Android | KuiklyWebview（A/I/O/J） | 仅当协议页改跨端实现才需要 |
+| AppCalendar（月历自绘：打卡双角色点） | 跨端自绘 | Calendar（kizitonwose 移植）（A/I/O/J） | 不换（已成型）；全新日历场景再评估 |
+| M30 月报自绘统计条 | 跨端自绘 | charts（柱/折/饼/雷达等）/ KuiklyChart（A/I/O/J） | 月报图表化二期候选 |
+| 聊天本地缓存（SharedPreferences JSON ≤500 条） | 跨端 | KuiklyMMKV / mmkvKotlin、KuiklySqlite / VBSQLite（A/I/O） | 量小暂不动，迁移成本 > 收益 |
+| KLog | 跨端 | Napier（A/I/O/J） | 不换 |
+| —（开发调试） | — | kuikly-devtools（Chrome DevTools 式页面调试）（A/I/O/J） | 开发期可试，不进 release |
+
+**明确不采**：KuiklyChatUI / KuiklyChatComponent（自有聊天 24 轮迭代，换=重写）；kuiklyx-viewmodel / bridge / redux（自有 Store 快照范式已定型，架构层不引新范式）；QRose（无二维码场景）。
