@@ -1,8 +1,5 @@
 package com.zyc.love_baby.state
 
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
-
 /**
  * TimeKit — 聊天时间格式化(GMT+8 固定偏移,产品为中国大陆场景)
  * 用法:跨天判定 chatDayIndex(a) != chatDayIndex(b);气泡下单行时刻用 chatHHmm;日期分隔条文案 chatDayLabel
@@ -97,9 +94,11 @@ internal fun relativeTimeLabel(epochMs: Long): String {
     }
 }
 
-/** commonMain 墙钟毫秒(kotlin.time.Clock,Kotlin 2.1.20+ 全端实现;state 包内调用零改动) */
-@OptIn(ExperimentalTime::class)
-internal fun nowEpochMs(): Long = Clock.System.now().toEpochMilliseconds()
+/** commonMain 墙钟毫秒(expect/actual,M35:KBA Kotlin 2.0.21-ohos 无 kotlin.time.Clock——
+ *  2.1.20+ stdlib 才有,ohos 工具链编不过;各端 actual 取原生墙钟,均为 UTC epoch 毫秒语义等价,
+ *  state 包内调用零改动。actual:android=System.currentTimeMillis / js=Date.now /
+ *  ios+ohos=posix clock_gettime(CLOCK_REALTIME)) */
+internal expect fun nowEpochMs(): Long
 
 /** "m:ss"(分:秒,秒两位补零):语音/视频时长等 <1h 计时文案单源(commonMain 禁 String.format,
  *  纯整除+pad2;原 MediaPickerSheet.formatDuration、ChatPage.recordTimeLabel 同体收编) */

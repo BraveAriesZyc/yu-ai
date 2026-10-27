@@ -1760,8 +1760,9 @@ internal object ChatStore {
  * 传输层:官方社区组件 KuiklyWebsocket(vendored 源码 com.tencent.kuiklybase.websocket,见
  *  该目录 _VENDORED.md)替代自研 base/WebSocketModule+KRWebSocketModule——common 侧
  *  WebSocketManager 负责心跳(ping/pong echo)+ 指数退避自动重连(2s→60s+jitter)+ 网络切换
- *  感知重连,各端原生件只出底层能力;Android 注册组件原生件(okhttp),iOS/ohos/H5 未注册
- *  getModule=null → 自动退回既有 5s 轮询,渐进降级永不丢消息(数据仍走 lastId 增量拉 D-15)。
+ *  感知重连,各端原生件只出底层能力;Android(okhttp)/iOS(NSURLSession)/ohos(@ohos.net.webSocket)
+ *  三端注册(M35 补齐 iOS/ohos 原生半边+actual),js(H5) 未注册 getModule=null → 退回既有
+ *  5s 轮询,渐进降级永不丢消息(数据仍走 lastId 增量拉 D-15)。
  * 生命周期:MainPager 连接 effect 驱动(isLoggedIn+bindState+foregroundTick 三 key)——
  *  登录且 BOUND 才 connect(幂等),否则 disconnect(登出/解绑翻 key 即断);断线自愈由
  *  组件自动重连 + 聊天页 5s 轮询循环体顺手 connect(顺带刷新 token)双通道。

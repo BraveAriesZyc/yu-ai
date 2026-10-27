@@ -63,6 +63,14 @@ kotlin {
             }
         }
 
+        // M35:ohos 中间源集(此构建未应用默认层级模板,ohosArm64 只自动建 ohosArm64Main;
+        //  照 iosMain 先例手工接一层,src/ohosMain 平台 actual[PlatformExternalModules/TimeKit]由此入编)
+        val ohosArm64Main by getting
+        val ohosMain by creating {
+            dependsOn(commonMain)
+            ohosArm64Main.dependsOn(this)
+        }
+
         val iosX64Main by getting
         val iosArm64Main by getting
         val iosSimulatorArm64Main by getting
