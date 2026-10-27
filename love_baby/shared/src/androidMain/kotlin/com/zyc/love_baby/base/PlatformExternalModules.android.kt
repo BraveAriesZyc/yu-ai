@@ -1,6 +1,7 @@
 package com.zyc.love_baby.base
 
 import com.tencent.kuikly.core.module.Module
+import com.tencent.kuiklybase.websocket.WebSocketModule
 
 /**
  * Android 平台扩展模块(actual):Android 壳已注册同名原生模块(KRWebSocketModule/KRFileModule/
@@ -10,6 +11,10 @@ import com.tencent.kuikly.core.module.Module
  */
 internal actual fun platformExternalModules(): Map<String, Module> = mapOf(
     BridgeModule.MODULE_NAME to BridgeModule(),
+    // WS 触发器(D-16→M34):官方组件 KuiklyWebsocket(common 侧 WebSocketModule,vendored 源码,
+    //  包名 com.tencent.kuiklybase.websocket,见同目录 _VENDORED.md)替代自研 base/WebSocketModule;
+    //  原生侧同名注册 KRWebSocketModule(组件 Android 实现,okhttp)。iOS/ohos/H5 仍不注册 →
+    //  getModule=null → ChatPushStore 判空降级纯轮询,渐进降级设计不变
     WebSocketModule.MODULE_NAME to WebSocketModule(),
     FileModule.MODULE_NAME to FileModule(),
     NotificationModule.MODULE_NAME to NotificationModule(),

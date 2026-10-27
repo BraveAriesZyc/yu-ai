@@ -20,6 +20,9 @@ import com.tencent.kuikly.core.render.android.css.ktx.toMap
 import com.tencent.kuikly.core.render.android.expand.KuiklyRenderViewBaseDelegatorDelegate
 import com.tencent.kuikly.core.render.android.expand.KuiklyRenderViewBaseDelegator
 import com.tencent.kuikly.core.render.android.expand.component.KRTextFieldView
+// WS 触发器原生件(M34):官方组件 KuiklyWebsocket 的 Android 实现(vendored 源码,原包名),
+// 替代自研 module/KRWebSocketModule;common 侧组件 WebSocketModule(同注册名)经 platformExternalModules 注册
+import com.tencent.kuiklybase.websocket.KRWebSocketModule
 import com.zyc.love_baby.adapter.KRColorParserAdapter
 import com.zyc.love_baby.adapter.KRFontAdapter
 import com.zyc.love_baby.adapter.KRImageAdapter
@@ -34,7 +37,6 @@ import com.zyc.love_baby.module.KRFileModule
 import com.zyc.love_baby.module.KRLocationModule
 import com.zyc.love_baby.module.KRNotificationModule
 import com.zyc.love_baby.module.KRShareModule
-import com.zyc.love_baby.module.KRWebSocketModule
 import com.zyc.love_baby.module.PermissionSnapshot
 import com.zyc.love_baby.view.KRAMapView
 import com.zyc.love_baby.view.KRDefaultTypefaceTextFieldView
@@ -184,7 +186,10 @@ class KuiklyRenderActivity : AppCompatActivity(), KuiklyRenderViewBaseDelegatorD
             moduleExport(KRShareModule.MODULE_NAME) {
                 KRShareModule()
             }
-            // WS 触发器(D-16):common base/WebSocketModule 声明,ChatPushStore 经 getModule 取用
+            // WS 触发器(M34):官方组件 KuiklyWebsocket 的 Android 原生件(vendored 源码),
+            // common 侧组件 WebSocketModule(vendored,包名 com.tencent.kuiklybase.websocket)
+            // 经 platformExternalModules 注册,双端同串 "KRWebSocketModule";ChatPushStore 经
+            // getModule 取用,心跳/自动重连/网络感知由组件 common 侧 WebSocketManager 驱动
             moduleExport(KRWebSocketModule.MODULE_NAME) {
                 KRWebSocketModule()
             }

@@ -15,7 +15,9 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.base.BridgeModule
 import com.zyc.love_baby.base.NotificationModule
-import com.zyc.love_baby.base.WebSocketModule
+import com.tencent.kuiklybase.websocket.WebSocketEvent
+import com.tencent.kuiklybase.websocket.WebSocketManager
+import com.tencent.kuiklybase.websocket.WebSocketModule
 import com.zyc.love_baby.components.AppIconType
 import com.zyc.love_baby.data.model.AnniversaryInfo
 import com.zyc.love_baby.data.model.CheckinInfo
@@ -1754,16 +1756,19 @@ internal object ChatStore {
 // ---------- ChatPushStore:WS 触发器(D-16,§5.2 WS 通道) ----------
 
 /**
- * ChatPushStore — WS 长连接触发器(D-16):连接管理 + 「对方有新消息」信号驱动的增量拉。
- * 设计:WS 只做纯信号,数据仍走 ChatStore.loadIncrement 的 lastId 增量拉(D-15 游标语义)——
- *  断线/漏推/未桥接端(iOS/ohos/H5 未注册原生模块,getModule=null)自动退回既有 5s 轮询,
- *  渐进降级永不丢消息。
+ * ChatPushStore — WS 长连接触发器(D-16,M34 换官方组件):连接管理 + 「对方有新消息」信号驱动的增量拉。
+ * 传输层:官方社区组件 KuiklyWebsocket(vendored 源码 com.tencent.kuiklybase.websocket,见
+ *  该目录 _VENDORED.md)替代自研 base/WebSocketModule+KRWebSocketModule——common 侧
+ *  WebSocketManager 负责心跳(ping/pong echo)+ 指数退避自动重连(2s→60s+jitter)+ 网络切换
+ *  感知重连,各端原生件只出底层能力;Android 注册组件原生件(okhttp),iOS/ohos/H5 未注册
+ *  getModule=null → 自动退回既有 5s 轮询,渐进降级永不丢消息(数据仍走 lastId 增量拉 D-15)。
  * 生命周期:MainPager 连接 effect 驱动(isLoggedIn+bindState+foregroundTick 三 key)——
  *  登录且 BOUND 才 connect(幂等),否则 disconnect(登出/解绑翻 key 即断);断线自愈由
- *  聊天页 5s 轮询循环体顺手 connect(同入口,握手轻量无风暴)。
- * 线程:事件回调经原生主线程转投(见 KRWebSocketModule.fire),common 侧 lifecycleScope.launch
- *  主线程起步,与 LaunchedEffect 同构;state 只在主线程读写,无并发问题。
- * 事件:无对外事件——对内消化,message 信号即触发 loadIncrement,失败静默轮询兜底(§11)
+ *  组件自动重连 + 聊天页 5s 轮询循环体顺手 connect(顺带刷新 token)双通道。
+ * 线程:事件回调经原生主线程转投(组件 KRWebSocketModule mainHandler post),common 侧
+ *  lifecycleScope.launch 主线程起步,与 LaunchedEffect 同构;state 只在主线程读写,无并发问题。
+ * 事件:无对外事件——对内消化,message 信号即触发 loadIncrement,失败静默轮询兜底(§11);
+ *  心跳 "ping" 回显帧在组件内部拦截(manager.isHeartbeatPong),业务收不到
  */
 internal object ChatPushStore {
 
@@ -1797,6 +1802,10 @@ internal object ChatPushStore {
     /** 事件回调闭包持有的 pager 引用(connect 时刷新;MainPager 常驻页,生命周期=App 会话) */
     private var currentPager: Pager? = null
 
+    /** 已挂监听器的 manager 实例(M34):Activity 重建会换新 Pager→新 Module→新 manager,
+     *  按 instance 判别重挂,防旧标记跳过新 manager(addEventListener 无去重,重复挂=事件翻倍) */
+    private var wsManagerRef: WebSocketManager? = null
+
     /** WS 回调域 launch 的 Job 自持跟踪(T2 官方:Pager.lifecycleScope 不随页面销毁自动取消——
      *  context 不含 Job 框架不代管,登出/解绑 disconnect 时手动 cancel,防残留任务继续跑) */
     private val wsJobs = mutableListOf<Job>()
@@ -1810,7 +1819,10 @@ internal object ChatPushStore {
 
     /**
      * 连接(幂等,亦作断线自愈 ensure 入口):未桥接端 getModule=null 静默降级纯轮询;
-     * CONNECTING/CONNECTED 早退——触发源密集(连接 effect 三 key + 5s 轮询循环体),判重全靠 state
+     * CONNECTING/CONNECTED 早退——触发源密集(连接 effect 三 key + 5s 轮询循环体),判重全靠 state。
+     * M34:每次 connect 重配 URL+token 再 connect——组件自动重连固定用 config.url,而 token
+     * 会随 401 单飞刷新轮换,不重配则断线后永远拿陈旧 token 握手被拒(自研版每次 connect
+     * 现读 token 的自愈语义由这一行保住);重配全量换 WebSocketConfig,重连退避参数回默认,无状态损失
      */
     fun connect(pager: Pager) {
         val module = pager.getModule<WebSocketModule>(WebSocketModule.MODULE_NAME) ?: return
@@ -1819,7 +1831,26 @@ internal object ChatPushStore {
         if (token.isEmpty()) return
         state = STATE_CONNECTING
         currentPager = pager
-        module.connect(ApiConfig.wsUrl(pager), token) { onEvent(it) }
+        // 组件约定:首次使用 manager 前接原生桥(幂等);⚠ 勿调 manager.destroy()——上游
+        // bridgeInitialized 一旦置位不回退,destroy 清 nativeBridge 后 ensureBridge 不再重建=死桥
+        module.ensureBridge()
+        val manager = module.manager
+        if (wsManagerRef !== manager) {
+            wsManagerRef = manager
+            manager.addEventListener { onManagerEvent(it) }
+        }
+        manager.configure(ApiConfig.wsUrl(pager) + "?token=" + token) {
+            // 本地 ws:// 联调放行(仅组件内 validate 字符串检查;release 明文禁用由
+            // network_security_config 在平台层兜底,M33)——心跳 ping/pong echo 见服务端
+            // JsonWebSocketMessageHandler(M34 改回显);重连走默认 2s→60s 指数退避+jitter
+            allowCleartextInDebug = true
+            heartbeat {
+                intervalMs = 30_000L
+                maxMissedPongs = 3
+                pingPayload = "ping"
+            }
+        }
+        manager.connect()
     }
 
     /** 主动断开(登出/解绑:连接 effect else 分支驱动;未桥接端无连接可言,静默) */
@@ -1829,71 +1860,80 @@ internal object ChatPushStore {
         wsJobs.forEach { it.cancel() }
         wsJobs.clear()
         val module = pager.getModule<WebSocketModule>(WebSocketModule.MODULE_NAME) ?: return
-        module.disconnect()
+        // manager.disconnect = MANUAL 关闭:组件 isManualClose 闸住后续自动重连,再登录
+        // connect() 复位即可重连;不调 destroy()(上游 quirk 见 connect 内注释)
+        module.manager.disconnect()
         state = STATE_DISCONNECTED
         currentPager = null
     }
 
     /**
-     * 事件分发(原生主线程回调):open 置已连;closed/error 回未连等下一触发点重连;
-     * message 解析 JsonWebSocketMessage,type=love-message-new 即触发一次增量拉——
-     * 信号只触发,数据由 lastId 游标保证(D-15);非 JSON 文本帧(如 "pong")忽略
+     * 事件分发(组件 manager 事件转投,M34):Connected 置已连;Disconnected/Error 回未连——
+     * 自动重连已由组件指数退避接管,外部触发点(5s 轮询循环体/连接 effect)再调 connect
+     * 顺带把最新 token 换进 config.url;message 交 onMessage 消费。
+     * Heartbeat/Reconnecting/NetworkChanged/StateChanged/BinaryMessage 业务无感
+     * (心跳 "ping" 回显帧已在组件 manager.onNativeMessage 内拦截,不会到这)
      */
-    private fun onEvent(data: JSONObject?) {
-        if (data == null) return
-        when (data.optString("event")) {
-            "open" -> state = STATE_CONNECTED
-            "closed", "error" -> state = STATE_DISCONNECTED
-            "message" -> {
-                val pager = currentPager ?: return
-                val text = data.optString("data")
-                val type = try {
-                    JSONObject(text).optString("type")
-                } catch (_: Exception) {
-                    ""
+    private fun onManagerEvent(event: WebSocketEvent) {
+        when (event) {
+            is WebSocketEvent.Connected -> state = STATE_CONNECTED
+            is WebSocketEvent.Disconnected, is WebSocketEvent.Error -> state = STATE_DISCONNECTED
+            is WebSocketEvent.MessageReceived -> onMessage(event.data)
+            else -> {}
+        }
+    }
+
+    /**
+     * message 信号消费(原生主线程回调):解析 JsonWebSocketMessage,type=love-message-new
+     * 即触发一次增量拉——信号只触发,数据由 lastId 游标保证(D-15);非 JSON 文本帧静默忽略
+     */
+    private fun onMessage(text: String) {
+        val pager = currentPager ?: return
+        val type = try {
+            JSONObject(text).optString("type")
+        } catch (_: Exception) {
+            ""
+        }
+        if (type == TYPE_LOVE_NEW) {
+            launchTracked {
+                ChatStore.loadIncrement(pager)
+            }
+        } else if (type == TYPE_LOVE_RECALL) {
+            // content 是字符串化的 JSON(JsonWebSocketMessage.content:String,双层解析),取 messageId
+            val messageId = try {
+                JSONObject(JSONObject(text).optString("content")).optString("messageId")
+            } catch (_: Exception) {
+                ""
+            }
+            if (messageId.isNotEmpty()) {
+                launchTracked {
+                    ChatStore.applyRecall(pager, messageId)
                 }
-                if (type == TYPE_LOVE_NEW) {
-                    launchTracked {
-                        ChatStore.loadIncrement(pager)
-                    }
-                } else if (type == TYPE_LOVE_RECALL) {
-                    // content 是字符串化的 JSON(JsonWebSocketMessage.content:String,双层解析),取 messageId
-                    val messageId = try {
-                        JSONObject(JSONObject(text).optString("content")).optString("messageId")
-                    } catch (_: Exception) {
-                        ""
-                    }
-                    if (messageId.isNotEmpty()) {
-                        launchTracked {
-                            ChatStore.applyRecall(pager, messageId)
-                        }
-                    }
-                } else if (type == TYPE_LOVE_TYPING) {
-                    // M13 正在输入纯信号:content 单键占位不消费;置位 + seq++ 由 ChatPage 过期
-                    // 协程 4s 收口(D-18 无停止信号);非停留聊天页时置位无害(副标题仅聊天页可见)
-                    launchTracked {
-                        ChatStore.applyPartnerTyping()
-                    }
-                } else if (type == TYPE_LOVE_LOCATION_NEW) {
-                    // M27 位置实时帧:content 即点数据本体(双层解析同 recall),纯快照写无 IO
-                    // 不走 launchTracked;无效点静默(latest 30s 兜底轮询自愈),TA 关共享后
-                    // 恒无此帧(服务端只在落库成功分支推),marker 消失由轮询 shareEnabled 驱动
-                    val point = try {
-                        LocationPointInfo.from(JSONObject(JSONObject(text).optString("content")))
-                    } catch (_: Exception) {
-                        null
-                    }
-                    if (point != null) {
-                        LocationStore.applyPartnerPoint(point)
-                    }
-                } else if (type == TYPE_LOVE_LOCATION_PULL) {
-                    // M28 「提醒 TA」信号(M28 行动轨迹半层按钮):对方催我更新位置,收到即
-                    // 上报一次——doReport 内部 单飞 Mutex + 位置共享开关 + 前台闸 多重收口,
-                    // 连点风暴被单飞+服务端 3s 限频兜底;WS 未连/未桥接端收不到,latest 兜底
-                    launchTracked {
-                        LocationStore.doReport(pager)
-                    }
-                }
+            }
+        } else if (type == TYPE_LOVE_TYPING) {
+            // M13 正在输入纯信号:content 单键占位不消费;置位 + seq++ 由 ChatPage 过期
+            // 协程 4s 收口(D-18 无停止信号);非停留聊天页时置位无害(副标题仅聊天页可见)
+            launchTracked {
+                ChatStore.applyPartnerTyping()
+            }
+        } else if (type == TYPE_LOVE_LOCATION_NEW) {
+            // M27 位置实时帧:content 即点数据本体(双层解析同 recall),纯快照写无 IO
+            // 不走 launchTracked;无效点静默(latest 30s 兜底轮询自愈),TA 关共享后
+            // 恒无此帧(服务端只在落库成功分支推),marker 消失由轮询 shareEnabled 驱动
+            val point = try {
+                LocationPointInfo.from(JSONObject(JSONObject(text).optString("content")))
+            } catch (_: Exception) {
+                null
+            }
+            if (point != null) {
+                LocationStore.applyPartnerPoint(point)
+            }
+        } else if (type == TYPE_LOVE_LOCATION_PULL) {
+            // M28 「提醒 TA」信号(M28 行动轨迹半层按钮):对方催我更新位置,收到即
+            // 上报一次——doReport 内部 单飞 Mutex + 位置共享开关 + 前台闸 多重收口,
+            // 连点风暴被单飞+服务端 3s 限频兜底;WS 未连/未桥接端收不到,latest 兜底
+            launchTracked {
+                LocationStore.doReport(pager)
             }
         }
     }

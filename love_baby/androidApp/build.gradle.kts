@@ -77,9 +77,11 @@ dependencies {
 
     implementation("androidx.recyclerview:recyclerview:1.2.1")
     implementation("androidx.appcompat:appcompat:1.3.1")
-    // WS 触发器(D-16):KRWebSocketModule 用 okhttp WebSocket(core-render-android 的 NetworkModule 是
-    // HttpURLConnection 实现,不带 okhttp 传递依赖,须显式引)
-    implementation("com.squareup.okhttp3:okhttp:4.10.0")
+    // WS 触发器:KuiklyWebsocket 组件原生件 KRWebSocketModule(M34,vendored 于
+    // com/tencent/kuiklybase/websocket/)用 okhttp WebSocket(core-render-android 的
+    // NetworkModule 是 HttpURLConnection 实现,不带 okhttp 传递依赖,须显式引;
+    // 4.12.0 与组件上游构建版本一致)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation("com.squareup.picasso:picasso:2.71828")
 
