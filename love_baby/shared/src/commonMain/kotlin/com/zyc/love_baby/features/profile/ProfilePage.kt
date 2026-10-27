@@ -467,8 +467,8 @@ internal fun ProfilePage(pager: Pager, isPartner: Boolean) {
             initialDay = parts.getOrNull(2)?.toIntOrNull() ?: 1,
             onConfirm = { y, m, d ->
                 // padStart 拼 yyyy-MM-dd(滚轮保证格式,isValidBirthday 仅内部状态异常兜底);
-                // 注:旧注「commonMain 无 String.format」已过时——kotlin stdlib "...".format()
-                // 在 commonMain 可用(CheckinPage 日历格 dateKey 同款在用),本处沿用 padStart 不动
+                // 注:stdib "...".format() 是 JVM-only,commonMain 不可用(js 目标 2026-10-27 编译实锤
+                // Unresolved,当时 CheckinPage 同款即错点)——commonMain 拼 key 一律 padStart
                 val date = "$y".padStart(4, '0') + "-" + "$m".padStart(2, '0') + "-" + "$d".padStart(2, '0')
                 if (!isValidBirthday(date) || date == profileBirthday.trim()) {
                     showBirthdayPicker = false

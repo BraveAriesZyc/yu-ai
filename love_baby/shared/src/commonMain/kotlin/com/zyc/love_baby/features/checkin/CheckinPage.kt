@@ -348,7 +348,9 @@ private fun CheckinCalendarCard(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (day > 0) {
-                            val dateKey = "%04d-%02d-%02d".format(year, month, day)
+                            // "%04d".format 是 JVM-only(commonMain js 实锤编译错),padStart 跨端等价
+                            val dateKey = year.toString().padStart(4, '0') + "-" +
+                                month.toString().padStart(2, '0') + "-" + day.toString().padStart(2, '0')
                             CheckinDayCell(
                                 day = day,
                                 isToday = dateKey == todayKey,

@@ -8,6 +8,7 @@ import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.data.model.WishTemplateInfo
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.WishTemplateApi
+import kotlin.concurrent.Volatile
 
 /**
  * WishStore — 心愿墙挑选模板快照单例(LoveConfigStore 单例范式,M25)

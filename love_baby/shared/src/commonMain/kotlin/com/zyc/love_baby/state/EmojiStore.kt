@@ -7,6 +7,7 @@ import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.data.model.EmojiInfo
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.EmojiApi
+import kotlin.concurrent.Volatile
 
 /**
  * EmojiStore — 表情面板字典快照单例(LoveConfigStore 单例范式,M25)

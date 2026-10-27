@@ -7,6 +7,7 @@ import com.tencent.kuikly.core.nvi.serialization.json.JSONArray
 import com.tencent.kuikly.core.pager.Pager
 import com.zyc.love_baby.network.ApiResult
 import com.zyc.love_baby.network.LoveConfigApi
+import kotlin.concurrent.Volatile
 
 /**
  * LoveConfigStore — 全局业务配置快照单例(StatsStore 单例范式,M23)
